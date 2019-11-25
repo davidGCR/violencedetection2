@@ -1,0 +1,9 @@
+
+__pycache__/
+YOLOv3/weights
+YOLOv3/output
+RESULTS
+DATA
+ANOMALYCRIME/checkpoints
+ANOMALYCRIME/learning_curves
+*.tar
