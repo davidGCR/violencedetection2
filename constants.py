@@ -43,3 +43,8 @@ GREEN = 'g'
 CYAN = 'c'
 PIL_WHITE = (255, 255, 255)
 PIL_RED = (255, 0, 0)
+
+FRAME_POS_FIRST = 'first'
+FRAME_POS_END = 'end'
+FRAME_POS_ALL = 'all'
+FRAME_POS_EXTREMES = 'extremes'

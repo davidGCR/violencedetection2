@@ -17,9 +17,61 @@ from matplotlib.ticker import NullLocator
 from mpl_toolkits.axes_grid1 import ImageGrid
 import copy
 import itertools
+
 # import point.Point as Point
+def IOU(gt_bbox1, bbox2):
+    if bbox2 == None:
+        return 0
+    # calculate area of intersection rectangle
+    inter_area = overlappedArea(gt_bbox1,bbox2)
+    # calculate area of actual and predicted boxes
+    actual_area = gt_bbox1.area()
+    pred_area = bbox2.area()
+ 
+    # computing intersection over union
+    iou = inter_area / float(actual_area + pred_area - inter_area)
+ 
+    # return the intersection over union value
+    return iou
+
+def mAP(dataframe):
+    # calculating Precision and recall
+    Precision = []
+    Recall = []
+
+    TP = FP = 0
+    FN = len(dataframe['tp/fp'] == 'TP')
+    print('all TP', FN)
+    for index , row in dataframe.iterrows():     
+        if row.iou > 0.5:
+            TP =TP+1
+        else:
+            FP =FP+1    
+        try:
+            AP = TP/(TP+FP)
+            Rec = TP/(TP+FN)
+        except ZeroDivisionError:
+            AP = Recall = 0.0
+        Precision.append(AP)
+        Recall.append(Rec)
+    dataframe['Precision'] = Precision
+    dataframe['Recall'] = Recall
+    dataframe['ip'] = dataframe.groupby('Recall')['Precision'].transform('max')
+    prec_at_rec = []
+    for recall_level in np.linspace(0.0, 1.0, 11):
+        try:
+            x = dataframe[dataframe['Recall'] >= recall_level]['Precision']
+            prec = max(x)
+        except:
+            prec = 0.0
+        prec_at_rec.append(prec)
+    avg_prec = np.mean(prec_at_rec)
+    print('11 point precision is ', prec_at_rec)
+    print('\nmap is ', avg_prec)
+
 
 def findAnomalyRegionsOnFrame(personBboxes, salencyBboxes, over_area_threshold, max_dist_persons_threshold):
+    """Detect anomalous regions in one frame"""
     anomalyRegions = []
     # close persons
     # person - saliency regions intersection
@@ -49,19 +101,16 @@ def findAnomalyRegionsOnFrame(personBboxes, salencyBboxes, over_area_threshold, 
             #     filtered_regions.append(p2)
         anomalyRegions = list(set(filtered_regions.copy()))
         # print('-->anomalyRegions FINAL: ',len(anomalyRegions), aaa)
-    return anomalyRegions
+    if len(anomalyRegions) < 1:
+        return None
+    return anomalyRegions[0]
 
 def verifyClosePersons(p1, p2, d_treshold):
-    # over_area = overlappedArea(p1, p2)
-    # if over_area > 0:
-    #     return True
     dist = distance(p1.center, p2.center)
     if dist < d_treshold:
         return True
     return False
 
-def printBoundingBox(bbox):
-    print("=> x1: %.5f, y1: %.5f, x2: %.5f, y2: %.5f" % (bbox.pmin.x, bbox.pmin.y, bbox.pmax.x, bbox.pmax.y))
 
 def overlappedArea(bbox1, bbox2): 
     dx = min(bbox1.pmax.x, bbox2.pmax.x) - max(bbox1.pmin.x, bbox2.pmin.x)
@@ -82,61 +131,9 @@ def joinBBoxes(bbox1, bbox2):
     bbox = BoundingBox(Point(xmin, ymin), Point(xmax, ymax))
     return bbox
 
-def joinOverlappedBBoxes_recursively(bbox_list, threshold=48):
-    print('================bbox_list', len(bbox_list))
-    if len(bbox_list) == 1:
-        return bbox_list
-    else:
-        for i in range(1,len(bbox_list)):
-            overlap_area = overlappedArea(bbox_list[0], bbox_list[i])
-            if overlap_area > 0:
-                area1 = bbox_list[0].area()
-                area2 = bbox_list[i].area()
-                percentaje = .0
-                if area1 <= area2:
-                    percentaje = percentajeOverlappedArea(area1, overlap_area)
-                else:
-                    percentaje = percentajeOverlappedArea(area2, overlap_area)
-                if percentaje >= threshold:
-                    joinBox = joinBBoxes(bbox_list[0], bbox_list[i])
-                    bbox_list[i] = joinBox
-                    del bbox_list[0]
-                    # first = bbox_list[0]
-                    break
-        first = bbox_list[0]
-        if len(bbox_list) > 1:
-            sub_bbox_list = bbox_list[1:]
-            print('sub_bbox_list: ', sub_bbox_list, len(sub_bbox_list))
-            sub_bbox_list = joinOverlappedBBoxes_recursively(sub_bbox_list, threshold)
-            # print('sub_bbox_list: ', sub_bbox_list, len(sub_bbox_list))
-            sub_bbox_list.insert(0, first)
-            bbox_list = sub_bbox_list
-        return bbox_list
-        
-
-def joinOverlappedBBoxes(bboxes, threshold=48):
-    bboxes_r = copy.deepcopy(bboxes)
-    for i in range(len(bboxes) - 1):
-        for idx in range(i+1, len(bboxes)):
-            # print(i, idx)
-            overlap_area = overlappedArea(bboxes[i], bboxes[idx])
-            if overlap_area > 0:
-                area1 = bboxes[i].area()
-                area2 = bboxes[idx].area()
-                percentaje = .0
-                # print('area1, area2: ', area1, area2)
-                if area1 <= area2:
-                    percentaje = percentajeOverlappedArea(area1, overlap_area)
-                else:
-                    percentaje = percentajeOverlappedArea(area2, overlap_area)
-                if percentaje >= threshold:
-                    joinBox = joinBBoxes(bboxes[i], bboxes[idx])
-                    bboxes_r[idx] = joinBox
-                    del bboxes_r[i]
-    return bboxes_r
-
 def getFramesFromSegment(video_name, frames_segment, num_frames):
     # print('sdfasffffffffffffffffffffffffff')
+    names = []
     frames = []
     bboxes = []
     if num_frames == 'all':
@@ -145,15 +142,17 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
             frame_name = str(frame_info[0][0])
             # print(frame_info, len(frame_info))
             frame_path = os.path.join(video_name, frame_name)
+            names.append(frame_path)
             # image = np.array(Image.open(frame_path))
             image = Image.open(frame_path)
             frames.append(image)
-            bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN], frame_info[constants.IDX_YMIN]), Point(frame_info[constants.IDX_XMAX], frame_info[constants.IDX_YMAX]))
+            bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN].float(), frame_info[constants.IDX_YMIN].float()), Point(frame_info[constants.IDX_XMAX].float(), frame_info[constants.IDX_YMAX].float()))
             bboxes.append(bbox)
     elif num_frames == 'first':
         frame_info = frames_segment[0]
         frame_name = str(frame_info[0][0])
         frame_path = os.path.join(video_name, frame_name)
+        names.append(frame_path)
         image = Image.open(frame_path)
         frames.append(image)
         bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN], frame_info[constants.IDX_YMIN]), Point(frame_info[constants.IDX_XMAX], frame_info[constants.IDX_YMAX]))
@@ -162,6 +161,7 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
         frame_info_first = frames_segment[0]
         frame_name_first = str(frame_info_first[0][0])
         frame_path_first = os.path.join(video_name, frame_name_first)
+        names.append(frame_path_first)
         image = Image.open(frame_path_first)
         frames.append(image)
         bbox = BoundingBox(Point(frame_info_first[constants.IDX_XMIN], frame_info_first[constants.IDX_YMIN]), Point(frame_info_first[constants.IDX_XMAX], frame_info_first[constants.IDX_YMAX]))
@@ -170,11 +170,12 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
         frame_info_end = frames_segment[len(frames_segment)-1]
         frame_name_end = str(frame_info_end[0][0])
         frame_path_end = os.path.join(video_name, frame_name_end)
+        names.append(frame_path_end)
         image = Image.open(frame_path_end)
         frames.append(image)
         bbox = BoundingBox(Point(frame_info_end[constants.IDX_XMIN], frame_info_end[constants.IDX_YMIN]), Point(frame_info_end[constants.IDX_XMAX], frame_info_end[constants.IDX_YMAX]))
         bboxes.append(bbox)
-    return frames, bboxes
+    return names, frames, bboxes
 
 
 def personDetectionInSegment(frames_list, yolo_model, img_size, conf_thres, nms_thres, classes, type_num_frames):
@@ -193,8 +194,11 @@ def personDetectionInSegment(frames_list, yolo_model, img_size, conf_thres, nms_
         bbox_persons_in_segment.append(bbox_persons_in_frame_end)
     return bbox_persons_in_segment
 
+
+
+
+
 def personDetectionInFrame(model, img_size, conf_thres, nms_thres, classes, ioImage, plot = False):
-    
     # print('='*20+' YOLOv3 - ', frame_path)
     img = yolo_inference.preProcessImage(ioImage, img_size)
     detections = yolo_inference.inference(model, img, conf_thres, nms_thres)
@@ -231,16 +235,10 @@ def computeBoundingBoxFromMask(mask):
     """
     *** mask: rgb numpy image
     """
-
     mask = thresholding_cv2(mask)
-    # mask = mask.astype('uint8')
-    # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-    # print('ccccc: ', mask.shape)
     img = process_mask(mask)
     img, contours = findContours(img, remove_fathers=True)
-    
     bboxes = bboxes_from_contours(img, contours)
-    # print(len(bboxes),bboxes)
     return bboxes
 
 def process_mask(img):
@@ -258,7 +256,6 @@ def findContours(img, remove_fathers = True):
     # Find contours
     # color = cv2.Scalar(0, 255, 0)
     contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
     # Draw contours
     drawing = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     if remove_fathers:
@@ -267,12 +264,8 @@ def findContours(img, remove_fathers = True):
             if hierarchy[0, idx, 3] == -1:
                 removed.append(contour)
         contours = removed
-    # print('contours: ', len(contours))
-    
     for i in range(len(contours)):
         cv2.drawContours(drawing, contours, i, (0, 255, 0), 2, cv2.LINE_8, hierarchy, 0)
-    # Show in a window
-    # cv2.imshow('Contours', drawing)
     return drawing, contours
 
 def plotBBoxesOnImage(fig, ax, bboxes, color, text):
@@ -300,15 +293,16 @@ def plotBBoxesOnImage(fig, ax, bboxes, color, text):
     return fig, ax
 
 def plotOnlyBBoxOnImage(image, box, color, text):
-    draw = ImageDraw.Draw(image)
-    # h = box.pmax.y - box.pmin.y
-    # w = box.pmax.x - box.pmin.x
-    draw.rectangle((box.pmin.x, box.pmin.y, box.pmax.x, box.pmax.y), fill=None, outline=color)
-    # rect = patches.Rectangle((box.pmin.x, box.pmin.y), w, h, linewidth=1, edgecolor=color, facecolor='none')
-    # # Add the patch to the Axes
-    # ax.add_patch(rect)
-    # plt.text(box.pmin.x, box.pmin.y, s=text, color="white", verticalalignment="top", bbox={"color": color, "pad": 0},)
-    # fig.patches.extend([plt.Rectangle((box.pmin.x, box.pmin.y),w,h, color=color, alpha=0.5,zorder=1000,figure=fig)])
+    if box is not None:
+        draw = ImageDraw.Draw(image)
+        # h = box.pmax.y - box.pmin.y
+        # w = box.pmax.x - box.pmin.x
+        draw.rectangle((box.pmin.x, box.pmin.y, box.pmax.x, box.pmax.y), fill=None, outline=color)
+        # rect = patches.Rectangle((box.pmin.x, box.pmin.y), w, h, linewidth=1, edgecolor=color, facecolor='none')
+        # # Add the patch to the Axes
+        # ax.add_patch(rect)
+        # plt.text(box.pmin.x, box.pmin.y, s=text, color="white", verticalalignment="top", bbox={"color": color, "pad": 0},)
+        # fig.patches.extend([plt.Rectangle((box.pmin.x, box.pmin.y),w,h, color=color, alpha=0.5,zorder=1000,figure=fig)])
     return image
 
 def bboxes_from_contours(img, contours):
