@@ -67,62 +67,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from PIL import Image
-# fig = plt.figure()
-# def f(path='YOLOv3/data/samples/frame805.jpg'):
-#     image = Image.open(path)
-#     return np.array(image)
+fig = plt.figure()
+def f(path='YOLOv3/data/samples/frame805.jpg'):
+    image = Image.open(path)
+    return np.array(image)
 
-# # x = np.linspace(0, 2 * np.pi, 120)
-# # y = np.linspace(0, 2 * np.pi, 100).reshape(-1, 1)
+# x = np.linspace(0, 2 * np.pi, 120)
+# y = np.linspace(0, 2 * np.pi, 100).reshape(-1, 1)
+# ims is a list of lists, each row is a list of artists to draw in the
+# current frame; here we are just animating one artist, the image, in
+# each frame
+ims = []
+for i in range(60):
+    # x += np.pi / 15.
+    # y += np.pi / 20.
+    im = plt.imshow(f('YOLOv3/data/samples/frame805.jpg'), animated=True)
+    ims.append([im])
+
+ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True,
+                                repeat_delay=1000)
+plt.show()
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import matplotlib.animation as animation
+
+# fig = plt.figure()
+
+
+# def f(x, y):
+#     return np.sin(x) + np.cos(y)
+
+# x = np.linspace(0, 2 * np.pi, 120)
+# y = np.linspace(0, 2 * np.pi, 100).reshape(-1, 1)
 # # ims is a list of lists, each row is a list of artists to draw in the
 # # current frame; here we are just animating one artist, the image, in
 # # each frame
 # ims = []
 # for i in range(60):
-#     # x += np.pi / 15.
-#     # y += np.pi / 20.
-#     im = plt.imshow(f('YOLOv3/data/samples/frame805.jpg'), animated=True)
+#     x += np.pi / 15.
+#     y += np.pi / 20.
+#     im = plt.imshow(f(x, y), animated=True)
 #     ims.append([im])
 
 # ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True,
 #                                 repeat_delay=1000)
 
-# # ani.save('dynamic_images.mp4')
-
 # plt.show()
-
-plt.style.use('dark_background')
-
-fig = plt.figure() 
-ax = plt.axes(xlim=(-50, 50), ylim=(-50, 50)) 
-line, = ax.plot([], [], lw=2) 
-
-# initialization function 
-def init(): 
-	# creating an empty plot/frame 
-	line.set_data([], []) 
-	return line, 
-
-# lists to store x and y axis points 
-xdata, ydata = [], [] 
-
-# animation function 
-def animate(i):
-    print('i', i)
-    t = 0.1 * i
-    x = t * np.sin(t)
-    y = t * np.cos(t)
-    xdata.append(x)
-    ydata.append(y)
-    line.set_data(xdata, ydata)
-    return line
-	
-# setting a title for the plot 
-plt.title('Creating a growing coil with matplotlib!') 
-# hiding the axis details 
-plt.axis('off') 
-
-# call the animator	 
-anim = animation.FuncAnimation(fig, animate, init_func=init, 
-							frames=500, interval=20, blit=True) 
-plt.show()

@@ -5,4 +5,6 @@ python3 LOCALIZATION/localization_main.py \
 --numWorkers 4 \
 --numDiPerVideos 1 \
 --shuffle false \
---plot true
+--plot true \
+--videoSegmentLength 8 \
+--personDetector maskrcnn

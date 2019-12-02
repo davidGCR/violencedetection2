@@ -43,8 +43,15 @@ GREEN = 'g'
 CYAN = 'c'
 PIL_WHITE = (255, 255, 255)
 PIL_RED = (255, 0, 0)
+PIL_YELLOW = (255, 255, 0)
+PIL_GREEN = (0, 255, 0)
+PIL_MAGENTA = (255, 0, 255)
+PIL_BLUE = (0,0,255)
 
 FRAME_POS_FIRST = 'first'
 FRAME_POS_END = 'end'
 FRAME_POS_ALL = 'all'
 FRAME_POS_EXTREMES = 'extremes'
+
+YOLO = 'yolov3'
+MASKRCNN = 'maskrcnn'
