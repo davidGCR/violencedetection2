@@ -23,7 +23,7 @@ def IOU(gt_bbox1, bbox2):
     if bbox2 == None:
         return 0
     # calculate area of intersection rectangle
-    inter_area = overlappedArea(gt_bbox1,bbox2)
+    inter_area = intersetionArea(gt_bbox1,bbox2)
     # calculate area of actual and predicted boxes
     actual_area = gt_bbox1.area()
     pred_area = bbox2.area()
@@ -69,37 +69,73 @@ def mAP(dataframe):
     print('11 point precision is ', prec_at_rec)
     print('\nmap is ', avg_prec)
 
-def filterPersonsDetectionsInFrame(personsBBoxes, thresh_close_persons):
+def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
+    """Join persons bboxes if they iou is greter than a threshold"""
     persons_filtered = []
-    if len(personsBBoxes) > 1:
-        for p1, p2 in itertools.combinations(personsBBoxes, 2):
-            iou = IOU(p1, p2)
-            print('iou: ', iou, p1, p2)
-            if iou >= thresh_close_persons:
-                presult = joinBBoxes(p1,p2)
-                # persons_filtered.append(p1)
-                # persons_filtered.append(p2)
-                persons_filtered.append(presult)
-    return persons_filtered
+    only_joined_regions = []
+    # if len(personsBBoxes) > 0:
+    for p1, p2 in itertools.combinations(personsBBoxes, 2):
+        # iou = IOU(p1, p2)
+        iou = intersetionArea(p1, p2)
+        iou = p1.percentajeArea(iou)
+        # print('iou: ', iou, p1, p2)
+        if iou >= thresh_close_persons:
+            presult = joinBBoxes(p1,p2)
+            # persons_filtered.append(p1)
+            # persons_filtered.append(p2)
+            persons_filtered.append(presult)
+            only_joined_regions.append(presult)
+        else:
+            persons_filtered.append(p1)
+            persons_filtered.append(p2)
+            
+    return persons_filtered, only_joined_regions
 
+def plotOnlyBBoxOnImage(image, boxes, color, text, font_size):
+    if boxes is not None:
 
-def findAnomalyRegionsOnFrame(personBboxes, anomalus_regions_segment, over_area_threshold, max_dist_persons_threshold):
-    """Detect anomalous regions in one frame"""
-    if len(personBboxes) == 0:
-        print('No persons found...')
-        return None
+        if isinstance(image, np.ndarray):
+            image = (image * 255 / np.max(image)).astype('uint8')
+            image = Image.fromarray(image)
+            # print('image pil: ', image.size)
+            # draw = ImageDraw.Draw()
+        
+        draw = ImageDraw.Draw(image)
+        # h = box.pmax.y - box.pmin.y
+        # w = box.pmax.x - box.pmin.x
+        font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', font_size)
+        if isinstance(boxes, list):
+            for box in boxes:
+                # print('******* box: ', box)
+                draw.rectangle((box.pmin.x, box.pmin.y, box.pmax.x, box.pmax.y), fill=None, outline=color)
+                draw.text((box.pmin.x, box.pmin.y), text, fill =color,font = font, align ="left")
+        else:
+            draw.rectangle((boxes.pmin.x, boxes.pmin.y, boxes.pmax.x, boxes.pmax.y), fill=None, outline=color)
+            draw.text((boxes.pmin.x, boxes.pmin.y), text, fill=color,font = font, align ="left")  
+            
+        # drawing text size 
+        
+        # rect = patches.Rectangle((box.pmin.x, box.pmin.y), w, h, linewidth=1, edgecolor=color, facecolor='none')
+        # # Add the patch to the Axes
+        # ax.add_patch(rect)
+        # plt.text(box.pmin.x, box.pmin.y, s=text, color="white", verticalalignment="top", bbox={"color": color, "pad": 0},)
+        # fig.patches.extend([plt.Rectangle((box.pmin.x, box.pmin.y),w,h, color=color, alpha=0.5,zorder=1000,figure=fig)])
+    return image
+
+def findAnomalyRegionsOnFrame(personBboxes, saliencyBboxes, iou_threshold):
+    """Detect anomalous regions in one frame: Iou between persons and saliency"""
     anomalyRegions = []
-    # close persons
     # person - saliency regions intersection
     for personBox in personBboxes:
-        for saliencyBoxes in anomalus_regions_segment:
-            over_area = overlappedArea(personBox, saliencyBox)
-            percent_area = percentajeOverlappedArea(personBox.area(), over_area)
-            if percent_area >= over_area_threshold:
-                personBox.abnormal_area = over_area
+        for saliencyBox in saliencyBboxes:
+            iou = IOU(personBox, saliencyBox)
+            # iou = intersetionArea(personBox, saliencyBox)
+            # intersection = personBox.percentajeArea(iou)
+            print('***iou: ', iou)
+            if iou >= iou_threshold:
+                personBox.iou = iou
                 anomalyRegions.append(personBox)
-    anomalyRegions = set(anomalyRegions)
-    anomalyRegions = list(anomalyRegions)
+    
     
     # while len(anomalyRegions) > 1:
     #     filtered_regions = []
@@ -119,16 +155,14 @@ def verifyClosePersons(p1, p2, d_treshold):
     return False
 
 
-def overlappedArea(bbox1, bbox2): 
+def intersetionArea(bbox1, bbox2): 
     dx = min(bbox1.pmax.x, bbox2.pmax.x) - max(bbox1.pmin.x, bbox2.pmin.x)
     dy = min(bbox1.pmax.y, bbox2.pmax.y) - max(bbox1.pmin.y, bbox2.pmin.y)
     if (dx>=0) and (dy>=0):
         return dx * dy
     else: return 0
 
-def percentajeOverlappedArea(realArea, overArea):
-    per = overArea * 100 / realArea
-    return per
+
 
 def joinBBoxes(bbox1, bbox2):
     xmin = min(bbox1.pmin.x, bbox2.pmin.x)
@@ -242,8 +276,9 @@ def computeBoundingBoxFromMask(mask):
     mask = thresholding_cv2(mask)
     img_process_mask = process_mask(mask)
     img_contuors, contours = findContours(img_process_mask, remove_fathers=True)
-    bboxes = bboxes_from_contours(img_contuors, contours)
-    return img_process_mask, bboxes
+    img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
+    preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
+    return bboxes, preprocesing_reults
 
 def process_mask(img):
     kernel_exp = np.ones((5, 5), np.uint8)
@@ -272,36 +307,7 @@ def findContours(img, remove_fathers = True):
         cv2.drawContours(img, contours, i, (0, 255, 0), 2, cv2.LINE_8, hierarchy, 0)
     return img, contours
 
-def plotOnlyBBoxOnImage(image, boxes, color, text, font_size):
-    if boxes is not None:
 
-        if isinstance(image, np.ndarray):
-            image = (image * 255 / np.max(image)).astype('uint8')
-            image = Image.fromarray(image)
-            # print('image pil: ', image.size)
-            # draw = ImageDraw.Draw()
-        
-        draw = ImageDraw.Draw(image)
-        # h = box.pmax.y - box.pmin.y
-        # w = box.pmax.x - box.pmin.x
-        font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', font_size)
-        if isinstance(boxes, list):
-            for box in boxes:
-                # print('******* box: ', box)
-                draw.rectangle((box.pmin.x, box.pmin.y, box.pmax.x, box.pmax.y), fill=None, outline=color)
-                draw.text((box.pmin.x, box.pmin.y), text, fill =color,font = font, align ="left")
-        else:
-            draw.rectangle((boxes.pmin.x, boxes.pmin.y, boxes.pmax.x, boxes.pmax.y), fill=None, outline=color)
-            draw.text((boxes.pmin.x, boxes.pmin.y), text, fill=color,font = font, align ="left")  
-            
-        # drawing text size 
-        
-        # rect = patches.Rectangle((box.pmin.x, box.pmin.y), w, h, linewidth=1, edgecolor=color, facecolor='none')
-        # # Add the patch to the Axes
-        # ax.add_patch(rect)
-        # plt.text(box.pmin.x, box.pmin.y, s=text, color="white", verticalalignment="top", bbox={"color": color, "pad": 0},)
-        # fig.patches.extend([plt.Rectangle((box.pmin.x, box.pmin.y),w,h, color=color, alpha=0.5,zorder=1000,figure=fig)])
-    return image
 
 def bboxes_from_contours(img, contours):
     contours_poly = [None]*len(contours)
@@ -309,16 +315,16 @@ def bboxes_from_contours(img, contours):
     for i, c in enumerate(contours):
         contours_poly[i] = cv2.approxPolyDP(c, 3, True)
         boundRect[i] = cv2.boundingRect(contours_poly[i])
-    # drawing = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
+    image = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     bboxes = []
     for i, rect in enumerate(boundRect):
         # print('REct: ', rect)
         bb = cvRect2BoundingBox(rect)
         bboxes.append(bb)
-    #     color_red = (0,0,255)
-    #     # cv2.drawContours(drawing, contours_poly, i, color)
-    #     cv2.rectangle(drawing, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color_red, 2)
-    return bboxes
+        color_red = (0,0,255)
+        # cv2.drawContours(drawing, contours_poly, i, color)
+        cv2.rectangle(image, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color_red, 2)
+    return image, bboxes
 
 def cvRect2BoundingBox(cvRect):
     pmin = Point(cvRect[0], cvRect[1])

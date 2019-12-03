@@ -98,12 +98,15 @@ def __main__():
 
     for i, data in enumerate(dataloaders_dict['test'], 0):
         print("-" * 150)
+        #di_images = [1,3,224,224]
         di_images, labels, video_name, bbox_segments = data
         print(video_name, len(bbox_segments))
         bbox_segments = np.array(bbox_segments)
 
         ######################## mask
         masks = tester.compute_mask(di_images, labels)
+        # masks = di_images.cpu() * masks.cpu()
+        # print('mask by diimages: ', masks.size())
         masks = torch.squeeze(masks, 0) #tensor [1,224,224]
         masks = resize_transform(masks.cpu())
         # print('masks: ', type(masks), masks.size())
@@ -112,9 +115,35 @@ def __main__():
         # masks = masks.repeat(3, 1, 1)
         masks = tensor2numpy(masks)
         # print('masks numpy', masks.shape)
-        img_process_mask, saliency_bboxes = localization_utils.computeBoundingBoxFromMask(masks)  #only one by segment
-        print('saliency_bboxes: ', len(saliency_bboxes), 'img_process_mask: ', type(img_process_mask), img_process_mask.shape)
+        saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(masks)  #only one by segment
+        print('saliency_bboxes: ', len(saliency_bboxes))
         
+        # ######################### To plot a dynamic image
+        # di_image = torch.squeeze(di_images, 0)
+        # di_image = di_image / 2 + 0.5      
+        # di_image = resize_transform(di_image)
+        # di_image = di_image.numpy()
+        # di_image = np.transpose(di_image, (1, 2, 0))
+        # print('di_image numpy', di_image.shape)
+
+        # di_image_gray = cv2.cvtColor(di_image, cv2.COLOR_BGR2GRAY)
+        # di_image_t, preprocesing_reults_di = localization_utils.computeBoundingBoxFromMask(di_image_gray)
+
+        # fig, axes = plt.subplots(2, 5, figsize=(15, 5))
+        # print('axes: ', type(axes), axes.shape)
+        # im0 = axes[0,0].imshow(di_image)
+        # im1 = axes[0,1].imshow(preprocesing_reults['mask'])
+        # im2 = axes[0,2].imshow(preprocesing_reults['process_mask'])
+        # im3 = axes[0,3].imshow(preprocesing_reults['contours'])
+        # im4 = axes[0,4].imshow(preprocesing_reults['boxes'])
+        
+        # im5 = axes[1,0].imshow(di_image_gray)
+        # im6 = axes[1,1].imshow(preprocesing_reults_di['mask'])
+        # im7 = axes[1,2].imshow(preprocesing_reults_di['process_mask'])
+        # im8 = axes[1,3].imshow(preprocesing_reults_di['contours'])
+        # im9 = axes[1,4].imshow(preprocesing_reults_di['boxes'])
+        # plt.show()
+
         #read frames of segment
         frames_names, real_frames,  real_bboxes = localization_utils.getFramesFromSegment(video_name[0], bbox_segments[0], 'all')
         print('real_frames, real_bboxes: ', len(frames_names), len(real_frames), len(real_bboxes))
@@ -125,12 +154,11 @@ def __main__():
         area_threshold = 40
         persons_distance_threshold = 15
         anomalous_regions = []  # to plot
-        persons_filtered_segment = [] #close persons join boxes -
         mask_rcnn_threshold = 0.5
         persons_in_frame = []
+        persons_segment_filtered = [] #only to vizualice
         persons_in_segment = []
         font_size = 10
-        persons_filtered_frame = []
 
         if type_set_frames == constants.FRAME_POS_FIRST:
             #person detection
@@ -140,8 +168,8 @@ def __main__():
                 persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(mask_model, real_frames[first], mask_rcnn_threshold)
             
             print('num Persons in frame: ', len(persons_in_frame))
-            persons_filtered = localization_utils.filterPersonsDetectionsInFrame(persons_in_frame, 0.4)
-            persons_filtered_segment.append(persons_filtered)
+            # persons_filtered = localization_utils.filterClosePersonsInFrame(persons_in_frame, 0.4)
+            # persons_filtered_segment.append(persons_filtered)
             #refinement
             # anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
             # anomalous_regions.append(anomalous_regions_in_frame)
@@ -157,8 +185,8 @@ def __main__():
             elif personDetector == constants.MASKRCNN:
                 persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(mask_model, real_frames[first], mask_rcnn_threshold)
             #refinement
-            anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
-            anomalous_regions.append(anomalous_regions_in_frame)
+            # anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
+            # anomalous_regions.append(anomalous_regions_in_frame)
 
             # iou = localization_utils.IOU(real_bboxes[first],anomalous_region)
             # row = [frames_names[first], iou]
@@ -170,8 +198,8 @@ def __main__():
             elif personDetector == constants.MASKRCNN:
                 persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(mask_model, real_frames[first], mask_rcnn_threshold)
             #refinement
-            anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
-            anomalous_regions.append(anomalous_regions_in_frame)
+            # anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
+            # anomalous_regions.append(anomalous_regions_in_frame)
             # iou = localization_utils.IOU(real_bboxes[end],anomalous_region)
             # row = [frames_names[end], iou]
             # data_rows.append(row)
@@ -186,15 +214,22 @@ def __main__():
                     persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(mask_model, frame, mask_rcnn_threshold)
                 print('num Persons in frame: ', len(persons_in_frame))
                 persons_in_segment.append(persons_in_frame)
-                #refinement
-                persons_filtered = localization_utils.filterPersonsDetectionsInFrame(persons_in_frame, 0.3)
-                persons_filtered_segment.append(persons_filtered)
-                # anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
-                # anomalous_regions.append(anomalous_regions_in_frame)
+            
+            #refinement in segment
+            for i,persons_in_frame in enumerate(persons_in_segment):
+                # if len(persons_in_frame)>1:
+                persons_in_frame, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
+                persons_segment_filtered.append(only_joined_regions)
+                print('persons_in_frame filter: ', len(persons_in_frame))
+                anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame,saliency_bboxes,0.3)
+                anomalous_regions.append(anomalous_regions_in_frame)
+            print('anomalous_regions: ', len(anomalous_regions))
+            # anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_in_frame, saliency_bboxes, area_threshold, persons_distance_threshold)
+            # anomalous_regions.append(anomalous_regions_in_frame)
 
-                # iou = localization_utils.IOU(real_bboxes[idx],anomalous_region)
-                # row = [frames_names[first], iou]
-                # data_rows.append(row)
+            # iou = localization_utils.IOU(real_bboxes[idx],anomalous_region)
+            # row = [frames_names[first], iou]
+            # data_rows.append(row)
         
         if plot:
             shape = masks.shape
@@ -203,7 +238,7 @@ def __main__():
                 masks = localization_utils.gray2rgbRepeat(masks)
                 
             # create a figure with two subplots
-            fig, axes = plt.subplots(1, 3,figsize=(35,10))
+            fig, axes = plt.subplots(1, 5,figsize=(25,5))
             def f(image):
                 return np.array(image)
 
@@ -216,33 +251,32 @@ def __main__():
             di_image = np.transpose(di_image, (1, 2, 0))
             ims = []
 
-            img_process_mask = localization_utils.gray2rgbRepeat(img_process_mask)
+            img_process_mask = localization_utils.gray2rgbRepeat(preprocesing_reults['process_mask'])
 
+            di_image = localization_utils.plotOnlyBBoxOnImage(di_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
             
             for i in range(len(real_frames)):
-                # real_frame = real_frames[i].clone()
-                gt_image = localization_utils.plotOnlyBBoxOnImage(real_frames[i], real_bboxes[i], constants.PIL_RED, 'gtruth', font_size)
+                # real_frame = real_frames[i].copy()
+                gt_image = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), real_bboxes[i], constants.PIL_RED, 'gtruth', font_size)
                 # image = localization_utils.plotOnlyBBoxOnImage(di_images, real_bboxes[i], constants.PIL_RED, 'Ground Truth')
                 if len(saliency_bboxes) > 0:
-                    raw_image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency',font_size)
-                    raw_image_persons = localization_utils.plotOnlyBBoxOnImage(raw_image_saliency, persons_in_segment[i], constants.PIL_GREEN, 'person', font_size)
-
-                    raw_image_persons_filt = localization_utils.plotOnlyBBoxOnImage(di_image, persons_filtered_segment[i], constants.PIL_MAGENTA, 'person_filter',font_size)
-                    
-                    # di_image = localization_utils.plotOnlyBBoxOnImage(di_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
+                    image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency',font_size)
+                    image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN, 'person', font_size)
                     
                     
-                im0 = axes[0].imshow(f(raw_image_saliency))
-                im1 = axes[1].imshow(f(raw_image_persons))
-                im2 = axes[2].imshow(f(raw_image_persons_filt))
-                # im2 = axes[2].imshow(f(img_process_mask))
-                # im = 
-                # im = plt.imshow(f(image), animated=True)
-                # fig, ax = localization_utils.plotBBoxesOnImage(fig, ax, violent_regions, constants.CYAN, 'anomalous')
-                # ax = localization_utils.plotBBoxesOnImage(ax, violent_regions, constants.CYAN,'anomalous')
+                    image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA, 'person_filter',font_size)
+                    
+                    image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions[i], constants.PIL_BLUE, 'anomalous', font_size)
+                                       
+                im0 = axes[0].imshow(f(di_image))
+                im1 = axes[1].imshow(f(image_persons))
+                im2 = axes[2].imshow(f(image_persons_filt))
+                im3 = axes[3].imshow(f(image_anomalous))
+                im4 = axes[4].imshow(f(img_process_mask))
                 ims.append([im0])
                 ims.append([im1])
                 ims.append([im2])
+                ims.append([im3])
             print('ims: ', len(ims))
             ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=100)
             # ani.save('RESULTS/animations/'+str(i)+'.mp4', writer=writer)          

@@ -7,4 +7,4 @@ python3 LOCALIZATION/localization_main.py \
 --shuffle false \
 --plot true \
 --videoSegmentLength 8 \
---personDetector maskrcnn
+--personDetector yolov3
