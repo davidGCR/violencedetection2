@@ -25,8 +25,8 @@ def IOU(gt_bbox1, bbox2):
     # calculate area of intersection rectangle
     inter_area = intersetionArea(gt_bbox1,bbox2)
     # calculate area of actual and predicted boxes
-    actual_area = gt_bbox1.area()
-    pred_area = bbox2.area()
+    actual_area = gt_bbox1.area
+    pred_area = bbox2.area
  
     # computing intersection over union
     iou = inter_area / float(actual_area + pred_area - inter_area)
@@ -73,22 +73,24 @@ def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
     """Join persons bboxes if they iou is greter than a threshold"""
     persons_filtered = []
     only_joined_regions = []
-    # if len(personsBBoxes) > 0:
-    for p1, p2 in itertools.combinations(personsBBoxes, 2):
-        # iou = IOU(p1, p2)
-        iou = intersetionArea(p1, p2)
-        iou = p1.percentajeArea(iou)
-        # print('iou: ', iou, p1, p2)
-        if iou >= thresh_close_persons:
-            presult = joinBBoxes(p1,p2)
-            # persons_filtered.append(p1)
-            # persons_filtered.append(p2)
-            persons_filtered.append(presult)
-            only_joined_regions.append(presult)
-        else:
-            persons_filtered.append(p1)
-            persons_filtered.append(p2)
-            
+    if len(personsBBoxes) > 1:
+        for p1, p2 in itertools.combinations(personsBBoxes, 2):
+            # iou = IOU(p1, p2)
+            iou = intersetionArea(p1, p2)
+            iou = p1.percentajeArea(iou)
+            # print('iou: ', iou, p1, p2)
+            if iou >= thresh_close_persons:
+                presult = joinBBoxes(p1,p2)
+                # persons_filtered.append(p1)
+                # persons_filtered.append(p2)
+                persons_filtered.append(presult)
+                only_joined_regions.append(presult)
+            else:
+                persons_filtered.append(p1)
+                persons_filtered.append(p2)
+    elif len(personsBBoxes) == 1:
+        persons_filtered.append(personsBBoxes[0])
+
     return persons_filtered, only_joined_regions
 
 def plotOnlyBBoxOnImage(image, boxes, color, text, font_size):
@@ -129,11 +131,14 @@ def findAnomalyRegionsOnFrame(personBboxes, saliencyBboxes, iou_threshold):
     for personBox in personBboxes:
         for saliencyBox in saliencyBboxes:
             iou = IOU(personBox, saliencyBox)
-            # iou = intersetionArea(personBox, saliencyBox)
+            intersection = intersetionArea(personBox, saliencyBox)
             # intersection = personBox.percentajeArea(iou)
-            print('***iou: ', iou)
+            # print('***iou: ', iou)
             if iou >= iou_threshold:
-                personBox.iou = iou
+                personBox.iou = intersection
+                anomalyRegions.append(personBox)
+            elif intersection == personBox.area:
+                personBox.iou = intersection
                 anomalyRegions.append(personBox)
     
     
@@ -164,12 +169,24 @@ def intersetionArea(bbox1, bbox2):
 
 
 
-def joinBBoxes(bbox1, bbox2):
+def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     xmin = min(bbox1.pmin.x, bbox2.pmin.x)
     ymin = min(bbox1.pmin.y, bbox2.pmin.y)
     xmax = max(bbox1.pmax.x, bbox2.pmax.x)
     ymax = max(bbox1.pmax.y, bbox2.pmax.y)
     bbox = BoundingBox(Point(xmin, ymin), Point(xmax, ymax))
+    # if saliency_regions is not None:
+    #     i_areas_1 = []
+    #     i_areas_2 = []
+    #     for sr in saliency_regions:
+    #         a1 = intersetionArea(bbox1, sr)
+    #         a2 = intersetionArea(bbox2, sr)
+    #         i_areas_1.append(a1)
+    #         i_areas_2.append(a2)
+        
+    #     i_areas_1.sort(reverse=True)
+    #     i_areas_2.sort(reverse=True)
+    #     bbox.iou = bbox1.iou + bbox2.iou
     return bbox
 
 def getFramesFromSegment(video_name, frames_segment, num_frames):
@@ -273,6 +290,8 @@ def computeBoundingBoxFromMask(mask):
     """
     *** mask: rgb numpy image
     """
+    if mask.shape[2] == 3:
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
     mask = thresholding_cv2(mask)
     img_process_mask = process_mask(mask)
     img_contuors, contours = findContours(img_process_mask, remove_fathers=True)

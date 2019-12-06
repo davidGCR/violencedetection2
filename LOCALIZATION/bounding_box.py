@@ -12,7 +12,10 @@ class BoundingBox(object):
         pcenter.x = self._pmin.x + int((self._pmax.x - self._pmin.x) / 2)
         pcenter.y = self._pmin.y + int((self._pmax.y - self._pmin.y) / 2)
         self._pcenter = pcenter
-        self._area = self.area()
+
+        dy = self._pmax.y - self._pmin.y
+        dx = self._pmax.x - self._pmin.x
+        self._area = dx*dy
     
     @property
     def center(self):
@@ -46,10 +49,13 @@ class BoundingBox(object):
     def occluded(self, occluded):
         self._occluded = occluded
 
-    def area(self):
-        dy = self._pmax.y - self._pmin.y
-        dx = self._pmax.x - self._pmin.x
-        return dx * dy
+    @property
+    def area(self): 
+        return self._area
+    @area.setter
+    def area(self, area):
+        self._area = area
+        
     
     def percentajeArea(self, overArea):
         per = overArea * 100 / self._area
@@ -65,6 +71,6 @@ class BoundingBox(object):
         return hash((self._pmin.x, self._pmin.y, self._pmax.x, self._pmax.y, self._iou))
     
     def __str__(self):
-        return 'BoundingBox(('+str(self._pmin.x)+','+str(self._pmin.y)+')'+'('+str(self._pmax.x)+','+str(self._pmax.y)+', abn_area: '+str(self._iou)+'))'
+        return 'BoundingBox(('+str(self._pmin.x)+','+str(self._pmin.y)+')'+'('+str(self._pmax.x)+','+str(self._pmax.y)+', abn_area: '+str(self._iou)+', iou:'+str(self._iou)+'))'
     
     

@@ -19,10 +19,12 @@ class AnomalyDataset(Dataset):
         self.labels = labels
         self.numFrames = numFrames  #dataset total num frames by video
         self.bbox_files = bbox_files  # dataset bounding box txt file associated to video
-        self.numDynamicImagesPerVideo = nDynamicImages
+        
+        self.numDynamicImagesPerVideo = nDynamicImages  #number of segments from the video/ -1 means all the segments from the video
+        self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
+        
         self.source = source
         self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
-        self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
         self.positionSegment = positionSegment  #could be at begin, central or random
         self.skipPercentage = 35 
 
@@ -93,6 +95,78 @@ class AnomalyDataset(Dataset):
         bbox_file = self.bbox_files[idx]
         video_segments = []
         seqLen = 0 #number of frames for each segment
+        
+        if self.numFrames[idx] <= self.videoSegmentLength:
+            seqLen = self.numFrames[idx]
+        else:
+            seqLen = self.videoSegmentLength
+        num_frames_on_video = self.numFrames[idx] 
+        video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
+
+        if self.numDynamicImagesPerVideo == 1:
+            if self.positionSegment == 'random':
+                segment = self.getRandomSegment(video_splits_by_no_Di, idx)
+            elif self.positionSegment == 'central':
+                segment = self.getCentralSegment(video_splits_by_no_Di, idx)
+            elif self.positionSegment == 'begin':
+                self.skipPercentage = 0
+                segment = self.getBeginSegment(frames_list, self.skipPercentage)
+            video_segments = []
+            video_segments.append(segment)
+        elif self.numDynamicImagesPerVideo > 1:
+            print('num segments computed: ', str(len(video_splits_by_no_Di)))
+            i = self.numDynamicImagesPerVideo
+            for i in range(len(video_splits_by_no_Di)):
+                if i < self.numDynamicImagesPerVideo:
+                    video_segments.append(video_splits_by_no_Di[i])
+                
+
+            
+        #     if self.maxNumFramesOnVideo == 0: #use all frames from video
+        #         num_frames_on_video = self.numFrames[idx]
+        #     else: #use some frames from video
+        #         num_frames_on_video = self.maxNumFramesOnVideo if self.numFrames[idx] >= self.maxNumFramesOnVideo else self.numFrames[idx]
+        #     seqLen = num_frames_on_video // self.numDynamicImagesPerVideo  # calculate num frames by segment
+        #     # print('num_frames_on_video , segment length: ', num_frames_on_video, seqLen)
+        #     cut = 0
+        #     if self.labels[idx] == 0: # normal videos
+        #         video_segments, cut = self.skip_initial_segments(self.skipPercentage, video_segments)  #skip 35% of initial segments
+        #     video_segments = [frames_list[x:x + seqLen] for x in range(cut, num_frames_on_video + cut, seqLen)]
+        #     if len(video_segments) > self.numDynamicImagesPerVideo: #cut last segments
+        #         diff = len(video_segments) - self.numDynamicImagesPerVideo
+        #         video_segments = video_segments[: - diff]
+            # print(len(video_segments))
+        bbox_segments =  self.get_bbox_segmet(video_segments, bbox_file, idx)
+        return video_segments, seqLen, bbox_segments
+
+    def __getitem__(self, idx):
+        vid_name = self.images[idx]
+        # print(vid_name)
+        label = self.labels[idx]
+        dinamycImages = []
+        sequences, seqLen, bbox_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        for seq in sequences:
+            frames = []
+            for frame in seq:
+                img_dir = str(vid_name) + "/" + frame
+                img = Image.open(img_dir).convert("RGB")
+                img = np.array(img)
+                frames.append(img)
+            imgPIL, img = getDynamicImage(frames)
+            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            dinamycImages.append(imgPIL)
+            
+        dinamycImages = torch.stack(dinamycImages, dim=0) #torch.Size([bs, ndi, ch, h, w])
+        if self.numDynamicImagesPerVideo == 1:
+            dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
+        return dinamycImages, label, vid_name, bbox_segments
+
+    def getVideoSegments_old(self, vid_name, idx):
+        frames_list = os.listdir(vid_name)
+        frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        bbox_file = self.bbox_files[idx]
+        video_segments = []
+        seqLen = 0 #number of frames for each segment
         if self.numDynamicImagesPerVideo == 1 and self.videoSegmentLength > 0:
             if self.numFrames[idx] <= self.videoSegmentLength:
                 # print('hereeeeeeeeeeeeeee....')
@@ -128,33 +202,8 @@ class AnomalyDataset(Dataset):
         bbox_segments =  self.get_bbox_segmet(video_segments, bbox_file, idx)
         return video_segments, seqLen, bbox_segments
 
-    def __getitem__(self, idx):
-        vid_name = self.images[idx]
-        # print(vid_name)
-        label = self.labels[idx]
-        dinamycImages = []
-        sequences, seqLen, bbox_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info)
-        # bbox_segments2 = np.array(bbox_segments)
-        # print('bbox_segments: ',bbox_segments2)
-        for seq in sequences:
-            frames = []
-            for frame in seq:
-                img_dir = str(vid_name) + "/" + frame
-                img = Image.open(img_dir).convert("RGB")
-                img = np.array(img)
-                frames.append(img)
-            imgPIL, img = getDynamicImage(frames)
-            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            dinamycImages.append(imgPIL)               
-            # print(imgPIL.size())
-        
-        dinamycImages = torch.stack(dinamycImages, dim=0)
-        if self.numDynamicImagesPerVideo == 1:
-            dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
-            # print(dinamycImages.size()) #torch.Size([ndi, ch, h, w])
-        return dinamycImages, label, vid_name, bbox_segments
 
-        #####################################################################################################################################
+#####################################################################################################################################
 
 def labels_2_binary(multi_labels):
     binary_labels = multi_labels.copy()
