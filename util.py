@@ -11,8 +11,8 @@ def print_balance(train_y,name):
     unique, counts = np.unique(tx, return_counts=True)
     print(name +'-balance: ', dict(zip(unique, counts)))
 
-def get_model_name(modelType, scheduler_type, numDiPerVideos, dataset_source, feature_extract, joinType,num_epochs):
-    model_name = str(modelType) + '_' + dataset_source + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+joinType +'_num_epochs-' +str(num_epochs)
+def get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType,num_epochs):
+    model_name = str(modelType) + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+joinType +'_num_epochs-' +str(num_epochs)
     return model_name
     
 def save_checkpoint(state, path):

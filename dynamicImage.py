@@ -24,7 +24,8 @@ def getDynamicImage(frames):
     fwr = fw.reshape(seqLen,1,1,1)
     sm = frames*fwr
     sm = sm.sum(0)
-    sm = sm - np.min(sm) 
+    sm = sm - np.min(sm)
+    # print('*************** np.max(sm) : ', str(np.max(sm)))
     sm = 255 * sm /np.max(sm) 
     img = sm.astype(np.uint8)
     ##to PIL image
@@ -89,40 +90,40 @@ def computeDynamicImages(videoPath, numDynamicImages, sequenceLength=0):
   return dinamycImages
 
   
-def __main__():
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--framesPath", type=str)
-  parser.add_argument("--numDynamicImages", type=int)
-  args = parser.parse_args()
-  videoPath = args.framesPath
-  videoPath = os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED,videoPath)
-  numDynamicImages = args.numDynamicImages
-  sequences = getSequences(videoPath, numDynamicImages)
-  print(len(sequences))
-  dynamicImages = []
+# def __main__():
+#   parser = argparse.ArgumentParser()
+#   parser.add_argument("--framesPath", type=str)
+#   parser.add_argument("--numDynamicImages", type=int)
+#   args = parser.parse_args()
+#   videoPath = args.framesPath
+#   videoPath = os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED,videoPath)
+#   numDynamicImages = args.numDynamicImages
+#   sequences = getSequences(videoPath, numDynamicImages)
+#   print(len(sequences))
+#   dynamicImages = []
 
-  transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize([0.4770381, 0.4767955, 0.4773611], [0.11147115, 0.11427314, 0.11617025])
-  ])
+#   transform = transforms.Compose([
+#         transforms.ToTensor(),
+#         transforms.Normalize([0.4770381, 0.4767955, 0.4773611], [0.11147115, 0.11427314, 0.11617025])
+#   ])
 
-  for seq in sequences:
-    # if len(seq) == seqLen:
-    frames = []
-    for frame in seq:
-        img_dir = os.path.join(videoPath,frame)
-        # print(img_dir)
-        img = Image.open(img_dir).convert("RGB")
-        img = np.array(img)
-        frames.append(img)
-    imgPIL, img = getDynamicImage(frames)
-    imgPIL = transform(imgPIL)
-    dynamicImages.append(imgPIL)               
+#   for seq in sequences:
+#     # if len(seq) == seqLen:
+#     frames = []
+#     for frame in seq:
+#         img_dir = os.path.join(videoPath,frame)
+#         # print(img_dir)
+#         img = Image.open(img_dir).convert("RGB")
+#         img = np.array(img)
+#         frames.append(img)
+#     imgPIL, img = getDynamicImage(frames)
+#     imgPIL = transform(imgPIL)
+#     dynamicImages.append(imgPIL)               
   
-  dinamycImages = torch.stack(dynamicImages, dim=0)
+#   dinamycImages = torch.stack(dynamicImages, dim=0)
 
-  images = torchvision.utils.make_grid(dinamycImages.cpu().data, padding=10)
-  util.imshow(images,'')
+#   images = torchvision.utils.make_grid(dinamycImages.cpu().data, padding=10)
+#   util.imshow(images,'')
 
     # imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
 

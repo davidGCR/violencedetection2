@@ -55,6 +55,7 @@ class ViolenceModelResNet(nn.Module):
                 # x = self.AdaptiveAvgPool2d(x)
                 # print('AdaptiveAvgPool2d output size:',x.size())
             elif self.joinType == constants.JOIN_TEMP_MAX_POOL:
+                # print('x size: ', x.size())
                 x = Pooling.maxTemporalPool(x, self.numDiPerVideos, self.convLayers)
                 x = self.AdaptiveAvgPool2d(x)
                 # print('AdaptiveAvgPool2d out: ', x.size())

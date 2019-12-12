@@ -26,12 +26,78 @@ from matplotlib.animation import FuncAnimation
 import pandas as pd
 import torchvision
 import MaskRCNN
+from torchvision.utils import make_grid
 
 def maskRCNN():
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
     model.eval()
     return model
- 
+
+def f(image):
+        return np.array(image)
+
+def paste_imgs_on_axes(r, c, images, axs):
+    ims = []
+    # for row in range(r):
+    #     for col in range(c):
+    #         if row+col < len(images):
+    #             imag = axs[row,col].imshow(f(images[row+col]))
+    #             ims.append(imag)    
+    for idx, img in enumerate(images):
+        imag = axs[r,idx].imshow(f(img))
+        ims.append(imag)
+    return ims
+
+def pytorch_show(img):
+    # img = img / 2 + 0.5 
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+
+def myplot(r, c, font_size, preprocessing_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions):
+    # create a figure with two subplots
+    fig, axes = plt.subplots(r, c, figsize=(25, 5))
+
+    for i in range(len(preprocessing_imgs)):
+        if i > c:
+            print('Not enought axes ...')
+            break
+        im1 = axes[0,i].imshow(preprocessing_imgs[i]) #'mask'
+    
+    img_source = localization_utils.plotOnlyBBoxOnImage(img_source, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
+    image_anomalous, image_anomalous_final = None, None
+    ims = []
+    for i in range(len(real_frames)):
+    #     # real_frame = real_frames[i].copy()
+        images = []
+        gt_image = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), real_bboxes[i], constants.PIL_RED, 'gtruth', font_size)
+        img_source = localization_utils.plotOnlyBBoxOnImage(img_source, real_bboxes[i], constants.PIL_RED, 'testing', font_size)
+        
+        
+        images.append(img_source)
+        
+        if len(saliency_bboxes) > 0:
+            image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
+            images.append(image_saliency)
+            image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN, 'person', font_size)
+            images.append(image_persons)
+
+            image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA, 'person_filter', font_size)
+            images.append(image_persons_filt)
+            image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions, constants.PIL_BLUE, 'anomalous', font_size)
+            if len(anomalous_regions) > 0:
+                segmentBox = localization_utils.getSegmentBBox(real_bboxes)
+                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_YELLOW, 'segment', font_size)
+                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA, 'anomalous', font_size)
+            images.append(image_anomalous)                    
+        
+        
+        ims.append(paste_imgs_on_axes(1,c,images, axes))
+    print('ims: ', len(ims))
+    ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=100)
+    # ani.save('RESULTS/animations/animation.mp4', writer=writer)          
+    plt.show()
+    # ani.save('RESULTS/animations/animation.gif', writer='imagemagick', fps=30)
+    #  
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--saliencyModelFile", type=str)
@@ -50,7 +116,7 @@ def __main__():
     videoSegmentLength = args.videoSegmentLength
     personDetector = args.personDetector
     numDiPerVideos = args.numDiPerVideos
-    positionSegment = 'begin'
+    positionSegment = 'random'
     num_classes = 2 #anomalus or not
     input_size = (224,224)
     transforms_dataset = transforms_anomaly.createTransforms(input_size)
@@ -92,7 +158,9 @@ def __main__():
     # Set up formatting for the movie files
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
-    
+    type_set_frames = constants.FRAME_POS_ALL
+    first = 0
+    mask_rcnn_threshold = 0.3
     # fig, ax = plt.subplots()
 
 
@@ -103,76 +171,62 @@ def __main__():
         print(video_name, dis_images.size(), len(bbox_segments))
         bbox_segments = np.array(bbox_segments)
         ######################## dynamic images
-        l_di_masked = []
-        l_di_images = []
+        l_source_frames = []
+        l_di_images = [] # to plot
         dis_images = dis_images.detach().cpu()
+        # dis_images = torch.squeeze(dis_images, 0) ## to num dynamic images > 1 and minibatch == 1
         for di_image in dis_images:
+            # di_image = di_image / 2 + 0.5  q    
+            # di_image = resize_transform(di_image)
+            di_image = di_image.numpy()
+            di_image = np.transpose(di_image, (1, 2, 0))
             l_di_images.append(di_image)
 
         ######################## mask
         masks = tester.compute_mask(dis_images, labels)
         masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
         masks = masks.detach().cpu()
+        masks = tester.min_max_normalize_tensor(masks)
         l_masks = []
         
         for mask in masks:
             mask = resize_transform(mask.cpu())
-            mask = tester.normalize_tensor(mask)
             mask = tensor2numpy(mask)
             l_masks.append(mask)
             # saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(masks)  #only one by segment
             
 
         ######################## dynamic images masked
-        dis_masked = dis_images.detach().cpu() * masks.detach().cpu()  #tensor [1,3,224,224]
+        dis_masked = dis_images * masks  #tensor [1,3,224,224]
         dis_masked = torch.squeeze(dis_masked, 0)  #tensor [3,224,224]
-        dis_masked = dis_masked.detach().cpu()
+        # dis_masked = dis_masked.detach().cpu()
+
+        source_frames = masks
 
         video_prepoc_saliencies = []
-        for di_masked in dis_masked: 
-            di_masked = resize_transform(di_masked)
-            di_masked = tester.normalize_tensor(di_masked)
-            di_masked = tensor2numpy(di_masked)
-            l_di_masked.append(di_masked)
-            saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(di_masked)  #only one by segment
+        for source_frame in source_frames: 
+            source_frame = resize_transform(source_frame)
+            # di_masked = tester.min_max_normalize_tensor(di_masked)
+            source_frame = tensor2numpy(source_frame)
+            
+            saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
+            source_frame = localization_utils.gray2rgbRepeat(np.squeeze(source_frame,2))
+            # print('di masked //// ', type(di_masked), di_masked.shape)
+            l_source_frames.append(source_frame)
             video_prepoc_saliencies.append({
                 'saliency bboxes': saliency_bboxes,
                 'preprocesing': preprocesing_reults
             })
         
-        print('video_prepoc_saliencies: ', len(video_prepoc_saliencies))
-    #     ########################### To plot masks
-    #     shape = masks.shape
-    #     if shape[2] == 1:
-    #         masks = np.squeeze(masks,2)
-    #         masks = localization_utils.gray2rgbRepeat(masks)
-        
-    #     # ######################### To plot a dynamic image
-    #     # di_image = torch.squeeze(di_images, 0)
-    #     # di_image = di_image / 2 + 0.5      
-    #     # di_image = resize_transform(di_image)
-    #     # di_image = di_image.numpy()
-    #     # di_image = np.transpose(di_image, (1, 2, 0))
-    #     # print('di_image numpy', di_image.shape)
-
-    #     # # di_image_gray = cv2.cvtColor(di_image, cv2.COLOR_BGR2GRAY)
-    #     # # di_image_t, preprocesing_reults_di = localization_utils.computeBoundingBoxFromMask(di_image_gray)
-
-    #     # fig, axes = plt.subplots(2, 5, figsize=(15, 5))
-    #     # print('axes: ', type(axes), axes.shape)
-    #     # im0 = axes[0,0].imshow(masks)
-    #     # im1 = axes[0,1].imshow(preprocesing_reults['mask'])
-    #     # im2 = axes[0,2].imshow(preprocesing_reults['process_mask'])
-    #     # im3 = axes[0,3].imshow(preprocesing_reults['contours'])
-    #     # im4 = axes[0,4].imshow(preprocesing_reults['boxes'])
-        
-    #     # im5 = axes[1,0].imshow(di_masked)
-    #     # im6 = axes[1,1].imshow(preprocesing_reults_di['mask'])
-    #     # im7 = axes[1,2].imshow(preprocesing_reults_di['process_mask'])
-    #     # im8 = axes[1,3].imshow(preprocesing_reults_di['contours'])
-    #     # im9 = axes[1,4].imshow(preprocesing_reults_di['boxes'])
-    #     # plt.show()
         video_real_info = []
+        tt = transforms.Compose(
+            [
+                transforms.Resize((224,224)),
+                transforms.ToTensor(),
+                # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
+                # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
         for bbox_segment in bbox_segments:
             # print('bbox_segment: ',bbox_segment)
             #read frames of segment
@@ -180,20 +234,14 @@ def __main__():
             video_real_info.append({
                 'frames_names':frames_names,
                 'real_frames':real_frames,
-                'real_bboxes':real_bboxes})
-            # print('real_frames, real_bboxes: ', len(frames_names), len(real_frames), len(real_bboxes))
-        print('video_real_info: ', len(video_real_info))
-        type_set_frames = constants.FRAME_POS_ALL
-        first = 0
-        # end = len(real_frames) - 1
-        # area_threshold = 40
-        # persons_distance_threshold = 15
+                'real_bboxes': real_bboxes})
+          
+            # img_test = tt(real_frames[0])
+            # img_test = torch.unsqueeze(img_test,dim=0)
+            
+        # img_test = img_test * masks  #tensor [1,3,224,224]
+        # pytorch_show(make_grid(img_test.data, padding=10))
         
-        mask_rcnn_threshold = 0.3
-        
-        
-        font_size = 10
-
         for index, segment_real_info in enumerate(video_real_info): #di by di
             #person detection
             persons_in_segment = []
@@ -225,60 +273,38 @@ def __main__():
                 # print('No anomalous regions found...')
                 iou = localization_utils.IOU(segment_real_info['real_bboxes'][0],None)
             else:
-                iou = localization_utils.IOU(segment_real_info['real_bboxes'][0],anomalous_regions[0])
+                segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
+                iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
             row = [frames_names[first], iou]
             data_rows.append(row)
         
-    #     if plot:           
-    #         # create a figure with two subplots
-    #         fig, axes = plt.subplots(1, 5,figsize=(25,5))
-    #         def f(image):
-    #             return np.array(image)
+            if plot:
+                font_size = 10
+                img_source = l_source_frames[index]
+                di_image = l_di_images[index]
+                di_image = di_image / 2 + 0.5
+                # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
+                preprocesing_reults = []
+                preprocesing_reults.append(di_image)
+                mask = l_masks[index]
+                mask = np.squeeze(mask,2)
+                mask = np.stack([mask, mask, mask], axis=2)
+                preprocesing_reults.append(mask)
+                preprocesing_reults.append(img_source)
+                preprocesing_reults.append(video_prepoc_saliencies[index]['preprocesing'][2])
+                preprocesing_reults.append(video_prepoc_saliencies[index]['preprocesing'][3])
+               
 
-            
-    #         ######################### To plot a dynamic image
-    #         di_image = torch.squeeze(di_images, 0)
-    #         di_image = di_image / 2 + 0.5      
-    #         di_image = resize_transform(di_image)
-    #         di_image = di_image.numpy()
-    #         di_image = np.transpose(di_image, (1, 2, 0))
-    #         ims = []
+                real_frames = video_real_info[index]['real_frames']
+                real_bboxes = video_real_info[index]['real_bboxes']
 
-    #         # img_process_mask = localization_utils.gray2rgbRepeat(preprocesing_reults['process_mask'])
-
-    #         di_image = localization_utils.plotOnlyBBoxOnImage(di_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
-    #         image_anomalous, image_anomalous_final = None, None
-    #         for i in range(len(real_frames)):
-    #             # real_frame = real_frames[i].copy()
-    #             gt_image = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), real_bboxes[i], constants.PIL_RED, 'gtruth', font_size)
-    #             # image = localization_utils.plotOnlyBBoxOnImage(di_images, real_bboxes[i], constants.PIL_RED, 'Ground Truth')
-    #             if len(saliency_bboxes) > 0:
-    #                 image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency',font_size)
-    #                 image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN, 'person', font_size)
-                    
-                    
-    #                 image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA, 'person_filter',font_size)
-    #                 image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions, constants.PIL_BLUE, 'anomalous', font_size)
-    #                 if len(anomalous_regions)>0:
-    #                     image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA, 'anomalous', font_size)
-                                       
-    #             im0 = axes[0].imshow(f(masks))
-    #             im1 = axes[1].imshow(f(di_masked))
-    #             im2 = axes[2].imshow(f(image_persons))
-    #             im3 = axes[3].imshow(f(image_persons_filt))
-    #             im4 = axes[4].imshow(f(image_anomalous))
+                preprocesing_reults.append(np.multiply(real_frames[0],mask))
                 
-    #             ims.append([im0])
-    #             ims.append([im1])
-    #             ims.append([im2])
-    #             ims.append([im3])
-    #             ims.append([im4])
-    #         print('ims: ', len(ims))
-    #         ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=100)
-    #         # ani.save('RESULTS/animations/animation.mp4', writer=writer)          
-            
-    #         plt.show()
-    #         # ani.save('RESULTS/animations/animation.gif', writer='imagemagick', fps=30)
+                saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
+                
+                # print('types: ', type(dynamic_img), type(real_frames), type(real_bboxes))
+                myplot(2, 6, 10, preprocesing_reults, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)   
+    
     # ############# MAP #################
     print('data rows: ', len(data_rows))
     df = pd.DataFrame(data_rows, columns=['path', 'iou'])
@@ -287,14 +313,4 @@ def __main__():
    
 __main__()
 
-# while (1):
-        #     plt.show()
-        #     # cv2.imshow('eefef', img)
-        #     k = cv2.waitKey(33)
-        #     if k == -1:
-        #         continue
-        #     if k == ord('a'):
-        #         break
-        #     if k == ord('q'):
-        #         # localization_utils.tuple2BoundingBox(bboxes[0])
-        #         sys.exit('finish!!!') 
+

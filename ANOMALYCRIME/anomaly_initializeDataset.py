@@ -16,7 +16,7 @@ def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, 
      test_labels = anomaly_dataset.labels_2_binary(test_labels)
      util.print_balance(test_labels, 'test')
      image_datasets = {
-          "test": anomaly_dataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms_t["test"], source=dataset_source,
+          "test": anomaly_dataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms_t["test"],
                nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment)
      }
      dataloaders_dict = {
@@ -24,21 +24,20 @@ def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, 
      }
      return dataloaders_dict, test_names
 
-def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
-     train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, path_dataset)
-     combined = list(zip(train_names, train_labels, train_num_frames))
+def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
+     train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, path_dataset)
+     combined = list(zip(train_names, train_labels, train_num_frames, train_bbox_files))
      random.shuffle(combined)
 
-     train_names[:], train_labels[:], train_num_frames = zip(*combined)
+     train_names[:], train_labels[:], train_num_frames, train_bbox_files = zip(*combined)
      train_labels = anomaly_dataset.labels_2_binary(train_labels)
      test_labels = anomaly_dataset.labels_2_binary(test_labels)
      util.print_balance(train_labels, 'train')
      util.print_balance(test_labels, 'test')
      image_datasets = {
-
-          "train": anomaly_dataset.AnomalyDataset( dataset=train_names, labels=train_labels, numFrames=train_num_frames, spatial_transform=transforms_t["train"], source=dataset_source,
+          "train": anomaly_dataset.AnomalyDataset( dataset=train_names, labels=train_labels, numFrames=train_num_frames, bbox_files = train_bbox_files, spatial_transform=transforms_t["train"],
                nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment),
-          "test": anomaly_dataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, spatial_transform=transforms_t["test"], source=dataset_source,
+          "test": anomaly_dataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames,  bbox_files = test_bbox_files, spatial_transform=transforms_t["test"],
                nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment)
      }
      dataloaders_dict = {
@@ -47,15 +46,15 @@ def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_video
      }
      return dataloaders_dict, test_names
 
-def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size, num_workers, numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
-     train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, path_dataset)
-     # print(train_multilabels)
-     combined = list(zip(train_names, train_num_frames))
-     #     print(combined)
-     #     print('='*100)
+def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
+     
+     train_names,train_labels,train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, path_dataset)
+  
+     combined = list(zip(train_names, train_num_frames, train_bbox_files))
+  
      combined_train_names, combined_val_names, train_labels, val_labels = train_test_split(combined, train_labels, stratify=train_labels, test_size=0.30)
-     train_names, train_num_frames = zip(*combined_train_names)
-     val_names, val_num_frames = zip(*combined_val_names)
+     train_names, train_num_frames, train_bbox_files = zip(*combined_train_names)
+     val_names, val_num_frames, val_bbox_files = zip(*combined_val_names)
      train_labels = anomaly_dataset.labels_2_binary(train_labels)
      val_labels = anomaly_dataset.labels_2_binary(val_labels)
      test_labels = anomaly_dataset.labels_2_binary(test_labels)
@@ -73,11 +72,11 @@ def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_v
      
      
      image_datasets = {
-          "train": anomaly_dataset.AnomalyDataset( dataset=train_names, labels=train_labels, numFrames=train_num_frames, spatial_transform=transforms["train"], source=dataset_source,
+          "train": anomaly_dataset.AnomalyDataset( dataset=train_names, labels=train_labels, numFrames=train_num_frames, bbox_files=train_bbox_files, spatial_transform=transforms["train"],
                nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment),
-          "val": anomaly_dataset.AnomalyDataset( dataset=val_names, labels=val_labels, numFrames=val_num_frames, spatial_transform=transforms["val"], source=dataset_source,
+          "val": anomaly_dataset.AnomalyDataset( dataset=val_names, labels=val_labels, numFrames=val_num_frames, bbox_files=val_bbox_files, spatial_transform=transforms["val"], 
                nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment),
-          "test": anomaly_dataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, spatial_transform=transforms["test"], source=dataset_source,
+          "test": anomaly_dataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms["test"],
                nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment)
      }
      dataloaders_dict = {

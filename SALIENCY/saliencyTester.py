@@ -107,7 +107,7 @@ class SaliencyTester():
                 )
             )
 
-    def normalize_tensor(self, img):
+    def min_max_normalize_tensor(self, img):
         # print("normalize:", img.size())
         _min = torch.min(img)
         _max = torch.max(img)

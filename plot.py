@@ -104,14 +104,14 @@ def plot_results(path, lastEpoch, nfolds):
 
     # plt.axvline(x=lastEpoch, color='g', linestyle='--')
     
-    plt.text(-5.0, 0.1, 'Accuracy: '+str(acc), horizontalalignment='center', verticalalignment='center',
+    plt.text(0.0, 0.0, 'Accuracy: '+str(acc), horizontalalignment='center', verticalalignment='center',
           bbox=dict(boxstyle="square",
               ec=(1., 0.5, 0.5),
               fc=(1., 0.8, 0.8),))
 
     plt.show()
-
-    print('max test accuracy until ',lastEpoch,' epoch: ', np.amax(np.array(avgTestAcc[0:lastEpoch])))
+    print('max test accuracy until ',lastEpoch,' epoch: ', acc)
+    # print('max test accuracy until ',lastEpoch,' epoch: ', np.amax(np.array(avgTestAcc[0:lastEpoch])))
 
 def __main__():
     parser = argparse.ArgumentParser()

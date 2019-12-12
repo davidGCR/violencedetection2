@@ -18,7 +18,25 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 import copy
 import itertools
 
-# import point.Point as Point
+def getSegmentBBox(lbboxes):
+    xmin = 10000
+    ymin = 10000
+    xmax = 0
+    ymax = 0
+    
+    for bbox in lbboxes:
+        if bbox.pmin.x < xmin:
+            xmin = bbox.pmin.x
+        if bbox.pmin.y < ymin:
+            ymin = bbox.pmin.y
+        if bbox.pmax.x > xmax:
+            xmax = bbox.pmax.x
+        if bbox.pmax.y > ymax:
+            ymax = bbox.pmax.y
+    
+    return BoundingBox(Point(xmin,ymin),Point(xmax, ymax))
+
+
 def IOU(gt_bbox1, bbox2):
     if bbox2 == None:
         return 0
@@ -296,7 +314,8 @@ def computeBoundingBoxFromMask(mask):
     img_process_mask = process_mask(mask)
     img_contuors, contours = findContours(img_process_mask, remove_fathers=True)
     img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
-    preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
+    # preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
+    preprocesing_reults = [mask, img_process_mask, img_contuors, img_bboxes]
     return bboxes, preprocesing_reults
 
 def process_mask(img):
@@ -421,7 +440,7 @@ def get_anomalous_video(video_test_name, reduced_dataset = True):
     return path, label, bbox_infos_frames, num_frames
 
 def tensor2numpy(x):
-    x = x / 2 + 0.5
+    # x = x / 2 + 0.5
     x = x.numpy()
     x = np.transpose(x, (1, 2, 0))
     # print('x: ', type(x), x.shape)

@@ -12,7 +12,7 @@ import sys
 
 
 class AnomalyDataset(Dataset):
-    def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, source, nDynamicImages,
+    def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, nDynamicImages,
                     videoSegmentLength, maxNumFramesOnVideo, positionSegment):
         self.spatial_transform = spatial_transform
         self.images = dataset
@@ -23,7 +23,6 @@ class AnomalyDataset(Dataset):
         self.numDynamicImagesPerVideo = nDynamicImages  #number of segments from the video/ -1 means all the segments from the video
         self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
         
-        self.source = source
         self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
         self.positionSegment = positionSegment  #could be at begin, central or random
         self.skipPercentage = 35 
@@ -64,29 +63,30 @@ class AnomalyDataset(Dataset):
     
     def get_bbox_segmet(self, video_segments, bdx_file_path, idx):
         data = []
-        with open(bdx_file_path, 'r') as file:
-            for row in file:
-                data.append(row.split())
-        data = np.array(data)
         bbox_segments = [] #all video [[info, info, ...] , [info, info, ...], ...] ##info is a list: [num_frame, flac, xmin, ymin, xmax, ymax]
-        for segment in video_segments:
-            bbox_infos_frames = []
-            for frame in segment:
-                # print('frame: ', frame)
-                num_frame = int(frame[len(frame) - 7:-4])
-                if num_frame != int(data[num_frame, 5]):
-                    sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
-                    # print('Houston we have a problem: index frame does not equal to the bbox file!!!')
-                
-                flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
-                xmin = int(data[num_frame, 1])
-                ymin= int(data[num_frame, 2])
-                xmax = int(data[num_frame, 3])
-                ymax = int(data[num_frame, 4])
-                # print(type(frame), type(flac), type(xmin), type(ymin))
-                info_frame = [frame, flac, xmin, ymin, xmax, ymax]
-                bbox_infos_frames.append(info_frame)
-            bbox_segments.append(bbox_infos_frames)
+        if bdx_file_path is not None:
+            with open(bdx_file_path, 'r') as file:
+                for row in file:
+                    data.append(row.split())
+            data = np.array(data)
+            for segment in video_segments:
+                bbox_infos_frames = []
+                for frame in segment:
+                    # print('frame: ', frame)
+                    num_frame = int(frame[len(frame) - 7:-4])
+                    if num_frame != int(data[num_frame, 5]):
+                        sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
+                        # print('Houston we have a problem: index frame does not equal to the bbox file!!!')
+                    
+                    flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
+                    xmin = int(data[num_frame, 1])
+                    ymin= int(data[num_frame, 2])
+                    xmax = int(data[num_frame, 3])
+                    ymax = int(data[num_frame, 4])
+                    # print(type(frame), type(flac), type(xmin), type(ymin))
+                    info_frame = [frame, flac, xmin, ymin, xmax, ymax]
+                    bbox_infos_frames.append(info_frame)
+                bbox_segments.append(bbox_infos_frames)
         return bbox_segments
 
     def getVideoSegments(self, vid_name, idx):
@@ -96,12 +96,29 @@ class AnomalyDataset(Dataset):
         video_segments = []
         seqLen = 0 #number of frames for each segment
         
+        # if self.numFrames[idx]  < self.videoSegmentLength * self.numDynamicImagesPerVideo:
+        #     seqLen = self.numFrames[idx] // self.numDynamicImagesPerVideo
         if self.numFrames[idx] <= self.videoSegmentLength:
             seqLen = self.numFrames[idx]
+            # print('Short video: ', vid_name, self.numFrames[idx], 'seqLen:', seqLen)
         else:
             seqLen = self.videoSegmentLength
         num_frames_on_video = self.numFrames[idx] 
         video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
+
+        if len(video_splits_by_no_Di) > 1:
+            last_idx = len(video_splits_by_no_Di)-1
+            split = video_splits_by_no_Di[last_idx]
+            if len(split) < 10:
+                del video_splits_by_no_Di[last_idx]
+                
+        if len(video_splits_by_no_Di) < self.numDynamicImagesPerVideo:
+            diff = self.numDynamicImagesPerVideo - len(video_splits_by_no_Di)
+            last_idx = len(video_splits_by_no_Di) - 1
+            for i in range(diff):
+                video_splits_by_no_Di.append(video_splits_by_no_Di[last_idx])
+
+        
 
         if self.numDynamicImagesPerVideo == 1:
             if self.positionSegment == 'random':
@@ -114,28 +131,12 @@ class AnomalyDataset(Dataset):
             video_segments = []
             video_segments.append(segment)
         elif self.numDynamicImagesPerVideo > 1:
-            print('num segments computed: ', str(len(video_splits_by_no_Di)))
-            i = self.numDynamicImagesPerVideo
             for i in range(len(video_splits_by_no_Di)):
                 if i < self.numDynamicImagesPerVideo:
                     video_segments.append(video_splits_by_no_Di[i])
+                else:
+                    break
                 
-
-            
-        #     if self.maxNumFramesOnVideo == 0: #use all frames from video
-        #         num_frames_on_video = self.numFrames[idx]
-        #     else: #use some frames from video
-        #         num_frames_on_video = self.maxNumFramesOnVideo if self.numFrames[idx] >= self.maxNumFramesOnVideo else self.numFrames[idx]
-        #     seqLen = num_frames_on_video // self.numDynamicImagesPerVideo  # calculate num frames by segment
-        #     # print('num_frames_on_video , segment length: ', num_frames_on_video, seqLen)
-        #     cut = 0
-        #     if self.labels[idx] == 0: # normal videos
-        #         video_segments, cut = self.skip_initial_segments(self.skipPercentage, video_segments)  #skip 35% of initial segments
-        #     video_segments = [frames_list[x:x + seqLen] for x in range(cut, num_frames_on_video + cut, seqLen)]
-        #     if len(video_segments) > self.numDynamicImagesPerVideo: #cut last segments
-        #         diff = len(video_segments) - self.numDynamicImagesPerVideo
-        #         video_segments = video_segments[: - diff]
-            # print(len(video_segments))
         bbox_segments =  self.get_bbox_segmet(video_segments, bbox_file, idx)
         return video_segments, seqLen, bbox_segments
 
@@ -145,8 +146,10 @@ class AnomalyDataset(Dataset):
         label = self.labels[idx]
         dinamycImages = []
         sequences, seqLen, bbox_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        # print('SEGmentos lenght: ', len(sequences), vid_name)
         for seq in sequences:
             frames = []
+            # print('segment lenght: ', len(seq))
             for frame in seq:
                 img_dir = str(vid_name) + "/" + frame
                 img = Image.open(img_dir).convert("RGB")
@@ -156,7 +159,8 @@ class AnomalyDataset(Dataset):
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dinamycImages.append(imgPIL)
             
-        dinamycImages = torch.stack(dinamycImages, dim=0) #torch.Size([bs, ndi, ch, h, w])
+        dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+        # print('dynamic images: ', dinamycImages.size())
         if self.numDynamicImagesPerVideo == 1:
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
         return dinamycImages, label, vid_name, bbox_segments
@@ -220,16 +224,33 @@ def train_test_videos(train_file, test_file, g_path):
     train_labels = []
     test_names = []
     test_labels = []
+    train_bbox_files = []
+    test_bbox_files = []
     classes = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
     with open(train_file, 'r') as file:
         for row in file:
             train_names.append(os.path.join(g_path,row[:-1]))
             train_labels.append(row[:-4])
+            label = row[:-4]
+            if label != 'Normal_Videos':
+                file = row[:-1] + '.txt'
+                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                train_bbox_files.append(file)
+            else:
+                train_bbox_files.append(None)
 
     with open(test_file, 'r') as file:
         for row in file:
             test_names.append(os.path.join(g_path,row[:-1]))
             test_labels.append(row[:-4])
+            label = row[:-4]
+            if label != 'Normal_Videos':
+                file = row[:-1] + '.txt'
+                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                test_bbox_files.append(file)
+            else:
+                test_bbox_files.append(None)
+
     # for idx,label in enumerate(train_labels):
     #     if label == 'Normal_Videos':
     #         train_labels[idx]=0
@@ -246,7 +267,7 @@ def train_test_videos(train_file, test_file, g_path):
     #      print(train_names[i])
     NumFrames_train = [len(glob.glob1(train_names[i], "*.jpg")) for i in range(len(train_names))]
     NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
-    return train_names, train_labels, NumFrames_train, test_names, test_labels, NumFrames_test
+    return train_names, train_labels, NumFrames_train, train_bbox_files, test_names, test_labels, NumFrames_test, test_bbox_files
 
 def only_anomaly_test_videos(test_file, g_path):
     """ load train-test split from original dataset """

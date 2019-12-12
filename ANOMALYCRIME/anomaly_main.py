@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/MyCode')
+sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 import anomaly_dataset
 import os
 import re
@@ -60,11 +60,11 @@ def testing(model, dataloaders, device, numDiPerVideos, plot_samples):
     return auc
 
 def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves, 
-                scheduler_type, dataset_source, num_epochs, dataloaders_dict, path_checkpoints, plot_samples, operation):
+                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples, operation):
     model, input_size = initialize_model( model_name=modelType, num_classes=num_classes, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
     # print(model)
     model.to(device)
-    MODEL_NAME = util.get_model_name(modelType, scheduler_type, numDiPerVideos, dataset_source, feature_extract, joinType, num_epochs)
+    MODEL_NAME = util.get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType, num_epochs)
     MODEL_NAME += additional_info
     MODEL_NAME = MODEL_NAME+'-FINAL' if operation == constants.OPERATION_TRAINING_FINAL else MODEL_NAME
     print(MODEL_NAME)
@@ -103,7 +103,7 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
             val_acc.append(epoch_acc_val)
     
     print("saving loss and acc history...")
-    if operation == 'trainingFinal':
+    if operation == 'trainingfinal':
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
     elif operation == 'training':
@@ -147,7 +147,6 @@ def __main__():
 
     path_dataset = args.pathDataset
     shuffle = args.shuffle
-    dataset_source = "frames"
     num_workers = args.numWorkers
     input_size = 224
     maxNumFramesOnVideo = args.maxNumFramesOnVideo
@@ -170,17 +169,17 @@ def __main__():
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
     
     if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TESTING:
-        dataloaders_dict, test_names = anomaly_initializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size, num_workers,
+        dataloaders_dict, test_names = anomaly_initializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
     elif operation == constants.OPERATION_TRAINING_FINAL:
-        dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size, num_workers,
+        dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
 
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_FINAL:
         training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
-                scheduler_type, dataset_source, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
+                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
     elif operation == constants.OPERATION_TESTING:
         model = torch.load(testModelFile)
         testing(model, dataloaders_dict['test'], device, numDiPerVideos, plot_samples)

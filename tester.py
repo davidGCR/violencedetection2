@@ -20,7 +20,7 @@ class Tester:
         predictions = []  #indeicea
         scores = []
         # Iterate over data.
-        for inputs, labels, video_names in tqdm(self.dataloader):
+        for inputs, labels, video_names, bbox_segments in tqdm(self.dataloader):
             if self.numDiPerVideos > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             gt_labels.extend(labels.numpy())

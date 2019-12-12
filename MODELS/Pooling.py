@@ -18,9 +18,9 @@ def maxTemporalPool(x, numDiPerVideos, fn_encoder):
     # loss #torch.Size([8, 1, 3, 224, 224])
     # print('tempPool input: ', x.size())
     lista = []
-    seqLen = numDiPerVideos
+    # seqLen = numDiPerVideos
     # print(seqLen)
-    for dimage in range(0, seqLen):
+    for dimage in range(0, numDiPerVideos):
         feature = fn_encoder(x[dimage])
         # print('encoder out: ', feature.size())
         lista.append(feature)

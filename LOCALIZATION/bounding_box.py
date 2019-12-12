@@ -71,6 +71,6 @@ class BoundingBox(object):
         return hash((self._pmin.x, self._pmin.y, self._pmax.x, self._pmax.y, self._iou))
     
     def __str__(self):
-        return 'BoundingBox(('+str(self._pmin.x)+','+str(self._pmin.y)+')'+'('+str(self._pmax.x)+','+str(self._pmax.y)+', abn_area: '+str(self._iou)+', iou:'+str(self._iou)+'))'
+        return 'BoundingBox(('+str(self._pmin.x)+','+str(self._pmin.y)+')'+'('+str(self._pmax.x)+','+str(self._pmax.y)+', iou:'+str(self._iou)+'))'
     
     
