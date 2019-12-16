@@ -126,7 +126,7 @@ def __main__():
     path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size,
+    dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size,
                                                         num_workers, numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
     tester =  saliencyTester.SaliencyTester(saliency_model_file, num_classes,  dataloaders_dict['test'], test_names, input_size, saliency_model_config, numDiPerVideos, threshold)
     
@@ -149,11 +149,11 @@ def __main__():
         di_images = tensor2numpy(di_images)
         masks = tensor2numpy(masks)
 
-        threshold_mask = torch.squeeze(threshold_mask,0)
-        threshold_mask = threshold_mask.detach().cpu()
-        threshold_mask = tester.normalize_tensor(threshold_mask)
-        threshold_mask = tensor2numpy(threshold_mask)
-        threshold_mask = tester.thresholding_cv2(threshold_mask)
+        # threshold_mask = torch.squeeze(threshold_mask,0)
+        # threshold_mask = threshold_mask.detach().cpu()
+        # threshold_mask = tester.normalize_tensor(threshold_mask)
+        # threshold_mask = tensor2numpy(threshold_mask)
+        # threshold_mask = tester.thresholding_cv2(threshold_mask)
         # print('threshold_mask: ', type(threshold_mask), threshold_mask.shape)
 
         morpho = process_mask(threshold_mask[:,:, 0])  # 0 channels

@@ -304,15 +304,61 @@ def distance(point1, point2):
     distance = math.sqrt(((point1.x - point2.x)** 2) + ((point1.y - point2.y)** 2))
     return distance
 
+def myTresholding(image, cell_size=[8, 8]):
+    img_thresholding = image.copy()
+    h = img_thresholding.shape[0]
+    w = img_thresholding.shape[1]
+    cell_h = h//cell_size[0]
+    cell_w = w // cell_size[1]
+    # print('image shape: ', image.shape, ', cell h,w', cell_h, cell_w) #(240,320,1)
+    
+    for row in range(0, h, cell_size[0]):
+        for col in range(0, w, cell_size[1]):
+            cell = img_thresholding[row:row + cell_size[0], col:col + cell_size[1],:]
+            # cell = cell.reshape((1, 12))
+            # cell = np.squeeze(cell)
+            # max_el = np.amax(cell)
+            max_el = np.average(cell)
+            # print('****** (', str(row), ',', str(col), ')', cell, 'maax: ', max_el)
+            
+            img_thresholding[row:row + cell_size[0], col:col + cell_size[1],:] = max_el
+    return img_thresholding
+
+def myPreprocessing(image):
+    if image.shape[2] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # mask = thresholding_cv2(mask)
+    threshold = 0.5
+    mask = ((image > threshold) * 1).astype("uint8")
+    mask = np.squeeze(mask,2)
+    # img_process_mask = process_mask(mask)
+    # print('ttttttttttttttttttttttttttttttttttttt')
+    # print(mask.shape)
+    img_process_mask = mask
+    # print(img_process_mask.shape)
+    img_contuors, contours = findContours(img_process_mask, remove_fathers=True)
+    # print(img_contuors.shape)
+    img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
+    # preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
+    preprocesing_reults = [mask, img_process_mask, img_contuors, img_bboxes]
+    return bboxes, preprocesing_reults
+    
+
 def computeBoundingBoxFromMask(mask):
     """
-    *** mask: rgb numpy image
+    *** mask: [h,w,c]
+    *** return: [thresholding, morpho, contours, bboxes]
     """
     if mask.shape[2] == 3:
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-    mask = thresholding_cv2(mask)
-    img_process_mask = process_mask(mask)
-    img_contuors, contours = findContours(img_process_mask, remove_fathers=True)
+    # print('uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
+    mask = thresholding_cv2(mask) #(h,w)
+    # print(mask.shape)
+    img_process_mask = process_mask(mask) #(h,w)
+    # print(img_process_mask.shape)
+    img_contuors, contours = findContours(img_process_mask, remove_fathers=True) #(h,w,c)
+    # print(img_contuors.shape)
+
     img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
     # preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
     preprocesing_reults = [mask, img_process_mask, img_contuors, img_bboxes]

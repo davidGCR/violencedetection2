@@ -67,6 +67,7 @@ class Loss:
         # destroyed_images = destroyed_images.permute(1, 0, 2, 3, 4)
         # print('====>destroyed_images: ', destroyed_images.size()) #torch.Size([8, 1, 3, 224, 224])
         out = black_box_func(destroyed_images)
+        # print('out destroyer: ', out.size(), targets.size())
         
         return self.cw_loss(out, targets, targeted=False, t_conf=1., nt_conf=5)
   

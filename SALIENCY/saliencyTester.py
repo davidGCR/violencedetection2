@@ -1,3 +1,5 @@
+# import sys
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -5,10 +7,10 @@ import torchvision
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from .saliencyModel  import build_saliency_model
+import SALIENCY.saliencyModel
 import random
 from operator import itemgetter
-from loss import Loss
+from SALIENCY.loss import Loss
 import os
 from torchvision.utils import save_image
 import constants
@@ -27,7 +29,7 @@ class SaliencyTester():
         self.numDiPerVideos = numDiPerVideos
         self.threshold = threshold
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.net = build_saliency_model(num_classes=num_classes)
+        self.net = SALIENCY.saliencyModel.build_saliency_model(num_classes=num_classes)
         self.net = self.net.to(device)
         self.net = torch.load(saliency_model_file)
         self.net.eval()

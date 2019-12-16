@@ -10,9 +10,10 @@ import constants
 import MODELS.Pooling as Pooling
 
 class ViolenceModelResNet(nn.Module):
-    def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract):
+    def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract, inference=False):
         super(ViolenceModelResNet, self).__init__()
         self.numDiPerVideos = numDiPerVideos
+        self.inference = inference
         self.num_classes = num_classes
         self.joinType = joinType
         self.model_ft = None
@@ -37,10 +38,24 @@ class ViolenceModelResNet(nn.Module):
             self.linear = nn.Linear(512, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
     
+    def inferenceMode(self):
+        self.inference = True
+
     def forward(self, x):
         # print('forward input size:',x.size())
-        # shape = x.size()
-        # if len(shape) == 4:
+        if self.inference:
+            if self.numDiPerVideos > 1:
+                # l = []
+                # for i in range(self.numDiPerVideos):
+                #     l.append(x[0])
+                x = torch.unsqueeze(x, dim=1)
+                
+                # print('hereeeeeeeeeeeeee....', x.size())
+                # x = torch.stack(l, dim=1)
+                x = x.repeat(1, self.numDiPerVideos, 1, 1, 1)
+                x = x.permute(1, 0, 2, 3, 4)
+                # print('hereeeeeeeeeeeeee....2', x.size())
+
         if self.numDiPerVideos == 1:
             x = self.convLayers(x)  #torch.Size([8, 512, 7, 7])
             x = self.AdaptiveAvgPool2d(x) #  torch.Size([8, 512, 1, 1])
@@ -61,6 +76,7 @@ class ViolenceModelResNet(nn.Module):
                 # print('AdaptiveAvgPool2d out: ', x.size())
                 x = torch.flatten(x, 1)
         x = self.linear(x)
+        # print('forward output: ', x.size())
         return x
   
     # def getFeatureVectorCat(self, x):

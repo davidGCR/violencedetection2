@@ -11,7 +11,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_curve, auc
 
-def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
+def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
      test_names, test_labels, test_num_frames, test_bbox_files = anomaly_dataset.only_anomaly_test_videos(test_videos_path, path_dataset)
      test_labels = anomaly_dataset.labels_2_binary(test_labels)
      util.print_balance(test_labels, 'test')

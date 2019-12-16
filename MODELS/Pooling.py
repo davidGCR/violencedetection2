@@ -22,8 +22,11 @@ def maxTemporalPool(x, numDiPerVideos, fn_encoder):
     # print(seqLen)
     for dimage in range(0, numDiPerVideos):
         feature = fn_encoder(x[dimage])
-        # print('encoder out: ', feature.size())
+        
         lista.append(feature)
+
+    # resta = lista[0]-lista[1]
+    # print('encoder out: ', torch.sum(resta))
 
     minibatch = torch.stack(lista, 0)
     minibatch = minibatch.permute(1, 0, 2, 3, 4)

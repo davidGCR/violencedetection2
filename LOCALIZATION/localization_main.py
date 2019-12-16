@@ -4,8 +4,11 @@ sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
 import ANOMALYCRIME.anomaly_initializeDataset as anomaly_initializeDataset
+# import SALIENCY.saliencyTester as saliencyTester
+
+# from saliencyTester import *
+# from SALIENCY.saliencyModel  import SaliencyModel
 import SALIENCY.saliencyTester as saliencyTester
-# import SALIENCY
 import constants
 import torch
 import os
@@ -36,15 +39,14 @@ def maskRCNN():
 def f(image):
         return np.array(image)
 
-def paste_imgs_on_axes(r, c, images, axs):
-    ims = []
-    # for row in range(r):
-    #     for col in range(c):
-    #         if row+col < len(images):
-    #             imag = axs[row,col].imshow(f(images[row+col]))
-    #             ims.append(imag)    
-    for idx, img in enumerate(images):
-        imag = axs[r,idx].imshow(f(img))
+def paste_imgs_on_axes(images, axs):
+    ims = []    
+    r = axs.shape[0]-1
+    for idx in range(len(images)):
+        img, title = images[idx]
+        imag = axs[r, idx].imshow(f(img))
+        
+        axs[r, idx].set_title(title)
         ims.append(imag)
     return ims
 
@@ -53,15 +55,17 @@ def pytorch_show(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
 
-def myplot(r, c, font_size, preprocessing_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions):
+def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions):
     # create a figure with two subplots
-    fig, axes = plt.subplots(r, c, figsize=(25, 5))
+    fig, axes = plt.subplots(r, c, figsize=(25, 10))
 
-    for i in range(len(preprocessing_imgs)):
-        if i > c:
-            print('Not enought axes ...')
-            break
-        im1 = axes[0,i].imshow(preprocessing_imgs[i]) #'mask'
+
+    for i in range(grid_static_imgs.shape[0]-1):
+        for j in range(grid_static_imgs.shape[1]):
+            # print(type(grid_static_imgs[i,j]), i,j)
+            im1 = axes[i, j].imshow(grid_static_imgs[i,j][0])  
+            axes[i, j].set_title(grid_static_imgs[i,j][1])
+    
     
     img_source = localization_utils.plotOnlyBBoxOnImage(img_source, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
     image_anomalous, image_anomalous_final = None, None
@@ -73,25 +77,25 @@ def myplot(r, c, font_size, preprocessing_imgs, img_source, real_frames, real_bb
         img_source = localization_utils.plotOnlyBBoxOnImage(img_source, real_bboxes[i], constants.PIL_RED, 'testing', font_size)
         
         
-        images.append(img_source)
+        images.append((img_source,'testing'))
         
         if len(saliency_bboxes) > 0:
             image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
-            images.append(image_saliency)
+            images.append((image_saliency,'saliency bboxes'))
             image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN, 'person', font_size)
-            images.append(image_persons)
+            images.append((image_persons,'persons'))
 
             image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA, 'person_filter', font_size)
-            images.append(image_persons_filt)
+            images.append((image_persons_filt,'persons close'))
             image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions, constants.PIL_BLUE, 'anomalous', font_size)
             if len(anomalous_regions) > 0:
                 segmentBox = localization_utils.getSegmentBBox(real_bboxes)
                 image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_YELLOW, 'segment', font_size)
                 image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA, 'anomalous', font_size)
-            images.append(image_anomalous)                    
+            images.append((image_anomalous,'abnormal regions'))                    
         
         
-        ims.append(paste_imgs_on_axes(1,c,images, axes))
+        ims.append(paste_imgs_on_axes(images, axes))
     print('ims: ', len(ims))
     ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=100)
     # ani.save('RESULTS/animations/animation.mp4', writer=writer)          
@@ -128,13 +132,12 @@ def __main__():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     threshold = 0.5
 
-    saliency_model_file = args.saliencyModelFile
     saliency_model_config = saliency_model_file
 
     path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, dataset_source, batch_size,
+    dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size,
                                                         num_workers, numDiPerVideos, transforms_dataset, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
     tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloaders_dict['test'], test_names,
                                         input_size, saliency_model_config, numDiPerVideos, threshold)
@@ -186,7 +189,7 @@ def __main__():
         masks = tester.compute_mask(dis_images, labels)
         masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
         masks = masks.detach().cpu()
-        masks = tester.min_max_normalize_tensor(masks)
+        masks = tester.min_max_normalize_tensor(masks) #to 0-1
         l_masks = []
         
         for mask in masks:
@@ -204,19 +207,35 @@ def __main__():
         source_frames = masks
 
         video_prepoc_saliencies = []
+        video_prepoc_saliencies2 = []
+        l_imgs_processing = []
+
         for source_frame in source_frames: 
             source_frame = resize_transform(source_frame)
-            # di_masked = tester.min_max_normalize_tensor(di_masked)
             source_frame = tensor2numpy(source_frame)
             
             saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
-            source_frame = localization_utils.gray2rgbRepeat(np.squeeze(source_frame,2))
-            # print('di masked //// ', type(di_masked), di_masked.shape)
-            l_source_frames.append(source_frame)
             video_prepoc_saliencies.append({
                 'saliency bboxes': saliency_bboxes,
                 'preprocesing': preprocesing_reults
             })
+
+
+            img_thresholding = localization_utils.myTresholding(source_frame, cell_size=[4, 4])
+            saliency_bboxes2, preprocesing_reults2 = localization_utils.myPreprocessing(img_thresholding)  #only one by segment
+            l_imgs_processing.append(img_thresholding)
+            video_prepoc_saliencies2.append({
+                'saliency bboxes': saliency_bboxes2,
+                'preprocesing': preprocesing_reults2
+            })
+            
+
+            source_frame = localization_utils.gray2rgbRepeat(np.squeeze(source_frame,2))
+            l_source_frames.append(source_frame)
+            saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
+
+
+            
         
         video_real_info = []
         tt = transforms.Compose(
@@ -280,30 +299,43 @@ def __main__():
         
             if plot:
                 font_size = 10
+                subplot_r = 3
+                subplot_c = 5
                 img_source = l_source_frames[index]
                 di_image = l_di_images[index]
                 di_image = di_image / 2 + 0.5
                 # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
-                preprocesing_reults = []
-                preprocesing_reults.append(di_image)
-                mask = l_masks[index]
-                mask = np.squeeze(mask,2)
-                mask = np.stack([mask, mask, mask], axis=2)
-                preprocesing_reults.append(mask)
-                preprocesing_reults.append(img_source)
-                preprocesing_reults.append(video_prepoc_saliencies[index]['preprocesing'][2])
-                preprocesing_reults.append(video_prepoc_saliencies[index]['preprocesing'][3])
+                preprocesing_reults = np.empty( (subplot_r,subplot_c), dtype=tuple)
+                preprocesing_reults[0,0] = (img_source,'image source')
+                # mask = l_masks[index]
+                # mask = np.squeeze(mask,2)
+                # mask = np.stack([mask, mask, mask], axis=2)
+                # preprocesing_reults.append((mask,'mask'))
+                # preprocesing_reults.append((img_source,'img source'))
+                preprocesing_reults[0,1]=(video_prepoc_saliencies[index]['preprocesing'][0], 'thresholding')
+                preprocesing_reults[0,2]=(video_prepoc_saliencies[index]['preprocesing'][1], 'morpho')
+                preprocesing_reults[0,3]=(video_prepoc_saliencies[index]['preprocesing'][2], 'contours')
+                preprocesing_reults[0,4]=(video_prepoc_saliencies[index]['preprocesing'][3], 'bboxes')
+
+                img_myThresholding = l_imgs_processing[index]
+                img_myThresholding = np.squeeze(img_myThresholding,2)
+                img_myThresholding = np.stack([img_myThresholding, img_myThresholding, img_myThresholding], axis=2)
+                preprocesing_reults[1,0]=(img_myThresholding, 'myThresholding')
+                preprocesing_reults[1,1]=(video_prepoc_saliencies2[index]['preprocesing'][0], 'thresholding2')
+                preprocesing_reults[1,2]=(video_prepoc_saliencies2[index]['preprocesing'][1], 'morpho2')
+                preprocesing_reults[1,3]=(video_prepoc_saliencies2[index]['preprocesing'][2], 'contours2')
+                preprocesing_reults[1,4]=(video_prepoc_saliencies2[index]['preprocesing'][3], 'bboxes2')
                
 
                 real_frames = video_real_info[index]['real_frames']
                 real_bboxes = video_real_info[index]['real_bboxes']
 
-                preprocesing_reults.append(np.multiply(real_frames[0],mask))
+                # preprocesing_reults.append((np.multiply(real_frames[0],mask),'realFrame x mask'))
                 
                 saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
                 
                 # print('types: ', type(dynamic_img), type(real_frames), type(real_bboxes))
-                myplot(2, 6, 10, preprocesing_reults, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)   
+                myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)   
     
     # ############# MAP #################
     print('data rows: ', len(data_rows))

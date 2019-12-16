@@ -26,16 +26,7 @@ python3 ANOMALYCRIME/anomaly_main.py \
 --shuffle true
 
 
-# # SALIENCY: Train U-NET model
-# python3 ANOMALYCRIME/saliencyAnomaly_main.py  \
-# --batchSize 8 \
-# --numEpochs 10 \
-# --numWorkers 4  \
-# --saliencyCheckout SALIENCY/Models/anomaly \
-# --blackBoxFile ANOMALYCRIME/checkpoints/resnet18_frames_Finetuned-False-_di-1_fusionType-tempMaxPool_num_epochs-50_videoSegmentLength-0_positionSegment-random-FINAL.pth \
-# --maxNumFramesOnVideo 0 \
-# --videoSegmentLength 16 \
-# --positionSegment random
+
 
 
 # python3 Saliency/saliencyAnomalyTest.py \
