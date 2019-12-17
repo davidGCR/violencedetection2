@@ -44,17 +44,14 @@ class ViolenceModelResNet(nn.Module):
     def forward(self, x):
         # print('forward input size:',x.size())
         if self.inference:
+            # batch_num = x.size()[0]
+            # num_dyn_imgs_infer = x.size()[1]
             if self.numDiPerVideos > 1:
-                # l = []
-                # for i in range(self.numDiPerVideos):
-                #     l.append(x[0])
                 x = torch.unsqueeze(x, dim=1)
-                
-                # print('hereeeeeeeeeeeeee....', x.size())
-                # x = torch.stack(l, dim=1)
                 x = x.repeat(1, self.numDiPerVideos, 1, 1, 1)
-                x = x.permute(1, 0, 2, 3, 4)
-                # print('hereeeeeeeeeeeeee....2', x.size())
+                print('hereseeee: ', x.size())
+                x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
+            
 
         if self.numDiPerVideos == 1:
             x = self.convLayers(x)  #torch.Size([8, 512, 7, 7])
