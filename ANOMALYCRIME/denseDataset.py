@@ -57,7 +57,25 @@ class DenseDataset(Dataset):
                 random_segment = video_splits_by_no_Di[random_segment_idx]
         # print('random sequence:', random_segment_idx, len(random_segment))
         return random_segment
-    
+
+    def getSegmentBBox(self, segment):
+        xmin = 10000
+        ymin = 10000
+        xmax = 0
+        ymax = 0
+        
+        for bbox in segment:
+            if bbox[2] < xmin:
+                xmin = bbox[2]
+            if bbox[3] < ymin:
+                ymin = bbox[3]
+            if bbox[4] > xmax:
+                xmax = bbox[4]
+            if bbox[5] > ymax:
+                ymax = bbox[5]
+        
+        return [xmin, ymin, xmax, ymax]
+        
     def get_bbox_segmet(self, video_segments, bdx_file_path, idx):
         data = []
         bbox_segments = [] #all video [[info, info, ...] , [info, info, ...], ...] ##info is a list: [num_frame, flac, xmin, ymin, xmax, ymax]
@@ -139,10 +157,6 @@ class DenseDataset(Dataset):
         label = self.labels[idx]
         dinamycImages = []
         sequences, seqLen, bbox_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
-        # print('SEGmentos lenght: ', len(sequences), vid_name)
-        kh, kw = 32, 32
-        dh, dw = 32, 32
-       
 
         for seq in sequences:
             frames = []
@@ -158,7 +172,14 @@ class DenseDataset(Dataset):
             
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         # print('dynamic images: ', dinamycImages.size())
-        if self.numDynamicImagesPerVideo == 1:
+        if self.patch_size == -1 and self.numDynamicImagesPerVideo == 1 :  ## DENSE SAMPLING
+            [xmin, ymin, xmax, ymax] = self.getSegmentBBox(bbox_segments[0])
+            dinamycImages = dinamycImages.squeeze(dim=0)
+            dinamycImages = dinamycImages[:,:,ymin:ymax,xmin:xmax]
+            print(' dinamycImages cutted: ', dinamycImages.size())
+        else:
+            kh, kw = self.patch_size[0], self.patch_size[1]
+            dh, dw = self.patch_size[0], self.patch_size[1]
             # dinamycImages = dinamycImages.squeeze(dim=0)  ## get normal pytorch tensor [bs, ch, h, w]
             # print('Dense Dataset patches1: ', dinamycImages.size())  #torch.Size([1, 3, 224, 224])
             dinamycImages = F.pad(dinamycImages, (1, 1, 1, 1))
@@ -168,9 +189,9 @@ class DenseDataset(Dataset):
             patches = patches.view(*patches.size()[:3], -1) # torch.Size([1, 7, 7, 3072])
 
             patches = torch.unsqueeze(patches, dim=0)
-            patches = patches.view(49, 3, 32, 32)
+            patches = patches.view(49, 3, self.patch_size[0], self.patch_size[1])
             # print('Dense Dataset patches2: ', patches.size())
-        return patches, label, vid_name, bbox_segments
+            return patches, label, vid_name, bbox_segments
 
 #####################################################################################################################################
 
