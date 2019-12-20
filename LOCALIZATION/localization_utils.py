@@ -111,7 +111,56 @@ def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
 
     return persons_filtered, only_joined_regions
 
-def plotOnlyBBoxOnImage(image, boxes, color, text, font_size):
+def setLabelInImage(image, boxes, text, font_color, font_size, pos_text, background_color):
+    # draw = ImageDraw.Draw(image)
+    # font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', font_size)
+    font = ImageFont.load_default().font
+    # text_size = font.getsize(text)
+    # button_size = (text_size[0] + 2, text_size[1] + 2)
+    text_inicial = text[:]
+    # if isinstance(boxes, list):
+    #     print('is a listtttttttttttttt ', len(boxes))
+    #     for box in boxes:
+    #         print('*** enter', text)
+    #         if text == 'score':
+    #             text = str(round(box.score, 3))
+    #         text_size = font.getsize(text)
+    #         button_size = (text_size[0]+1, text_size[1]+1)
+    #         # font = ImageFont.load_default().font
+    #         # text = str(round(box.score, 3))
+    #         canvas = Image.new('RGB', button_size, background_color)
+    #         draw2 = ImageDraw.Draw(canvas)
+    #         draw2.text((0.3, 0.3), text, font_color, font)
+    #         if pos_text == 'left_corner':
+    #             pos_text = (box.pmin.x, box.pmin.y)
+    #         elif pos_text == 'right_corner':
+    #             # width, height = canvas.size
+    #             pos_text = (box.pmax.x-button_size[0], box.pmax.y-button_size[1])
+    #         image.paste(canvas, pos_text)
+    #         # image = image.copy()
+    #         text = text_inicial
+    # else:
+    if text == 'score':
+        text = str(round(boxes.score, 3))
+    text_size = font.getsize(text)
+    button_size = (text_size[0]+1, text_size[1]+1)
+    # font = ImageFont.load_default().font
+    # text = str(round(boxes.score, 3))
+    canvas = Image.new('RGB', button_size, background_color)
+    draw2 = ImageDraw.Draw(canvas)
+    draw2.text((0.3, 0.3), text, font_color, font)
+    if pos_text == 'left_corner':
+        pos_text = (boxes.pmin.x, boxes.pmin.y)
+    elif pos_text == 'right_corner':
+        # width, height = canvas.size
+        pos_text = (boxes.pmax.x-button_size[0], boxes.pmax.y-button_size[1])
+    image.paste(canvas, pos_text)
+    text = text_inicial
+    return image
+        # else:
+        #     draw.text(pos_text, text, fill=color, font = font, align ="left")  
+    
+def plotOnlyBBoxOnImage(image, boxes, color):
     if boxes is not None:
 
         if isinstance(image, np.ndarray):
@@ -123,15 +172,35 @@ def plotOnlyBBoxOnImage(image, boxes, color, text, font_size):
         draw = ImageDraw.Draw(image)
         # h = box.pmax.y - box.pmin.y
         # w = box.pmax.x - box.pmin.x
-        font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', font_size)
+        
+        
         if isinstance(boxes, list):
             for box in boxes:
                 # print('******* box: ', box)
                 draw.rectangle((box.pmin.x, box.pmin.y, box.pmax.x, box.pmax.y), fill=None, outline=color)
-                draw.text((box.pmin.x, box.pmin.y), text, fill =color,font = font, align ="left")
+                # if isinstance(bo)
+                # if text == None:
+                #     font = ImageFont.load_default().font
+                #     text = str(round(box.score, 3))
+                #     canvas = Image.new('RGB', (50, font_size + 10), "black")
+                #     draw2 = ImageDraw.Draw(canvas)
+                #     draw2.text((5,5), text, 'white', font)
+                #     image.paste(canvas, pos_text)
+                #     text = None
+                # else:
+                #     draw.text(pos_text, text, fill =color,font = font, align ="left")
         else:
             draw.rectangle((boxes.pmin.x, boxes.pmin.y, boxes.pmax.x, boxes.pmax.y), fill=None, outline=color)
-            draw.text((boxes.pmin.x, boxes.pmin.y), text, fill=color,font = font, align ="left")  
+            # if text == None:
+            #     font = ImageFont.load_default().font
+            #     text = str(round(boxes.score, 3))
+            #     canvas = Image.new('RGB', (50, font_size + 10), "black")
+            #     draw2 = ImageDraw.Draw(canvas)
+            #     draw2.text((5, 5), text, 'white', font)
+            #     image.paste(canvas, pos_text)
+            #     text = None
+            # else:
+            #     draw.text(pos_text, text, fill=color, font = font, align ="left")  
             
         # drawing text size 
         
@@ -185,6 +254,27 @@ def intersetionArea(bbox1, bbox2):
         return dx * dy
     else: return 0
 
+def removeInsideSmallAreas(list_bboxes):
+    filter_list = list_bboxes.copy()
+    filter_list.sort(key=lambda x: x.area,reverse=True)
+    i = 0
+    while i<len(filter_list)-1:
+        j = i + 1
+        while j<len(filter_list):
+            int_area = intersetionArea(filter_list[i], filter_list[j])
+            if int_area == filter_list[j].area:
+                del filter_list[j]
+                # for j in range(i+2,len(list_bboxes)-1):
+                # filter_list.append(list_bboxes[i])
+                # j = j+1
+            else:
+                # filter_list.append(list_bboxes[i])
+                # filter_list.append(list_bboxes[j])
+                # i = j + 1
+                j = j + 1
+        i = i + 1
+            
+    return filter_list
 
 
 def joinBBoxes(bbox1, bbox2, saliency_regions = None):
@@ -317,8 +407,8 @@ def myTresholding(image, cell_size=[8, 8]):
             cell = img_thresholding[row:row + cell_size[0], col:col + cell_size[1],:]
             # cell = cell.reshape((1, 12))
             # cell = np.squeeze(cell)
-            # max_el = np.amax(cell)
-            max_el = np.average(cell)
+            max_el = np.amax(cell)
+            # max_el = np.average(cell)
             # print('****** (', str(row), ',', str(col), ')', cell, 'maax: ', max_el)
             
             img_thresholding[row:row + cell_size[0], col:col + cell_size[1],:] = max_el

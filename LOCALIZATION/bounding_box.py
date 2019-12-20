@@ -2,10 +2,11 @@ import math
 from LOCALIZATION.point import Point
 
 class BoundingBox(object):
-    def __init__(self, pmin, pmax, iou=0, occluded = 0):
+    def __init__(self, pmin, pmax, iou=0, occluded = 0, score=0):
 
         self._pmin = pmin
         self._pmax = pmax
+        self._score = score
         self._occluded = occluded
         self._iou = iou
         pcenter = Point(-1,-1)
@@ -21,6 +22,14 @@ class BoundingBox(object):
     def center(self):
         return self._pcenter
     
+    @property
+    def score(self): 
+        return self._score 
+    @score.setter
+    def score(self, score):
+        self._score = score
+
+
     @property
     def iou(self): 
         return self._iou 
@@ -62,15 +71,15 @@ class BoundingBox(object):
         return per
 
     def __eq__(self, other):
-        return isinstance(other, BoundingBox) and self._pmin.x == other._pmin.x and self._pmin.y == other._pmin.y and self._pmax.x == other._pmax.x and self._pmax.y == other._pmax.y and self._iou == other._iou
+        return isinstance(other, BoundingBox) and self._pmin.x == other._pmin.x and self._pmin.y == other._pmin.y and self._pmax.x == other._pmax.x and self._pmax.y == other._pmax.y and self._iou == other._iou and self._area == other._area
 
 
     def __hash__(self):
         # use the hashcode of self.ssn since that is used
         # for equality checks as well
-        return hash((self._pmin.x, self._pmin.y, self._pmax.x, self._pmax.y, self._iou))
+        return hash((self._pmin.x, self._pmin.y, self._pmax.x, self._pmax.y, self._iou, self._area))
     
     def __str__(self):
-        return 'BoundingBox(('+str(self._pmin.x)+','+str(self._pmin.y)+')'+'('+str(self._pmax.x)+','+str(self._pmax.y)+', iou:'+str(self._iou)+'))'
+        return 'BoundingBox(('+str(self._pmin.x)+','+str(self._pmin.y)+')'+'('+str(self._pmax.x)+','+str(self._pmax.y)+' , area: '+ str(self._area)+', iou:'+str(self._iou)+', score: '+str(self._score)+'))'
     
     

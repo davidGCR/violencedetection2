@@ -49,7 +49,7 @@ class ViolenceModelResNet(nn.Module):
             if self.numDiPerVideos > 1:
                 x = torch.unsqueeze(x, dim=1)
                 x = x.repeat(1, self.numDiPerVideos, 1, 1, 1)
-                print('hereseeee: ', x.size())
+                # print('hereseeee: ', x.size())
                 x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
             
 

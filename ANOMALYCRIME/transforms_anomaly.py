@@ -2,7 +2,7 @@ import torchvision.transforms as transforms
 import numpy as np
 from tqdm import tqdm
 import constants
-import ANOMALYCRIME.anomaly_dataset as anomaly_dataset
+import ANOMALYCRIME.anomalyDataset as anomalyDataset
 import os
 import torch
 import glob
@@ -69,7 +69,7 @@ def compute_mean_std(dataloader):
     return pop_mean, pop_std0, pop_std1
 
 def getDataLoaderAnomaly(x, y, numFrames, data_transform, numDiPerVideos, maxNumFramesOnVideo, batch_size, num_workers, dataset_source, debugg_mode):
-    dataset = anomaly_dataset.AnomalyDataset( dataset=x, labels=y, numFrames=numFrames, spatial_transform=data_transform, source=dataset_source,
+    dataset = anomalyDataset.AnomalyDataset( dataset=x, labels=y, numFrames=numFrames, spatial_transform=data_transform, source=dataset_source,
              nDynamicImages=numDiPerVideos, debugg_mode=debugg_mode, maxNumFramesOnVideo=maxNumFramesOnVideo)
     dataloader = torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     return dataloader

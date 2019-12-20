@@ -152,7 +152,7 @@ def preProcessImage(npImage, img_size):
     # npImage = transforms.ToPILImage(npImage)
     
     img = transforms.ToTensor()(npImage)
-    print('preProcessImage: ', type(img), img.size())
+    # print('preProcessImage: ', type(img), img.size())
     # Pad to square resolution
     img, _ = pad_to_square2(img, 0)
     # Resize

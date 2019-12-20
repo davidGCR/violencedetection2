@@ -3,7 +3,7 @@ import sys
 sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
-import ANOMALYCRIME.anomaly_initializeDataset as anomaly_initializeDataset
+import ANOMALYCRIME.anomalyInitializeDataset as anomalyInitializeDataset
 # import SALIENCY.saliencyTester as saliencyTester
 
 # from saliencyTester import *
@@ -57,8 +57,8 @@ def pytorch_show(img):
 
 def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions):
     # create a figure with two subplots
-    fig, axes = plt.subplots(r, c, figsize=(25, 10))
-
+    fig, axes = plt.subplots(r, c, figsize=(25, 15))
+    plt.subplots_adjust(hspace=0.5, wspace=0, left = 0.03, right = 0.99)
 
     for i in range(grid_static_imgs.shape[0]-1):
         for j in range(grid_static_imgs.shape[1]):
@@ -67,31 +67,51 @@ def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bbox
             axes[i, j].set_title(grid_static_imgs[i,j][1])
     
     
-    img_source = localization_utils.plotOnlyBBoxOnImage(img_source, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
+    img_source = localization_utils.plotOnlyBBoxOnImage(img_source, saliency_bboxes, constants.PIL_YELLOW)
+    # img_source = localization_utils.setLabelInImage(img_source,saliency_bboxes, 'saliency','yellow',10,'left_corner','black' )
     image_anomalous, image_anomalous_final = None, None
     ims = []
     for i in range(len(real_frames)):
     #     # real_frame = real_frames[i].copy()
         images = []
-        gt_image = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), real_bboxes[i], constants.PIL_RED, 'gtruth', font_size)
-        img_source = localization_utils.plotOnlyBBoxOnImage(img_source, real_bboxes[i], constants.PIL_RED, 'testing', font_size)
+        gt_image = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), real_bboxes[i], constants.PIL_RED)
+
+        img_source = localization_utils.plotOnlyBBoxOnImage(img_source, real_bboxes[i], constants.PIL_RED)
+        img_source = localization_utils.setLabelInImage(img_source, real_bboxes[i], 'score', constants.PIL_RED, font_size, 'left_corner', 'white')
+        img_source = localization_utils.plotOnlyBBoxOnImage(img_source, saliency_bboxes, constants.PIL_YELLOW)
+        for s_box in saliency_bboxes:
+            img_source = localization_utils.setLabelInImage(img_source, s_box, 'score' ,font_color=constants.PIL_YELLOW,font_size=font_size,pos_text='right_corner',background_color='black' )
         
         
-        images.append((img_source,'testing'))
+        images.append((img_source,'source image'))
         
         if len(saliency_bboxes) > 0:
-            image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image, saliency_bboxes, constants.PIL_YELLOW, 'saliency', font_size)
-            images.append((image_saliency,'saliency bboxes'))
-            image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN, 'person', font_size)
+            image_saliency = localization_utils.plotOnlyBBoxOnImage(gt_image.copy(), real_bboxes[i], constants.PIL_RED)
+            image_saliency = localization_utils.setLabelInImage(image_saliency, real_bboxes[i], 'score', constants.PIL_RED, font_size, 'left_corner', 'black')
+            
+            image_saliency = localization_utils.plotOnlyBBoxOnImage(image_saliency, saliency_bboxes, constants.PIL_YELLOW)
+            for s_box in saliency_bboxes:
+                image_saliency = localization_utils.setLabelInImage(image_saliency,s_box, 'score' ,constants.PIL_YELLOW,font_size,'right_corner','black' )
+            images.append((image_saliency,'gt image with bboxes'))
+            
+            image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN)
+            # image_persons = localization_utils.setLabelInImage(image_persons,persons_in_segment[i], text='person',font_color='black',font_size=font_size,pos_text='left_corner',background_color='white' )
             images.append((image_persons,'persons'))
 
-            image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA, 'person_filter', font_size)
+            image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA)
+            # image_persons_filt = localization_utils.setLabelInImage(image_persons_filt, persons_segment_filtered[i], text='person_filter', font_color=constants.PIL_MAGENTA, font_size=font_size, pos_text='left_corner', background_color='white')
+            
             images.append((image_persons_filt,'persons close'))
-            image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions, constants.PIL_BLUE, 'anomalous', font_size)
+            image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions, constants.PIL_BLUE)
+            # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='anomalous', font_color=constants.PIL_BLUE, font_size=font_size, pos_text='left_corner', background_color='white')
+
             if len(anomalous_regions) > 0:
                 segmentBox = localization_utils.getSegmentBBox(real_bboxes)
-                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_YELLOW, 'segment', font_size)
-                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA, 'anomalous', font_size)
+                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_YELLOW,)
+                # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='segment', font_color=constants.PIL_YELLOW, font_size=font_size, pos_text='left_corner', background_color='white')
+                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA)
+                # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='anomalous', font_color=constants.PIL_MAGENTA, font_size=font_size, pos_text='left_corner', background_color='white')
+
             images.append((image_anomalous,'abnormal regions'))                    
         
         
@@ -137,7 +157,7 @@ def __main__():
     path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size,
+    dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size,
                                                         num_workers, numDiPerVideos, transforms_dataset, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
     tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloaders_dict['test'], test_names,
                                         input_size, saliency_model_config, numDiPerVideos, threshold)
@@ -156,6 +176,25 @@ def __main__():
         transforms.Resize(raw_size),
         transforms.ToTensor()
         ])
+
+    scale_transform = transforms.Compose(
+        [
+            transforms.ToPILImage(),
+            transforms.Resize((224,224)),
+            transforms.ToTensor(),
+            # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
+            # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
+    crop_transform = transforms.Compose(
+        [
+            transforms.ToPILImage(),
+            transforms.CenterCrop((224,224)),
+            transforms.ToTensor(),
+            # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
+            # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
     data_rows = []
     mask_model = maskRCNN()
     # Set up formatting for the movie files
@@ -165,6 +204,10 @@ def __main__():
     first = 0
     mask_rcnn_threshold = 0.3
     # fig, ax = plt.subplots()
+    classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth'
+    classifier = torch.load(classifierFile)
+    classifier.eval()
+    classifier.inferenceMode()
 
 
     for i, data in enumerate(dataloaders_dict['test'], 0):
@@ -176,14 +219,16 @@ def __main__():
         ######################## dynamic images
         l_source_frames = []
         l_di_images = [] # to plot
-        dis_images = dis_images.detach().cpu()
+        dis_images = dis_images.detach().cpu() # torch.Size([1, 3, 224, 224])
+        
         # dis_images = torch.squeeze(dis_images, 0) ## to num dynamic images > 1 and minibatch == 1
         for di_image in dis_images:
             # di_image = di_image / 2 + 0.5  q    
-            # di_image = resize_transform(di_image)
+            di_image = resize_transform(di_image)
             di_image = di_image.numpy()
             di_image = np.transpose(di_image, (1, 2, 0))
             l_di_images.append(di_image)
+            # print('di_image: ', di_image.shape)
 
         ######################## mask
         masks = tester.compute_mask(dis_images, labels)
@@ -210,11 +255,57 @@ def __main__():
         video_prepoc_saliencies2 = []
         l_imgs_processing = []
 
-        for source_frame in source_frames: 
+        for idx_dyn_img, source_frame in enumerate(source_frames): 
             source_frame = resize_transform(source_frame)
             source_frame = tensor2numpy(source_frame)
             
             saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
+            if len(saliency_bboxes) > 1:
+                # print('****removing inside areas...', len(saliency_bboxes))
+                saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)
+                # print('****removing inside areas finished...', len(saliency_bboxes))
+            
+            di_image = resize_transform(dis_images[idx_dyn_img])
+            # batch_crop_regions = []
+            for bbox in saliency_bboxes:
+                # print('Crop region BBOX: ',bbox)
+                crop_image = di_image[:, bbox.pmin.y:bbox.pmax.y,bbox.pmin.x:bbox.pmax.x]
+                # batch_crop_regions.append(crop_image)
+                # batch_crop_regions = torch.stack(batch_crop_regions,dim=0)
+                # print('Crop region size: ', crop_image.size())
+                if crop_image.size()[1] > 224 or crop_image.size()[2] > 224:
+                    crop_image = crop_transform(crop_image)
+                else:
+                    crop_image = scale_transform(crop_image)
+                batch_crop_regions = torch.unsqueeze(crop_image, dim=0)
+                batch_crop_regions = batch_crop_regions.to(device)
+                # print('batch_crop_regions: ', batch_crop_regions.size())
+                with torch.set_grad_enabled(False):
+                    output_patch = classifier(batch_crop_regions)
+                    p = torch.nn.functional.softmax(output_patch, dim=1)
+                    # print('p>: ',p.size())
+                    # scores.extend(p.cpu().numpy())
+                    valu_patch, indice_patch = torch.max(output_patch, 1)
+                    
+                    bbox.score = p[0][1].cpu().item()
+                    print('--------> label_p' , str(indice_patch),', score: ', str(p.data), bbox)
+
+            #     plot = True
+            # else:
+            #     plot = False
+            # crops = []
+            # for bbox in saliency_bboxes:
+            #     crop_image = dis_images[:,:, bbox.pmin.x:bbox.pmax.x, bbox.pmin.y:bbox.pmax.y]
+            #     # crops.append(crop_image)
+            #     crop_image = crop_image / 2 + 0.5
+            #     pytorch_show(make_grid(crop_image.cpu().data, nrow=7, padding=10))
+            #     plt.show()
+            # crops = torch.stack(crops, dim=0)
+            # print('crops: ', crops.size())
+            
+            # 
+            
+            print('saliency_bboxes: ', type(saliency_bboxes),len(saliency_bboxes),saliency_bboxes[0])
             video_prepoc_saliencies.append({
                 'saliency bboxes': saliency_bboxes,
                 'preprocesing': preprocesing_reults
@@ -233,19 +324,11 @@ def __main__():
             source_frame = localization_utils.gray2rgbRepeat(np.squeeze(source_frame,2))
             l_source_frames.append(source_frame)
             saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
-
-
+            
             
         
         video_real_info = []
-        tt = transforms.Compose(
-            [
-                transforms.Resize((224,224)),
-                transforms.ToTensor(),
-                # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
-                # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-            ]
-        )
+        
         for bbox_segment in bbox_segments:
             # print('bbox_segment: ',bbox_segment)
             #read frames of segment
@@ -273,7 +356,7 @@ def __main__():
                     # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
                 elif personDetector == constants.MASKRCNN:
                     persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(mask_model, frame, mask_rcnn_threshold)
-                print('num Persons in frame: ', len(persons_in_frame))
+                # print('num Persons in frame: ', len(persons_in_frame))
                 persons_in_segment.append(persons_in_frame)
         
             #refinement in segment
@@ -285,25 +368,49 @@ def __main__():
                 # anomalous_regions_in_frame = sorted(anomalous_regions_in_frame, key=lambda x: x.iou, reverse=True)
                 
                 anomalous_regions.extend(anomalous_regions_in_frame)
-                print('--------------- anomalous_regions: ', len(anomalous_regions))
+                # print('--------------- anomalous_regions: ', len(anomalous_regions))
                 anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
-                            
+            ######################################              
+            segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
+            # di_image = resize_transform(dis_images[idx_dyn_img])
+            di_image = resize_transform(dis_images[0])
+            # print('fdsfgsdgdsfgfdgh: ', di_image.size())
+            crop_image = di_image[:, int(segmentBox.pmin.y):int(segmentBox.pmax.y), int(segmentBox.pmin.x):int(segmentBox.pmax.x)]
+            if crop_image.size()[1] > 224 or crop_image.size()[2] > 224:
+                crop_image = crop_transform(crop_image)
+            else:
+                crop_image = scale_transform(crop_image)
+            batch_crop_regions = torch.unsqueeze(crop_image, dim=0)
+            batch_crop_regions = batch_crop_regions.to(device)
+            with torch.set_grad_enabled(False):
+                output_patch = classifier(batch_crop_regions)
+                p = torch.nn.functional.softmax(output_patch, dim=1)
+                valu_patch, indice_patch = torch.max(output_patch, 1)
+
+                for b in segment_real_info['real_bboxes']:
+                    b.score = p[0][1].cpu().item()
+                
+                print('--------> label_real' , str(indice_patch),', score: ', str(p.data), segmentBox)
+            ######################################
             if len(anomalous_regions) == 0:
                 # print('No anomalous regions found...')
                 iou = localization_utils.IOU(segment_real_info['real_bboxes'][0],None)
             else:
-                segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
+                # segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
                 iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
             row = [frames_names[first], iou]
             data_rows.append(row)
         
             if plot:
-                font_size = 10
-                subplot_r = 3
+                font_size = 9
+                subplot_r = 2
                 subplot_c = 5
                 img_source = l_source_frames[index]
                 di_image = l_di_images[index]
                 di_image = di_image / 2 + 0.5
+
+                
+                
                 # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
                 preprocesing_reults = np.empty( (subplot_r,subplot_c), dtype=tuple)
                 preprocesing_reults[0,0] = (img_source,'image source')
@@ -317,14 +424,14 @@ def __main__():
                 preprocesing_reults[0,3]=(video_prepoc_saliencies[index]['preprocesing'][2], 'contours')
                 preprocesing_reults[0,4]=(video_prepoc_saliencies[index]['preprocesing'][3], 'bboxes')
 
-                img_myThresholding = l_imgs_processing[index]
-                img_myThresholding = np.squeeze(img_myThresholding,2)
-                img_myThresholding = np.stack([img_myThresholding, img_myThresholding, img_myThresholding], axis=2)
-                preprocesing_reults[1,0]=(img_myThresholding, 'myThresholding')
-                preprocesing_reults[1,1]=(video_prepoc_saliencies2[index]['preprocesing'][0], 'thresholding2')
-                preprocesing_reults[1,2]=(video_prepoc_saliencies2[index]['preprocesing'][1], 'morpho2')
-                preprocesing_reults[1,3]=(video_prepoc_saliencies2[index]['preprocesing'][2], 'contours2')
-                preprocesing_reults[1,4]=(video_prepoc_saliencies2[index]['preprocesing'][3], 'bboxes2')
+                # img_myThresholding = l_imgs_processing[index]
+                # img_myThresholding = np.squeeze(img_myThresholding,2)
+                # img_myThresholding = np.stack([img_myThresholding, img_myThresholding, img_myThresholding], axis=2)
+                # preprocesing_reults[1,0]=(img_myThresholding, 'myThresholding')
+                # preprocesing_reults[1,1]=(video_prepoc_saliencies2[index]['preprocesing'][0], 'thresholding2')
+                # preprocesing_reults[1,2]=(video_prepoc_saliencies2[index]['preprocesing'][1], 'morpho2')
+                # preprocesing_reults[1,3]=(video_prepoc_saliencies2[index]['preprocesing'][2], 'contours2')
+                # preprocesing_reults[1,4]=(video_prepoc_saliencies2[index]['preprocesing'][3], 'bboxes2')
                
 
                 real_frames = video_real_info[index]['real_frames']
@@ -335,7 +442,18 @@ def __main__():
                 saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
                 
                 # print('types: ', type(dynamic_img), type(real_frames), type(real_bboxes))
-                myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)   
+                myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)
+                
+                
+                # di_image_to_crop = resize_transform(torch.squeeze(dis_images.cpu(), dim=0))
+                # di_image_to_crop = torch.unsqueeze(di_image_to_crop, dim=0)
+                # for bbox in saliency_bboxes:
+                #     print('Bounding Box: ', bbox.pmin.x, bbox.pmin.y,bbox.pmax.x,bbox.pmax.y)
+                #     crop_image = di_image_to_crop[:,:,  bbox.pmin.y:bbox.pmax.y ,bbox.pmin.x:bbox.pmax.x]
+                #     # crops.append(crop_image)
+                #     crop_image = crop_image / 2 + 0.5
+                #     pytorch_show(make_grid(crop_image.cpu().data, nrow=7, padding=10))
+                #     plt.show()
     
     # ############# MAP #################
     print('data rows: ', len(data_rows))
