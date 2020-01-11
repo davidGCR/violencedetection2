@@ -1,5 +1,5 @@
  python3 plot.py \
---learningCurvesFolder AnomalyCrime/learning_curves \
---modelName resnet18_frames_Finetuned-False-_di-5_fusionType-cat_num_epochs-50_videoSegmentLength-0_positionSegment-random \
+--learningCurvesFolder ANOMALYCRIME/learning_curves \
+--modelName resnet18_Finetuned-False-_di-3_fusionType-stdTempPool_num_epochs-30_videoSegmentLength-30_positionSegment-begin \
 --numFolds 1 \
---lastEpoch 4
+--lastEpoch 26

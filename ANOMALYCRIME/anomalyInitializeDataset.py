@@ -76,7 +76,7 @@ def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, 
      return dataloaders_dict, test_names
 
 def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
-     train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, path_dataset)
+     train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
      combined = list(zip(train_names, train_labels, train_num_frames, train_bbox_files))
      random.shuffle(combined)
 
@@ -99,7 +99,7 @@ def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_video
 
 def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
      
-     train_names,train_labels,train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, path_dataset)
+     train_names,train_labels,train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
   
      combined = list(zip(train_names, train_num_frames, train_bbox_files))
   

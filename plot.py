@@ -68,7 +68,7 @@ def plotScalarCombined(trainlist,testlist, tepochs,title, ylabel, fig2, rows, co
 # modelType = 'alexnetv2-frames-Finetuned:False-5-decay-'
 # path = '/media/david/datos/Violence DATA/HockeyFights/Results/frames/'
 
-def plot_results(path, lastEpoch, nfolds):
+def plot_results(path, lastEpoch, nfolds,title):
     train_lost = loadList(str(path)+'-train_lost.txt')
     train_acc = loadList(str(path)+'-train_acc.txt')
     test_lost = loadList(str(path)+'-val_lost.txt')
@@ -84,30 +84,42 @@ def plot_results(path, lastEpoch, nfolds):
     # saveList(path+modelType+'test_lost.txt',train_lost[150:300])
     # saveList(path+modelType+'test_acc.txt',train_lost[150:300])
 
-    fig2 = plt.figure(figsize=(12,12))
+    
 
-    plotScalarFolds(train_acc,train_lost,num_epochs,'Train',fig2,3,2,1)
-    plotScalarFolds(test_acc, test_lost, num_epochs, 'Test',fig2,3,2,3)
+    
     acc = 0
     if nfolds == 5:
+      fig2 = plt.figure(figsize=(12,12))
+      rows = 3
+      cols = 2
+      plotScalarFolds(train_acc,train_lost,num_epochs,'Train',fig2,rows,cols,1)
+      plotScalarFolds(test_acc, test_lost, num_epochs, 'Test',fig2,rows,cols,3)
       avgTrainAcc = getAverageFromFolds(train_acc,num_epochs)
       avgTrainLost = getAverageFromFolds(train_lost,num_epochs)
       avgTestAcc = getAverageFromFolds(test_acc,num_epochs)
       avgTestLost = getAverageFromFolds(test_lost, num_epochs)
       acc = np.max(avgTestAcc[0:lastEpoch+1])
-      plotScalarCombined(avgTrainAcc, avgTestAcc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, 3, 2, 5, lastEpoch)
-      plotScalarCombined(avgTrainLost, avgTestLost, num_epochs, 'Error Promedio', 'Error', fig2, 3, 2, 6, lastEpoch)
+      plotScalarCombined(avgTrainAcc, avgTestAcc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, rows, cols, 5, lastEpoch)
+      plotScalarCombined(avgTrainLost, avgTestLost, num_epochs, 'Error Promedio', 'Error', fig2, rows, cols, 6, lastEpoch)
+      plt.text(0.0, 0.0, 'Accuracy: '+str(acc), horizontalalignment='center', verticalalignment='center',
+            bbox=dict(boxstyle="square",
+            ec=(1., 0.5, 0.5),
+            fc=(1., 0.8, 0.8),))
     else:
+      fig2 = plt.figure(figsize=(15, 4))
+      fig2.suptitle(title, fontsize=14)
+      rows = 1
+      cols = 2
       acc = np.max(test_acc[0:lastEpoch+1])
-      plotScalarCombined(train_acc, test_acc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, 3, 2, 5, lastEpoch)
-      plotScalarCombined(train_lost, test_lost, num_epochs, 'Error Promedio', 'Error',fig2,3,2,6, lastEpoch)
+      plotScalarCombined(train_acc, test_acc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, rows, cols, 1, lastEpoch)
+      plotScalarCombined(train_lost, test_lost, num_epochs, 'Error Promedio', 'Error',fig2,rows,cols,2, lastEpoch)
 
     # plt.axvline(x=lastEpoch, color='g', linestyle='--')
     
-    plt.text(0.0, 0.0, 'Accuracy: '+str(acc), horizontalalignment='center', verticalalignment='center',
-          bbox=dict(boxstyle="square",
-              ec=(1., 0.5, 0.5),
-              fc=(1., 0.8, 0.8),))
+      plt.text(0.5, 0.25, 'Accuracy: '+str(acc), horizontalalignment='center', verticalalignment='center',
+            bbox=dict(boxstyle="square",
+                ec=(1., 0.5, 0.5),
+                fc=(1., 0.8, 0.8),))
 
     plt.show()
     print('max test accuracy until ',lastEpoch,' epoch: ', acc)
@@ -124,6 +136,6 @@ def __main__():
     path = os.path.join(args.learningCurvesFolder,model_name)
     lastEpoch = args.lastEpoch
     nfolds = args.numFolds
-    plot_results(path, lastEpoch, nfolds)
+    plot_results(path, lastEpoch, nfolds, model_name)
 
 __main__()

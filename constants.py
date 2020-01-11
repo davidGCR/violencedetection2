@@ -23,12 +23,16 @@ ANOMALY_PATH_TEST_SPLIT = os.path.join(PATH_UCFCRIME2LOCAL_README, 'Test_split_A
 ANOMALY_PATH_SALIENCY_MODELS = 'SALIENCY/Models/anomaly'
 ANOMALY_PATH_BLACK_BOX_MODELS = 'SALIENCY/BlackBoxModels/anomaly'
 
-OPERATION_TRAINING = 'training'
-OPERATION_TRAINING_FINAL = 'trainingfinal'
+OPERATION_TRAINING = 'train'
+OPERATION_TRAINING_FINAL = 'trainfinal'
 OPERATION_TESTING = 'testing'
 
-JOIN_TEMP_MAX_POOL = 'tempMaxPool'
+TEMP_MAX_POOL = 'maxTempPool'
+TEMP_AVG_POOL = 'avgTempPool'
+TEMP_STD_POOL = 'stdTempPool'
 JOIN_CONCATENATE = 'cat'
+MULT_TEMP_POOL = 'multipleTempPool'
+
 
 # frame, flac, xmin, ymin, xmax, ymax
 IDX_FRAME_NAME = 0

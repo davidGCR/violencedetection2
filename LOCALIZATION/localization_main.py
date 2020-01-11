@@ -224,7 +224,7 @@ def __main__():
         # dis_images = torch.squeeze(dis_images, 0) ## to num dynamic images > 1 and minibatch == 1
         for di_image in dis_images:
             # di_image = di_image / 2 + 0.5  q    
-            di_image = resize_transform(di_image)
+            # di_image = resize_transform(di_image)
             di_image = di_image.numpy()
             di_image = np.transpose(di_image, (1, 2, 0))
             l_di_images.append(di_image)

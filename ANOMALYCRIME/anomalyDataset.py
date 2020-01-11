@@ -131,6 +131,7 @@ class AnomalyDataset(Dataset):
             video_segments = []
             video_segments.append(segment)
         elif self.numDynamicImagesPerVideo > 1:
+            # print('hereeeeeeeeeeee> ', self.numDynamicImagesPerVideo)
             for i in range(len(video_splits_by_no_Di)):
                 if i < self.numDynamicImagesPerVideo:
                     video_segments.append(video_splits_by_no_Di[i])

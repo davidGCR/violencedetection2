@@ -24,6 +24,7 @@ class ViolenceModelResNet(nn.Module):
         
         self.num_ftrs = self.model_ft.fc.in_features
         self.model_ft.fc = Identity()
+        self.bn = nn.BatchNorm2d(512)
         # self.cat_linear = nn.Linear(512, )
         
         self.convLayers = nn.Sequential(*list(self.model_ft.children())[:-2])  # to tempooling
@@ -34,7 +35,7 @@ class ViolenceModelResNet(nn.Module):
         set_parameter_requires_grad(self.convLayers, feature_extract)
         if self.joinType == constants.JOIN_CONCATENATE:
             self.linear = nn.Linear(self.num_ftrs*self.numDiPerVideos,self.num_classes)
-        elif self.joinType == constants.JOIN_TEMP_MAX_POOL:
+        elif self.joinType == constants.TEMP_MAX_POOL or self.joinType == constants.MULT_TEMP_POOL or self.joinType == constants.TEMP_AVG_POOL or self.joinType == constants.TEMP_STD_POOL:
             self.linear = nn.Linear(512, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
     
@@ -42,6 +43,7 @@ class ViolenceModelResNet(nn.Module):
         self.inference = True
 
     def forward(self, x):
+        # x size= torch.Size([ndi, bs, 3, 224, 224])
         # print('forward input size:',x.size())
         if self.inference:
             # batch_num = x.size()[0]
@@ -66,11 +68,51 @@ class ViolenceModelResNet(nn.Module):
                 # print('concatenate output size:',x.size())
                 # x = self.AdaptiveAvgPool2d(x)
                 # print('AdaptiveAvgPool2d output size:',x.size())
-            elif self.joinType == constants.JOIN_TEMP_MAX_POOL:
-                # print('x size: ', x.size())
+            elif self.joinType == constants.TEMP_MAX_POOL:
                 x = Pooling.maxTemporalPool(x, self.numDiPerVideos, self.convLayers)
+                # print('max pooling: ',x.size())
+                x = self.bn(x)
                 x = self.AdaptiveAvgPool2d(x)
                 # print('AdaptiveAvgPool2d out: ', x.size())
+                x = torch.flatten(x, 1)
+            elif self.joinType == constants.TEMP_AVG_POOL:
+                x = Pooling.avgTemporalPool(x, self.numDiPerVideos, self.convLayers)
+                # print('max pooling: ',x.size())
+                x = self.bn(x)
+                x = self.AdaptiveAvgPool2d(x)
+                # print('AdaptiveAvgPool2d out: ', x.size())
+                x = torch.flatten(x, 1)
+            elif self.joinType == constants.TEMP_STD_POOL:
+                x = Pooling.stdTemporalPool(x, self.numDiPerVideos, self.convLayers)
+                # print('max pooling: ',x.size())
+                x = self.bn(x)
+                x = self.AdaptiveAvgPool2d(x)
+                # print('AdaptiveAvgPool2d out: ', x.size())
+                x = torch.flatten(x, 1)
+            elif self.joinType == constants.MULT_TEMP_POOL:
+                z = Pooling.stdTemporalPool(x, self.numDiPerVideos, self.convLayers) #bs,512,7,7
+                y = Pooling.avgTemporalPool(x, self.numDiPerVideos, self.convLayers)
+                x = Pooling.maxTemporalPool(x, self.numDiPerVideos, self.convLayers)
+
+                # x = self.bn(x)
+                # x = self.AdaptiveAvgPool2d(x)
+
+                # y = self.bn(y)
+                # y = self.AdaptiveAvgPool2d(y)
+
+                # z = self.bn(z)
+                # z = self.AdaptiveAvgPool2d(z)
+                
+                # ll = [torch.flatten(x, 1), torch.flatten(y, 1), torch.flatten(z, 1)]
+                # x = torch.cat(ll,dim=1)
+                # print('cat poolings: ',ll.size())
+                # flat = torch.flatten(x, 1) #  torch.Size([8, 25088])
+                # print('flat feature map: ', flat.size())
+
+                x = torch.add(x,z)
+                x = torch.add(x, y)
+                x = self.bn(x)
+                x = self.AdaptiveAvgPool2d(x)
                 x = torch.flatten(x, 1)
         x = self.linear(x)
         # print('forward output: ', x.size())

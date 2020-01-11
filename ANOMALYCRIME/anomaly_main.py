@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-import anomaly_dataset
+import anomalyDataset
 import os
 import re
 from util import video2Images2, saveList, get_model_name
@@ -21,7 +21,7 @@ import util
 import constants
 import glob
 import argparse
-import anomaly_initializeDataset
+import anomalyInitializeDataset
 from tester import Tester
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 import matplotlib.pyplot as plt
@@ -62,8 +62,9 @@ def testing(model, dataloaders, device, numDiPerVideos, plot_samples):
 def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves, 
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples, operation):
     model, input_size = initialize_model( model_name=modelType, num_classes=num_classes, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
-    # print(model)
+    print(model)
     model.to(device)
+
     MODEL_NAME = util.get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType, num_epochs)
     MODEL_NAME += additional_info
     MODEL_NAME = MODEL_NAME+'-FINAL' if operation == constants.OPERATION_TRAINING_FINAL else MODEL_NAME
@@ -103,10 +104,10 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
             val_acc.append(epoch_acc_val)
     
     print("saving loss and acc history...")
-    if operation == 'trainingfinal':
+    if operation == constants.OPERATION_TRAINING_FINAL:
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-    elif operation == 'training':
+    elif operation == constants.OPERATION_TRAINING:
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
@@ -132,13 +133,13 @@ def __main__():
     parser.add_argument("--schedulerType",type=str,default="OnPlateau",help="learning rate scheduler")
     parser.add_argument("--debuggMode", type=bool, default=False, help="show prints")
     parser.add_argument("--ndis", type=int, help="num dyn imgs")
-    parser.add_argument("--joinType", type=str, default=constants.JOIN_TEMP_MAX_POOL)
+    parser.add_argument("--joinType", type=str)
     parser.add_argument("--plotSamples", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--numWorkers", type=int, default=4)
     parser.add_argument("--maxNumFramesOnVideo", type=int, default=0)
     parser.add_argument("--videoSegmentLength", type=int, default=0)
-    parser.add_argument("--positionSegment", type=str, default='random')
+    parser.add_argument("--positionSegment", type=str)
 
 
     args = parser.parse_args()
@@ -168,18 +169,21 @@ def __main__():
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
     
+    # Dalaloaders
     if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TESTING:
-        dataloaders_dict, test_names = anomaly_initializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
+        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
     elif operation == constants.OPERATION_TRAINING_FINAL:
-        dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
+        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
 
-    
+    #Training
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_FINAL:
         training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
+    
+    #testing
     elif operation == constants.OPERATION_TESTING:
         model = torch.load(testModelFile)
         testing(model, dataloaders_dict['test'], device, numDiPerVideos, plot_samples)
