@@ -10,24 +10,62 @@ import util
 # class DinamycImage():
 #     def __init__(self,):
 
+def computeDynamicImage(frames):
+    print('compute DY: ', type(frames[0]), frames.size()) #torch.Size([30, 240, 320, 3])
+    seqLen = frames.size()[0]
+
+    if seqLen < 2:
+      print('No se puede crear DI con solo un frames ...', seqLen)
+
+    fw = np.zeros(seqLen)  
+    for i in range(seqLen): #frame by frame
+      fw[i] = np.sum(np.divide((2 * np.arange(i + 1, seqLen + 1) - seqLen - 1), np.arange(i + 1, seqLen + 1)))
+    fw = torch.from_numpy(fw).float()
+    
+    sm = frames * fw[:,None, None, None]
+    
+    sm = sm.sum(0)
+    # print('min :', torch.min(sm))
+
+    sm = sm - torch.min(sm)
+    # print('*************** np.max(sm) : ', str(np.max(sm)))
+    sm = 255 * sm / torch.max(sm)
+    # print('max :', torch.max(sm))
+    img = sm
+    #img = sm.type(dtype=torch.uint8)
+
+    # print('IMG: ', img.size())
+    # print('IMG final : min :', torch.min(img), 'max:',torch.max(img))
+    imgPIL = Image.fromarray(np.uint8(img.numpy()))
+    return imgPIL, img
+
 def getDynamicImage(frames):
     seqLen = len(frames)
+
     if seqLen < 2:
       print('No se puede crear DI con solo un frames ...', seqLen)
     
-    frames = np.stack(frames, axis=0)
+    frames = np.stack(frames, axis=0) #frames:  (30, 240, 320, 3)
+    # print('frames: ', frames.shape)
 
     fw = np.zeros(seqLen)  
     for i in range(seqLen): #frame by frame
       fw[i] = np.sum( np.divide((2*np.arange(i+1,seqLen+1)-seqLen-1) , np.arange(i+1,seqLen+1))  )
-
-    fwr = fw.reshape(seqLen,1,1,1)
+    # print(fw)
+    fwr = fw.reshape(seqLen, 1, 1, 1)  #coeficiebts
+    # print('fwr0000: ', fwr.shape)
+    #print('Frames: ',frames.shape, 'Di coeff: ', fwr.shape)
     sm = frames*fwr
     sm = sm.sum(0)
+    # print('min :', np.min(sm))
     sm = sm - np.min(sm)
     # print('*************** np.max(sm) : ', str(np.max(sm)))
-    sm = 255 * sm /np.max(sm) 
+    sm = 255 * sm / np.max(sm)
+    # img = sm
+    # print('max :', np.max(sm))
     img = sm.astype(np.uint8)
+    # print('IMG final : min :', np.min(img), 'max:',np.max(img))
+    # print('IMG00000: ',img.shape, )
     ##to PIL image
     imgPIL = Image.fromarray(np.uint8(img))
     return imgPIL, img

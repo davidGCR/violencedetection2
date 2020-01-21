@@ -9,11 +9,12 @@ import time
 from dynamicImage import *
 import random
 import sys
-
+import torchvision.transforms as transforms
+from torch.utils.data._utils.collate import default_collate
 
 class AnomalyDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, nDynamicImages,
-                    videoSegmentLength, maxNumFramesOnVideo, positionSegment):
+                    videoSegmentLength, maxNumFramesOnVideo, positionSegment, overlapping, getRawFrames=False):
         self.spatial_transform = spatial_transform
         self.images = dataset
         self.labels = labels
@@ -25,7 +26,9 @@ class AnomalyDataset(Dataset):
         
         self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
         self.positionSegment = positionSegment  #could be at begin, central or random
-        self.skipPercentage = 35 
+        self.skipPercentage = 35
+        self.getRawFrames = getRawFrames
+        self.overlapping = overlapping
 
     def __len__(self):
         return len(self.images)
@@ -76,7 +79,6 @@ class AnomalyDataset(Dataset):
                     num_frame = int(frame[len(frame) - 7:-4])
                     if num_frame != int(data[num_frame, 5]):
                         sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
-                        # print('Houston we have a problem: index frame does not equal to the bbox file!!!')
                     
                     flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
                     xmin = int(data[num_frame, 1])
@@ -103,7 +105,8 @@ class AnomalyDataset(Dataset):
             # print('Short video: ', vid_name, self.numFrames[idx], 'seqLen:', seqLen)
         else:
             seqLen = self.videoSegmentLength
-        num_frames_on_video = self.numFrames[idx] 
+        num_frames_on_video = self.numFrames[idx]
+        # print('range: ', 'vid name: ', vid_name,seqLen,'numFrames: ', self.numFrames[idx], 'segmentLenght: ', self.videoSegmentLength)
         video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
 
         if len(video_splits_by_no_Di) > 1:
@@ -148,22 +151,48 @@ class AnomalyDataset(Dataset):
         dinamycImages = []
         sequences, seqLen, bbox_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         # print('SEGmentos lenght: ', len(sequences), vid_name)
+        video_raw_frames = []
+        # for seq in sequences:
+        #     frames = []
+        #     for frame in seq:
+        #         img_dir = str(vid_name) + "/" + frame
+        #         img = Image.open(img_dir).convert("RGB")
+        #         frames.append(img)
+        #         img = np.array(img)
+        #         img = torch.from_numpy(img).float()
+                
+        #         # print('---', img.size())
+        #     if self.getRawFrames:
+        #         # video_raw_frames.append(torch.stack(frames,0))
+        #         video_raw_frames.append(frames)
+        #     imgPIL, img = computeDynamicImage(torch.stack(frames, dim=0))
+            
+        #     imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+        #     dinamycImages.append(imgPIL)
+
         for seq in sequences:
             frames = []
-            # print('segment lenght: ', len(seq))
+            # r_frames = []
             for frame in seq:
                 img_dir = str(vid_name) + "/" + frame
-                img = Image.open(img_dir).convert("RGB")
-                img = np.array(img)
+                img1 = Image.open(img_dir).convert("RGB")
+                img = np.array(img1)
                 frames.append(img)
+            # if self.getRawFrames:
+            #     video_raw_frames.append(frames)
             imgPIL, img = getDynamicImage(frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dinamycImages.append(imgPIL)
             
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-        # print('dynamic images: ', dinamycImages.size())
         if self.numDynamicImagesPerVideo == 1:
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
+        # if self.getRawFrames:
+        #     return dinamycImages, label, vid_name, bbox_segments, video_raw_frames
+        # else:
+        # if self.positionSegment == 'begin':
+        #     return default_collate([dinamycImages, label, vid_name, bbox_segments])            
+        # else:
         return dinamycImages, label, vid_name, bbox_segments
 
     def getVideoSegments_old(self, vid_name, idx):

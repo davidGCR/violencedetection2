@@ -30,6 +30,8 @@ import pandas as pd
 import torchvision
 import MaskRCNN
 from torchvision.utils import make_grid
+import scoring
+from torch.utils.data._utils.collate import default_collate
 
 def maskRCNN():
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -55,7 +57,8 @@ def pytorch_show(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
 
-def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions):
+def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment,
+            persons_segment_filtered, anomalous_regions):
     # create a figure with two subplots
     fig, axes = plt.subplots(r, c, figsize=(25, 15))
     plt.subplots_adjust(hspace=0.5, wspace=0, left = 0.03, right = 0.99)
@@ -120,242 +123,152 @@ def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bbox
     ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=100)
     # ani.save('RESULTS/animations/animation.mp4', writer=writer)          
     plt.show()
-    # ani.save('RESULTS/animations/animation.gif', writer='imagemagick', fps=30)
-    #  
-def __main__():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--saliencyModelFile", type=str)
-    parser.add_argument("--batchSize", type=int, default=3)
-    # parser.add_argument("--numEpochs", type=int, default=10)
-    parser.add_argument("--numWorkers", type=int, default=1)
-    parser.add_argument("--numDiPerVideos", type=int, default=5)
-    parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
-    parser.add_argument("--plot", type=lambda x: (str(x).lower() == 'true'), default=False)
-    parser.add_argument("--videoSegmentLength", type=int, default=15)
-    parser.add_argument("--personDetector", type=str, default=constants.YOLO)
 
-    args = parser.parse_args()
-    plot = args.plot
-    maxNumFramesOnVideo = 0
-    videoSegmentLength = args.videoSegmentLength
-    personDetector = args.personDetector
-    numDiPerVideos = args.numDiPerVideos
-    positionSegment = 'random'
-    num_classes = 2 #anomalus or not
-    input_size = (224,224)
-    transforms_dataset = transforms_anomaly.createTransforms(input_size)
-    dataset_source = 'frames'
-    batch_size = args.batchSize
-    num_workers = args.numWorkers
-    saliency_model_file = args.saliencyModelFile
-    shuffle = args.shuffle
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    threshold = 0.5
+def getPersonDetectorModel(detector_type):
+    classes = None
+    if detector_type == constants.YOLO:
+        img_size = 416
+        weights_path = "YOLOv3/weights/yolov3.weights"
+        class_path = "YOLOv3/data/coco.names"
+        model_def = "YOLOv3/config/yolov3.cfg"
+        person_model, classes = yolo_inference.initializeYoloV3(img_size, class_path, model_def, weights_path)
+        
+        # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
+    elif detector_type == constants.MASKRCNN:
+        person_model = maskRCNN()
+        
 
-    saliency_model_config = saliency_model_file
+    return person_model, classes
 
-    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
-    train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
-    test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size,
-                                                        num_workers, numDiPerVideos, transforms_dataset, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
-    tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloaders_dict['test'], test_names,
-                                        input_size, saliency_model_config, numDiPerVideos, threshold)
-    img_size = 416
-    weights_path = "YOLOv3/weights/yolov3.weights"
-    class_path = "YOLOv3/data/coco.names"
-    model_def = "YOLOv3/config/yolov3.cfg"
-    conf_thres = 0.8
-    nms_thres = 0.4
-    yolo_model, classes = yolo_inference.initializeYoloV3(img_size, class_path, model_def, weights_path)
-    h = 240
-    w = 320
-    raw_size = (h, w)
-    resize_transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize(raw_size),
-        transforms.ToTensor()
-        ])
 
-    scale_transform = transforms.Compose(
-        [
-            transforms.ToPILImage(),
-            transforms.Resize((224,224)),
-            transforms.ToTensor(),
-            # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
-            # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
-    crop_transform = transforms.Compose(
-        [
-            transforms.ToPILImage(),
-            transforms.CenterCrop((224,224)),
-            transforms.ToTensor(),
-            # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
-            # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ]
-    )
+def offline(dataloader, saliency_tester, type_person_detector, h, w, plot):
+    person_model, classes = getPersonDetectorModel(type_person_detector)
     data_rows = []
-    mask_model = maskRCNN()
-    # Set up formatting for the movie files
-    Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
-    type_set_frames = constants.FRAME_POS_ALL
-    first = 0
-    mask_rcnn_threshold = 0.3
-    # fig, ax = plt.subplots()
-    classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth'
-    classifier = torch.load(classifierFile)
-    classifier.eval()
-    classifier.inferenceMode()
-
-
-    for i, data in enumerate(dataloaders_dict['test'], 0):
+    for i, data in enumerate(dataloader, 0):
         print("-" * 150)
         #di_images = [1,ndis,3,224,224]
         dis_images, labels, video_name, bbox_segments = data
-        print(video_name, dis_images.size(), len(bbox_segments))
+        
+        # - dis_images:  <class 'torch.Tensor'> torch.Size([1, 3, 224, 224])
+        # - video_name:  <class 'tuple'>
+        # - labels:  <class 'torch.Tensor'> torch.Size([1])
+        # - bbox_segments:  <class 'list'> [[('frame645.jpg',), tensor([0]), tensor([72]), tensor([67]), tensor([133]), tensor([148])], ...,[]
+
         bbox_segments = np.array(bbox_segments)
+        # dis_images = dis_images / 2 + 0.5 
+        ttttt = dis_images.numpy()[0].transpose(1, 2, 0)
+        plt.imshow(ttttt)
+        plt.title('Input for Classifier')
+        plt.show()
+        #bbox_segments:  1 30 [('frame765.jpg',) tensor([0]) tensor([69]) tensor([80]) tensor([142]) tensor([152])]
+
+        # print('bbox_segments: ', len(bbox_segments), len(bbox_segments[0]), bbox_segments[0][0])
+        #video_raw_frames = np.array(video_raw_frames)
+        #print('video_raw_frames: ', type(video_raw_frames[0][0]), len(video_raw_frames[0]), video_raw_frames[0][0].size())#[[[1, 240, 320, 3], [1, 240, 320, 3].[1, 240, 320, 3], ...]]
         ######################## dynamic images
         l_source_frames = []
         l_di_images = [] # to plot
-        dis_images = dis_images.detach().cpu() # torch.Size([1, 3, 224, 224])
+        dis_images = dis_images.detach().cpu()  # torch.Size([1, 3, 224, 224])
+        
         
         # dis_images = torch.squeeze(dis_images, 0) ## to num dynamic images > 1 and minibatch == 1
         for di_image in dis_images:
-            # di_image = di_image / 2 + 0.5  q    
-            # di_image = resize_transform(di_image)
-            di_image = di_image.numpy()
-            di_image = np.transpose(di_image, (1, 2, 0))
+            # di_image = di_image / 2 + 0.5 
+            # di_image = resize2raw_transform(di_image)
+            di_image = di_image.numpy().transpose(1, 2, 0)
             l_di_images.append(di_image)
             # print('di_image: ', di_image.shape)
 
         ######################## mask
-        masks = tester.compute_mask(dis_images, labels)
-        masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
-        masks = masks.detach().cpu()
-        masks = tester.min_max_normalize_tensor(masks) #to 0-1
-        l_masks = []
         
-        for mask in masks:
-            mask = resize_transform(mask.cpu())
-            mask = tensor2numpy(mask)
-            l_masks.append(mask)
-            # saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(masks)  #only one by segment
-            
+        masks = saliency_tester.compute_mask(dis_images, labels)  #[1, 1, 224, 224]
+        
+        mascara = masks.detach().cpu()#(1, 1, 224, 224)
+        mascara = torch.squeeze(mascara,0)#(1, 224, 224)
+        mascara = saliency_tester.min_max_normalize_tensor(mascara) #to 0-1
+        mascara = mascara.numpy().transpose(1, 2, 0)  
+        mascara = np.concatenate((mascara,) * 3, axis=-1)
 
-        ######################## dynamic images masked
-        dis_masked = dis_images * masks  #tensor [1,3,224,224]
-        dis_masked = torch.squeeze(dis_masked, 0)  #tensor [3,224,224]
-        # dis_masked = dis_masked.detach().cpu()
+        ##resize 
+        mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+        
+        plt.imshow(mascara)
+        plt.title('MASCARA')
+        plt.show()
 
+        mascara_dn = np.uint8(255*mascara)
+        mascara_dn = cv2.fastNlMeansDenoisingColored(mascara_dn, None, 10, 10, 7, 21)
+        # print('mascara :', mascara.shape)
+
+        plt.imshow(mascara_dn)
+        plt.title('MASCARA denoised')
+        plt.show()
+
+        
+        masks = torch.from_numpy(mascara_dn).float()  #torch.Size([224, 224, 3])
+        masks = masks.permute(2, 0, 1)  
+        masks = torch.unsqueeze(masks,dim=0) #masks : torch.Size([1, 3, 240, 320]
+        
+        # unsqueeze(0)
+        # masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
+        # masks = masks.detach().cpu()
+        masks = saliency_tester.min_max_normalize_tensor(masks) #to 0-1
         source_frames = masks
 
         video_prepoc_saliencies = []
-        video_prepoc_saliencies2 = []
-        l_imgs_processing = []
+        # video_prepoc_saliencies2 = []
+        # l_imgs_processing = []
 
-        for idx_dyn_img, source_frame in enumerate(source_frames): 
-            source_frame = resize_transform(source_frame)
-            source_frame = tensor2numpy(source_frame)
+        #print('raw frames: ', video_raw_frames.size()) #torch.Size([1, 1, 30, 3, 240, 320])
+        for idx_dyn_img, source_frame in enumerate(source_frames):  #get score from dyanmic regions
+            # source_frame = resize2raw_transform(source_frame)
+            #source_frame = tensor2numpy(source_frame)
             
+            source_frame = source_frame.numpy().transpose(1,2,0)
+            print('source frane: ', source_frame.shape)
             saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
-            if len(saliency_bboxes) > 1:
-                # print('****removing inside areas...', len(saliency_bboxes))
-                saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)
-                # print('****removing inside areas finished...', len(saliency_bboxes))
-            
-            di_image = resize_transform(dis_images[idx_dyn_img])
-            # batch_crop_regions = []
-            for bbox in saliency_bboxes:
-                # print('Crop region BBOX: ',bbox)
-                crop_image = di_image[:, bbox.pmin.y:bbox.pmax.y,bbox.pmin.x:bbox.pmax.x]
-                # batch_crop_regions.append(crop_image)
-                # batch_crop_regions = torch.stack(batch_crop_regions,dim=0)
-                # print('Crop region size: ', crop_image.size())
-                if crop_image.size()[1] > 224 or crop_image.size()[2] > 224:
-                    crop_image = crop_transform(crop_image)
-                else:
-                    crop_image = scale_transform(crop_image)
-                batch_crop_regions = torch.unsqueeze(crop_image, dim=0)
-                batch_crop_regions = batch_crop_regions.to(device)
-                # print('batch_crop_regions: ', batch_crop_regions.size())
-                with torch.set_grad_enabled(False):
-                    output_patch = classifier(batch_crop_regions)
-                    p = torch.nn.functional.softmax(output_patch, dim=1)
-                    # print('p>: ',p.size())
-                    # scores.extend(p.cpu().numpy())
-                    valu_patch, indice_patch = torch.max(output_patch, 1)
-                    
-                    bbox.score = p[0][1].cpu().item()
-                    print('--------> label_p' , str(indice_patch),', score: ', str(p.data), bbox)
+            saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)
+            # saliency_bboxes.append(localization_utils.randomBBox(240, 320))
+            # saliency_bboxes.append(localization_utils.randomBBox(240, 320))
+            # saliency_bboxes.append(localization_utils.randomBBox(240,320))
+            # scoring.getScoresFromRegions(video_name[0], bbox_segments, saliency_bboxes,classifier, transforms_dataset['test'])
 
-            #     plot = True
-            # else:
-            #     plot = False
-            # crops = []
-            # for bbox in saliency_bboxes:
-            #     crop_image = dis_images[:,:, bbox.pmin.x:bbox.pmax.x, bbox.pmin.y:bbox.pmax.y]
-            #     # crops.append(crop_image)
-            #     crop_image = crop_image / 2 + 0.5
-            #     pytorch_show(make_grid(crop_image.cpu().data, nrow=7, padding=10))
-            #     plt.show()
-            # crops = torch.stack(crops, dim=0)
-            # print('crops: ', crops.size())
-            
-            # 
-            
-            print('saliency_bboxes: ', type(saliency_bboxes),len(saliency_bboxes),saliency_bboxes[0])
+            # print('saliency_bboxes: ', type(saliency_bboxes),len(saliency_bboxes),saliency_bboxes[0])
             video_prepoc_saliencies.append({
                 'saliency bboxes': saliency_bboxes,
                 'preprocesing': preprocesing_reults
-            })
-
-
-            img_thresholding = localization_utils.myTresholding(source_frame, cell_size=[4, 4])
-            saliency_bboxes2, preprocesing_reults2 = localization_utils.myPreprocessing(img_thresholding)  #only one by segment
-            l_imgs_processing.append(img_thresholding)
-            video_prepoc_saliencies2.append({
-                'saliency bboxes': saliency_bboxes2,
-                'preprocesing': preprocesing_reults2
-            })
-            
-
-            source_frame = localization_utils.gray2rgbRepeat(np.squeeze(source_frame,2))
-            l_source_frames.append(source_frame)
-            saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
-            
-            
+            })            
         
-        video_real_info = []
-        
+        segment_info = []
         for bbox_segment in bbox_segments:
             # print('bbox_segment: ',bbox_segment)
             #read frames of segment
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], bbox_segment, 'all')
-            video_real_info.append({
+            segment_info.append({
                 'frames_names':frames_names,
                 'real_frames':real_frames,
                 'real_bboxes': real_bboxes})
           
             # img_test = tt(real_frames[0])
             # img_test = torch.unsqueeze(img_test,dim=0)
-            
-        # img_test = img_test * masks  #tensor [1,3,224,224]
-        # pytorch_show(make_grid(img_test.data, padding=10))
-        
-        for index, segment_real_info in enumerate(video_real_info): #di by di
+    
+        for index, segment_real_info in enumerate(segment_info): #di by di
             #person detection
             persons_in_segment = []
             anomalous_regions = []  # to plot
             persons_in_frame = []
-            persons_segment_filtered = [] #only to vizualice
+            persons_segment_filtered = []  #only to vizualice
+            print('Real frames shot: ', len(segment_real_info['real_frames']))
             for idx, frame in enumerate(segment_real_info['real_frames']):
-                if personDetector == constants.YOLO:
-                    persons_in_frame = localization_utils.personDetectionInFrame(yolo_model, img_size, conf_thres, nms_thres, classes, frame)
+                if type_person_detector == constants.YOLO:
+                    img_size = 416
+                    conf_thres = 0.8
+                    nms_thres = 0.4
+                    persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres, nms_thres, classes, frame)
                     # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
-                elif personDetector == constants.MASKRCNN:
-                    persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(mask_model, frame, mask_rcnn_threshold)
+                elif type_person_detector == constants.MASKRCNN:
+                    mask_rcnn_threshold = 0.4
+                    persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
                 # print('num Persons in frame: ', len(persons_in_frame))
                 persons_in_segment.append(persons_in_frame)
         
@@ -372,25 +285,13 @@ def __main__():
                 anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
             ######################################              
             segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
-            # di_image = resize_transform(dis_images[idx_dyn_img])
-            di_image = resize_transform(dis_images[0])
-            # print('fdsfgsdgdsfgfdgh: ', di_image.size())
-            crop_image = di_image[:, int(segmentBox.pmin.y):int(segmentBox.pmax.y), int(segmentBox.pmin.x):int(segmentBox.pmax.x)]
-            if crop_image.size()[1] > 224 or crop_image.size()[2] > 224:
-                crop_image = crop_transform(crop_image)
-            else:
-                crop_image = scale_transform(crop_image)
-            batch_crop_regions = torch.unsqueeze(crop_image, dim=0)
-            batch_crop_regions = batch_crop_regions.to(device)
-            with torch.set_grad_enabled(False):
-                output_patch = classifier(batch_crop_regions)
-                p = torch.nn.functional.softmax(output_patch, dim=1)
-                valu_patch, indice_patch = torch.max(output_patch, 1)
-
-                for b in segment_real_info['real_bboxes']:
-                    b.score = p[0][1].cpu().item()
-                
-                print('--------> label_real' , str(indice_patch),', score: ', str(p.data), segmentBox)
+            # l = [segmentBox]
+            # print('=========== Ground Truth Score =============')
+            # scoring.getScoresFromRegions(video_name[0], bbox_segments, l, classifier, transforms_dataset['test'])
+           
+            # for b in segment_real_info['real_bboxes']:
+            #     b.score = l[0].score
+            
             ######################################
             if len(anomalous_regions) == 0:
                 # print('No anomalous regions found...')
@@ -398,68 +299,315 @@ def __main__():
             else:
                 # segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
                 iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
-            row = [frames_names[first], iou]
+            row = [frames_names[0], iou]
             data_rows.append(row)
         
             if plot:
                 font_size = 9
                 subplot_r = 2
                 subplot_c = 5
-                img_source = l_source_frames[index]
-                di_image = l_di_images[index]
-                di_image = di_image / 2 + 0.5
+                img_source = source_frames[0].numpy().transpose(1, 2, 0)
+                # img_source = l_source_frames[index]
 
-                
-                
+                # di_image = dis_images.numpy()[0].transpose(1, 2, 0)
+                di_image = ttttt
+                # di_image = di_image / 2 + 0.5
+
                 # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
                 preprocesing_reults = np.empty( (subplot_r,subplot_c), dtype=tuple)
                 preprocesing_reults[0,0] = (img_source,'image source')
-                # mask = l_masks[index]
-                # mask = np.squeeze(mask,2)
-                # mask = np.stack([mask, mask, mask], axis=2)
-                # preprocesing_reults.append((mask,'mask'))
-                # preprocesing_reults.append((img_source,'img source'))
                 preprocesing_reults[0,1]=(video_prepoc_saliencies[index]['preprocesing'][0], 'thresholding')
                 preprocesing_reults[0,2]=(video_prepoc_saliencies[index]['preprocesing'][1], 'morpho')
                 preprocesing_reults[0,3]=(video_prepoc_saliencies[index]['preprocesing'][2], 'contours')
                 preprocesing_reults[0,4]=(video_prepoc_saliencies[index]['preprocesing'][3], 'bboxes')
 
-                # img_myThresholding = l_imgs_processing[index]
-                # img_myThresholding = np.squeeze(img_myThresholding,2)
-                # img_myThresholding = np.stack([img_myThresholding, img_myThresholding, img_myThresholding], axis=2)
-                # preprocesing_reults[1,0]=(img_myThresholding, 'myThresholding')
-                # preprocesing_reults[1,1]=(video_prepoc_saliencies2[index]['preprocesing'][0], 'thresholding2')
-                # preprocesing_reults[1,2]=(video_prepoc_saliencies2[index]['preprocesing'][1], 'morpho2')
-                # preprocesing_reults[1,3]=(video_prepoc_saliencies2[index]['preprocesing'][2], 'contours2')
-                # preprocesing_reults[1,4]=(video_prepoc_saliencies2[index]['preprocesing'][3], 'bboxes2')
-               
-
-                real_frames = video_real_info[index]['real_frames']
-                real_bboxes = video_real_info[index]['real_bboxes']
-
-                # preprocesing_reults.append((np.multiply(real_frames[0],mask),'realFrame x mask'))
+                real_frames = segment_info[index]['real_frames']
+                real_bboxes = segment_info[index]['real_bboxes']
                 
                 saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
-                
-                # print('types: ', type(dynamic_img), type(real_frames), type(real_bboxes))
                 myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)
                 
-                
-                # di_image_to_crop = resize_transform(torch.squeeze(dis_images.cpu(), dim=0))
-                # di_image_to_crop = torch.unsqueeze(di_image_to_crop, dim=0)
-                # for bbox in saliency_bboxes:
-                #     print('Bounding Box: ', bbox.pmin.x, bbox.pmin.y,bbox.pmax.x,bbox.pmax.y)
-                #     crop_image = di_image_to_crop[:,:,  bbox.pmin.y:bbox.pmax.y ,bbox.pmin.x:bbox.pmax.x]
-                #     # crops.append(crop_image)
-                #     crop_image = crop_image / 2 + 0.5
-                #     pytorch_show(make_grid(crop_image.cpu().data, nrow=7, padding=10))
-                #     plt.show()
     
     # ############# MAP #################
     print('data rows: ', len(data_rows))
     df = pd.DataFrame(data_rows, columns=['path', 'iou'])
     df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
     localization_utils.mAP(df)
+
+def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
+    person_model, classes = getPersonDetectorModel(type_person_detector)
+    for idx_video, data in enumerate(anomalyDataset):
+        print("-" * 150)
+        #di_images = [1,ndis,3,224,224]
+        video_name, label = data
+        video_name = [video_name]
+        label = torch.tensor(label)
+        #First Segment
+        dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
+        while (dis_images is not None):
+            # - dis_images:  <class 'torch.Tensor'> torch.Size([1, 3, 224, 224])
+            # - video_name:  <class 'tuple'>
+            # - labels:  <class 'torch.Tensor'> torch.Size([1])
+            # - bbox_segments:  <class 'list'> [[('frame645.jpg',), tensor([0]), tensor([72]), tensor([67]), tensor([133]), tensor([148])], ...,[]
+            print(video_name, dis_images.size(), len(segment_info))
+            print('- dis_images: ', type(dis_images), dis_images.size())
+            print('- video_name: ', type(video_name), video_name)
+            print('- label: ', type(label))
+            print('- segment_info: ', type(segment_info), segment_info[0])
+            # - dis_images:  <class 'torch.Tensor'>
+            # - video_name:  <class 'str'>
+            # - labels:  <class 'int'>
+            # - bbox_segments:  <class 'list'>  [['frame645.jpg', 0, 72, 67, 133, 148],..., []
+            dis_images = torch.unsqueeze(dis_images, 0)
+            segment_info = default_collate([segment_info])
+            segment_info = np.array(segment_info)
+            # dis_images = dis_images / 2 + 0.5 
+            ttttt = dis_images.numpy()[0].transpose(1, 2, 0)
+            # plt.imshow(ttttt)
+            # plt.title('Input for Classifier')
+            # plt.show()
+            ######################## dynamic images
+            l_source_frames = []
+            l_di_images = [] # to plot
+            dis_images = dis_images.detach().cpu()  # torch.Size([1, 3, 224, 224])
+        
+            for di_image in dis_images:
+                # di_image = di_image / 2 + 0.5 
+                # di_image = resize2raw_transform(di_image)
+                di_image = di_image.numpy().transpose(1, 2, 0)
+                l_di_images.append(di_image)
+                # print('di_image: ', di_image.shape)
+
+            ######################## mask
+            masks = saliency_tester.compute_mask(dis_images, label)  #[1, 1, 224, 224]
+            
+            mascara = masks.detach().cpu()#(1, 1, 224, 224)
+            mascara = torch.squeeze(mascara,0)#(1, 224, 224)
+            mascara = saliency_tester.min_max_normalize_tensor(mascara)  #to 0-1
+            
+            min_px = torch.min(mascara)
+            max_px = torch.max(mascara)
+            print('Mascara normal(min: ',str(min_px),' - max: ', str(max_px))
+            mascara = mascara.numpy().transpose(1, 2, 0)  
+            mascara = np.concatenate((mascara,) * 3, axis=-1)
+            min_px = np.amin(mascara)
+            max_px = np.amax(mascara)
+            print('Mascara numpy (min: ',str(min_px),' - max: ', str(max_px))
+
+            ##resize 
+            mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+            # plt.imshow(mascara)
+            # plt.title('MASCARA')
+            # plt.show()
+            mascara_dn = np.uint8(255*mascara)
+            mascara_dn = cv2.fastNlMeansDenoisingColored(mascara_dn, None, 10, 10, 7, 21)
+            # print('mascara :', mascara.shape)
+
+            # plt.imshow(mascara_dn)
+            # plt.title('MASCARA denoised')
+            # plt.show()
+            masks = torch.from_numpy(mascara_dn).float()  #torch.Size([224, 224, 3])
+            masks = masks.permute(2, 0, 1)  
+            masks = torch.unsqueeze(masks,dim=0) #masks : torch.Size([1, 3, 240, 320]
+            
+            # unsqueeze(0)
+            # masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
+            # masks = masks.detach().cpu()
+            masks = saliency_tester.min_max_normalize_tensor(masks) #to 0-1
+            source_frame = masks[0]
+
+            video_prepoc_saliencies = []
+            l_imgs_processing = []
+
+            # for idx_dyn_img, source_frame in enumerate(source_frames):  #Mask by mask
+            source_frame = source_frame.numpy().transpose(1,2,0)
+            print('source frane: ', source_frame.shape)
+            saliency_bboxes, preprocesing_outs = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
+
+            for bbox in saliency_bboxes:
+                crop = source_frame[bbox.pmin.y:bbox.pmax.y, bbox.pmin.x:bbox.pmax.x,:]
+                plt.imshow(crop)
+                plt.show()
+            # print('preprocesing_outs: ', len(preprocesing_outs))
+            saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)            
+            # segment_info = []
+            
+            frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
+            
+            # for index, segment_real_info in enumerate(segment_info): #di by di
+                #person detection
+            persons_in_segment = []
+            anomalous_regions = []  # to plot
+            persons_in_frame = []
+            persons_segment_filtered = []  #only to vizualice
+            print('Real frames shot: ', len(real_frames))
+            for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
+                if type_person_detector == constants.YOLO:
+                    img_size = 416
+                    conf_thres = 0.8
+                    nms_thres = 0.4
+                    persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres, nms_thres, classes, frame)
+                    # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
+                elif type_person_detector == constants.MASKRCNN:
+                    mask_rcnn_threshold = 0.4
+                    persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
+                print('num Persons in frame: ', len(persons_in_frame))
+                persons_in_segment.append(persons_in_frame)
+        
+            #refinement in segment
+            for i,persons_in_frame in enumerate(persons_in_segment): #Join bboxes from close persons an tersect with dynamic regions
+                persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
+                persons_segment_filtered.append(only_joined_regions)
+                # print('persons_in_frame filter: ', len(persons_filtered))
+                anomalous_regions_in_frame = localization_utils.filterIntersectionPersonAndDynamicRegion(persons_filtered, saliency_bboxes, 0.3)
+                # anomalous_regions_in_frame = sorted(anomalous_regions_in_frame, key=lambda x: x.iou, reverse=True)
+                anomalous_regions.extend(anomalous_regions_in_frame)
+                # print('--------------- anomalous_regions: ', len(anomalous_regions))
+                anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+            print('anomalous_regions final: ', len(anomalous_regions))
+            ######################################              
+            segmentBox = localization_utils.getSegmentBBox(real_bboxes)
+            # l = [segmentBox]
+            # print('=========== Ground Truth Score =============')
+            # scoring.getScoresFromRegions(video_name[0], bbox_segments, l, classifier, transforms_dataset['test'])
+        
+            # for b in segment_real_info['real_bboxes']:
+            #     b.score = l[0].score
+            
+            if plot:
+                font_size = 9
+                subplot_r = 2
+                subplot_c = 5
+                # img_source = source_frames[0].numpy().transpose(1, 2, 0)
+                img_source = source_frame
+                di_image = ttttt
+                # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
+                preprocesing_reults = np.empty( (subplot_r,subplot_c), dtype=tuple)
+                preprocesing_reults[0,0] = (source_frame,'image source')
+                # preprocesing_reults[0,1]=(video_prepoc_saliencies[index]['preprocesing'][0], 'thresholding')
+                # preprocesing_reults[0,2]=(video_prepoc_saliencies[index]['preprocesing'][1], 'morpho')
+                # preprocesing_reults[0,3]=(video_prepoc_saliencies[index]['preprocesing'][2], 'contours')
+                # preprocesing_reults[0,4]=(video_prepoc_saliencies[index]['preprocesing'][3], 'bboxes')
+                # real_frames = segment_info[index]['real_frames']
+                # real_bboxes = segment_info[index]['real_bboxes']
+                # saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
+                preprocesing_reults[0,1]=(preprocesing_outs[0], 'thresholding')
+                preprocesing_reults[0,2]=(preprocesing_outs[1], 'morpho')
+                preprocesing_reults[0,3]=(preprocesing_outs[2], 'contours')
+                preprocesing_reults[0,4]=(preprocesing_outs[3], 'bboxes')
+                # real_frames = real_frames
+                # real_bboxes = real_bboxes
+                # saliency_bboxes = saliency_bboxes
+                myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment,
+                        persons_segment_filtered, anomalous_regions)
+                    
+                ######################################
+            # if len(anomalous_regions) == 0:
+            #     # print('No anomalous regions found...')
+            #     iou = localization_utils.IOU(segmentBox,None)
+            # else:
+            #     iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
+            # row = [frames_names[0], iou]
+            # data_rows.append(row)
+            dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
+            
+    ############# MAP #################
+    # print('data rows: ', len(data_rows))
+    # df = pd.DataFrame(data_rows, columns=['path', 'iou'])
+    # df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
+    # localization_utils.mAP(df)
+
+
+def __main__():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--saliencyModelFile", type=str)
+    parser.add_argument("--batchSize", type=int, default=3)
+    # parser.add_argument("--numEpochs", type=int, default=10)
+    parser.add_argument("--numWorkers", type=int, default=1)
+    parser.add_argument("--numDiPerVideos", type=int, default=5)
+    parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--plot", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--videoSegmentLength", type=int, default=15)
+    parser.add_argument("--personDetector", type=str, default=constants.YOLO)
+    parser.add_argument("--positionSegment", type=str)
+    parser.add_argument("--overlapping", type=float)
+
+    args = parser.parse_args()
+    plot = args.plot
+    maxNumFramesOnVideo = 0
+    videoSegmentLength = args.videoSegmentLength
+    typePersonDetector = args.personDetector
+    numDiPerVideos = args.numDiPerVideos
+    positionSegment = args.positionSegment
+    overlapping = args.overlapping
+    num_classes = 2 #anomalus or not
+    input_size = (224,224)
+    transforms_dataset = transforms_anomaly.createTransforms(input_size)
+    dataset_source = 'frames'
+    batch_size = args.batchSize
+    num_workers = args.numWorkers
+    saliency_model_file = args.saliencyModelFile
+    shuffle = args.shuffle
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    threshold = 0.5
+
+    saliency_model_config = saliency_model_file
+    getRawFrames = True
+    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
+    train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
+    test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
+    dataloaders_dict, test_names, anomalyDataset = anomalyInitializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path,
+                                                        test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_dataset,
+                                                        maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle, getRawFrames,
+                                                        overlapping)
+    saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloaders_dict['test'], test_names,
+                                        input_size, saliency_model_config, numDiPerVideos, threshold)
+    
+    #classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth'
+    # classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
+    # classifier = torch.load(classifierFile)
+    # classifier.eval()
+    # classifier.inferenceMode()
+    h = 240
+    w = 320
+    # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
+    online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot)
+
+    
+    # raw_size = (h, w)
+    # resize2raw_transform = transforms.Compose([
+    #     transforms.ToPILImage(),
+    #     transforms.Resize(raw_size),
+    #     transforms.ToTensor()
+    #     ])
+
+    # resize2cnn_transform = transforms.Compose(
+    #     [
+    #         transforms.ToPILImage(),
+    #         transforms.Resize((224,224)),
+    #         transforms.ToTensor(),
+    #         # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
+    #         # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    #     ]
+    # )
+    # crop_transform = transforms.Compose(
+    #     [
+    #         transforms.ToPILImage(),
+    #         transforms.CenterCrop((224,224)),
+    #         transforms.ToTensor(),
+    #         # transforms.Normalize([0.49237782, 0.49160805, 0.48998737], [0.11053326, 0.11088469, 0.11275752] )
+    #         # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    #     ]
+    # )
+    
+    
+    # Set up formatting for the movie files
+    # Writer = animation.writers['ffmpeg']
+    # writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+    # type_set_frames = constants.FRAME_POS_ALL
+    # first = 0
+    
+    # fig, ax = plt.subplots()    
    
 __main__()
 

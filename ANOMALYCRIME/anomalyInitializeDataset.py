@@ -2,6 +2,7 @@
 # import sys
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/MyCode')
 import ANOMALYCRIME.anomalyDataset as anomalyDataset
+import ANOMALYCRIME.anomalyOnlineDataset as anomalyOnlineDataset
 import ANOMALYCRIME.datasetUtils as datasetUtils
 import ANOMALYCRIME.denseDataset as denseDataset
 # import anomaly_dataset
@@ -61,21 +62,32 @@ def dataloader_test_dense_dataset(path_dataset, train_videos_path, test_videos_p
      return dataloaders_dict, test_names
 
 
-def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
+def initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
+                    numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle, getRawFrames, overlapping):
      # print('ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
      test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.only_anomaly_test_videos(test_videos_path, path_dataset)
      test_labels = datasetUtils.labels_2_binary(test_labels)
      util.print_balance(test_labels, 'test')
+
+     if positionSegment == 'online':
+          dataset = anomalyOnlineDataset.AnomalyOnlineDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms_t["test"],
+               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength,
+               positionSegment=positionSegment, getRawFrames=getRawFrames, overlapping=overlapping)
+     else:
+          dataset = anomalyDataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms_t["test"],
+               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength,
+               positionSegment=positionSegment, getRawFrames=getRawFrames, overlapping=overlapping)
+     
      image_datasets = {
-          "test": anomalyDataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms_t["test"],
-               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment)
+          "test": dataset
      }
      dataloaders_dict = {
           "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
      }
-     return dataloaders_dict, test_names
+     return dataloaders_dict, test_names, dataset
 
-def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
+def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos,
+                                        transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle, overlapping):
      train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
      combined = list(zip(train_names, train_labels, train_num_frames, train_bbox_files))
      random.shuffle(combined)
@@ -87,9 +99,9 @@ def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_video
      util.print_balance(test_labels, 'test')
      image_datasets = {
           "train": anomalyDataset.AnomalyDataset( dataset=train_names, labels=train_labels, numFrames=train_num_frames, bbox_files = train_bbox_files, spatial_transform=transforms_t["train"],
-               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment),
+               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment,overlapping=overlapping),
           "test": anomalyDataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames,  bbox_files = test_bbox_files, spatial_transform=transforms_t["test"],
-               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment)
+               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment,overlapping=overlapping)
      }
      dataloaders_dict = {
           "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
@@ -97,7 +109,8 @@ def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_video
      }
      return dataloaders_dict, test_names
 
-def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
+def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
+                                        numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle, overlapping):
      
      train_names,train_labels,train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
   
@@ -124,11 +137,12 @@ def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_v
      
      image_datasets = {
           "train": anomalyDataset.AnomalyDataset( dataset=train_names, labels=train_labels, numFrames=train_num_frames, bbox_files=train_bbox_files, spatial_transform=transforms["train"],
-               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment),
+               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment, overlapping=overlapping),
           "val": anomalyDataset.AnomalyDataset( dataset=val_names, labels=val_labels, numFrames=val_num_frames, bbox_files=val_bbox_files, spatial_transform=transforms["val"], 
-               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment),
-          "test": anomalyDataset.AnomalyDataset( dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files, spatial_transform=transforms["test"],
-               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment)
+               nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo, videoSegmentLength=videoSegmentLength, positionSegment=positionSegment, overlapping=overlapping),
+          "test": anomalyDataset.AnomalyDataset(dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files,
+               spatial_transform=transforms["test"], nDynamicImages=numDiPerVideos, maxNumFramesOnVideo=maxNumFramesOnVideo,
+               videoSegmentLength=videoSegmentLength, positionSegment=positionSegment, overlapping=overlapping)
      }
      dataloaders_dict = {
           "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),

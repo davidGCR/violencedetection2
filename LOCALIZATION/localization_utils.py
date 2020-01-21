@@ -17,6 +17,7 @@ from matplotlib.ticker import NullLocator
 from mpl_toolkits.axes_grid1 import ImageGrid
 import copy
 import itertools
+import random
 
 def getSegmentBBox(lbboxes):
     xmin = 10000
@@ -160,11 +161,33 @@ def setLabelInImage(image, boxes, text, font_color, font_size, pos_text, backgro
         # else:
         #     draw.text(pos_text, text, fill=color, font = font, align ="left")  
     
+def randomBBox(h, w):
+    xmax = np.random.randint(0, w)
+    xmin = 0
+    if xmax > 20:
+        xmin = np.random.randint(0, xmax - 20)
+    else:
+        xmin = np.random.randint(0, xmax)
+    if xmax - xmin < 20:
+        xmax = xmax + 20
+        
+    ymax = np.random.randint(0, h)
+    if ymax > 20:
+        ymin = np.random.randint(0, ymax - 20)
+    else:
+        ymin = np.random.randint(0, ymax)
+    if ymax - ymin < 20:
+        ymax = ymax+20
+    return BoundingBox(Point(xmin,ymin),Point(xmax,ymax))
+
+
+
 def plotOnlyBBoxOnImage(image, boxes, color):
     if boxes is not None:
 
         if isinstance(image, np.ndarray):
             image = (image * 255 / np.max(image)).astype('uint8')
+            # image = image.astype('uint8')
             image = Image.fromarray(image)
             # print('image pil: ', image.size)
             # draw = ImageDraw.Draw()
@@ -211,7 +234,7 @@ def plotOnlyBBoxOnImage(image, boxes, color):
         # fig.patches.extend([plt.Rectangle((box.pmin.x, box.pmin.y),w,h, color=color, alpha=0.5,zorder=1000,figure=fig)])
     return image
 
-def findAnomalyRegionsOnFrame(personBboxes, saliencyBboxes, iou_threshold):
+def filterIntersectionPersonAndDynamicRegion(personBboxes, saliencyBboxes, iou_threshold):
     """Detect anomalous regions in one frame: Iou between persons and saliency"""
     anomalyRegions = []
     # person - saliency regions intersection
@@ -298,15 +321,18 @@ def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     return bbox
 
 def getFramesFromSegment(video_name, frames_segment, num_frames):
-    # print('sdfasffffffffffffffffffffffffff')
+    """
+    return: names: list(str), frames: list(PILImage), bboxes: list(Bbox)
+    """
     names = []
     frames = []
     bboxes = []
+    print('getFramesFromSegment Video: ', video_name, len(frames_segment))
     if num_frames == 'all':
         for frame_info in frames_segment:
             # f_info = frame_info[]
             frame_name = str(frame_info[0][0])
-            # print(frame_info, len(frame_info))
+            # print('frame_name000000000000: ', frame_name)
             frame_path = os.path.join(video_name, frame_name)
             names.append(frame_path)
             # image = np.array(Image.open(frame_path))
@@ -361,7 +387,7 @@ def personDetectionInSegment(frames_list, yolo_model, img_size, conf_thres, nms_
     return bbox_persons_in_segment
 
 
-def personDetectionInFrame(model, img_size, conf_thres, nms_thres, classes, ioImage, plot = False):
+def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, ioImage, plot = False):
     # print('='*20+' YOLOv3 - ', frame_path)
     img = yolo_inference.preProcessImage(ioImage, img_size)
     detections = yolo_inference.inference(model, img, conf_thres, nms_thres)
