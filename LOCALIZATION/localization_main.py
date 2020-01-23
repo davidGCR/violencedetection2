@@ -516,7 +516,7 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                     persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
                     persons_segment_filtered.append(only_joined_regions)
                     # anomalous_regions_in_frame = localization_utils.filterIntersectionPersonAndDynamicRegion(persons_filtered, saliency_bboxes, 0.3)
-                    for personBox in persons_in_frame:
+                    for personBox in persons_filtered:
                         for saliencyBox in saliency_bboxes:
                             iou = localization_utils.IOU(personBox, saliencyBox)
                             intersec = localization_utils.intersetionArea(personBox, saliencyBox)

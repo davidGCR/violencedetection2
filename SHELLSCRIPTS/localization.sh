@@ -6,8 +6,8 @@ python3 LOCALIZATION/localization_main.py \
 --numDiPerVideos 1 \
 --shuffle false \
 --plot false \
---videoSegmentLength 8 \
---personDetector maskrcnn \
+--videoSegmentLength 30 \
+--personDetector yolov3 \
 --positionSegment online \
 --overlapping 0.5
 
