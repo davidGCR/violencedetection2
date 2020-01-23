@@ -28,10 +28,14 @@ class SaliencyTester():
         self.saliency_config = saliency_config
         self.numDiPerVideos = numDiPerVideos
         self.threshold = threshold
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.net = SALIENCY.saliencyModel.build_saliency_model(num_classes=num_classes)
-        self.net = self.net.to(device)
-        self.net = torch.load(saliency_model_file)
+        self.net = self.net.to(self.device)
+        # print(device)
+        if str(self.device) == 'cpu':
+            self.net = torch.load(saliency_model_file, map_location=torch.device('cpu'))
+        else:
+            self.net = torch.load(saliency_model_file)
         self.net.eval()
 
     def compute_sal_map(self, data):
@@ -58,7 +62,9 @@ class SaliencyTester():
         # if numDiPerVideos>1:
         #     inputs = inputs.permute(1, 0, 2, 3, 4)
         #     inputs = torch.squeeze(inputs, 0)  #get one di [bs,c,w,h]
-        di_images, labels = Variable(di_images.cuda()), Variable(labels.cuda())
+        labels = labels.to(self.device)
+        di_images = di_images.to(self.device)
+        di_images, labels = Variable(di_images), Variable(labels)
         masks, _ = self.net(di_images, labels)
         return masks
 

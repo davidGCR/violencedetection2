@@ -1,6 +1,8 @@
 
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# import include
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
 import ANOMALYCRIME.anomalyInitializeDataset as anomalyInitializeDataset
@@ -60,7 +62,7 @@ def pytorch_show(img):
 def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bboxes, saliency_bboxes, persons_in_segment,
             persons_segment_filtered, anomalous_regions):
     # create a figure with two subplots
-    fig, axes = plt.subplots(r, c, figsize=(25, 15))
+    fig, axes = plt.subplots(r, c, figsize=(20, 10))
     plt.subplots_adjust(hspace=0.5, wspace=0, left = 0.03, right = 0.99)
 
     for i in range(grid_static_imgs.shape[0]-1):
@@ -97,7 +99,9 @@ def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bbox
                 image_saliency = localization_utils.setLabelInImage(image_saliency,s_box, 'score' ,constants.PIL_YELLOW,font_size,'right_corner','black' )
             images.append((image_saliency,'gt image with bboxes'))
             
-            image_persons = localization_utils.plotOnlyBBoxOnImage(image_saliency, persons_in_segment[i], constants.PIL_GREEN)
+            image_persons = image_saliency.copy()
+            for person in persons_in_segment:
+                image_persons = localization_utils.plotOnlyBBoxOnImage(image_persons, person, constants.PIL_GREEN)
             # image_persons = localization_utils.setLabelInImage(image_persons,persons_in_segment[i], text='person',font_color='black',font_size=font_size,pos_text='left_corner',background_color='white' )
             images.append((image_persons,'persons'))
 
@@ -458,12 +462,14 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
             # for index, segment_real_info in enumerate(segment_info): #di by di
                 #person detection
             persons_in_segment = []
-            
-            persons_in_frame = []
-            
+            persons_segment_filtered = []
+            anomalous_regions = []  # to plot
+            segmentBox = localization_utils.getSegmentBBox(real_bboxes)
             
             print('Real frames shot: ', len(real_frames))
             for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
+                print('Shot frame to process: ',idx)
+                persons_in_frame = []
                 if type_person_detector == constants.YOLO:
                     img_size = 416
                     conf_thres = 0.8
@@ -473,74 +479,84 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                 elif type_person_detector == constants.MASKRCNN:
                     mask_rcnn_threshold = 0.4
                     persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
-                print('num Persons in frame: ', len(persons_in_frame))
-                persons_in_segment.append(persons_in_frame)
-        
-            #refinement in segment
-            iou_threshold = 0.3
-            thres_intersec_person_saliency = 0.5
-            persons_segment_filtered = []  #only to vizualice
-            anomalous_regions = []  # to plot
-            fail_reason = ''
-            if bbox_last is not None:
-                print('='*10, ' ONLINE ')
-                dynamic_region = saliency_bboxes[0]
-                for i,persons_in_frame in enumerate(persons_in_segment): #Join bboxes from close persons an tersect with dynamic regions
-                    persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
-                    print('Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
-                    persons_segment_filtered.append(only_joined_regions)
-
-                    for person in persons_filtered:
-                        iou = localization_utils.IOU(person, dynamic_region)
-                        print('IOU: ', str(iou))
-                        if iou >= iou_threshold:
-                            # h1 = dynamic_region.pmax.y - dynamic_region.pmin.y
-                            # w1 = dynamic_region.pmax.x - dynamic_region.pmin.x
-                            dx = abs(person.center.x - dynamic_region.center.x)
-                            dy = abs(person.center.y - dynamic_region.center.y)
-
-                            abnorm_bbox = BoundingBox(Point(dynamic_region.pmin.x - dx, dynamic_region.pmin.y - dy), Point(dynamic_region.pmax.x - dx, dynamic_region.pmax.y - dx))
-                            abnorm_bbox.score = iou
-                            anomalous_regions.append(abnorm_bbox)
+                print('--num Persons in frame: ', len(persons_in_frame))
+                
+                if len(persons_in_frame) > 0:
+                    persons_in_segment.append(persons_in_frame)
+                    iou_threshold = 0.3
+                    thres_intersec_person_saliency = 0.5
+                    thresh_close_persons = 20
+                    # persons_segment_filtered = []  #only to vizualice
                     
-                    if len(anomalous_regions) > 0:
-                        anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
-                        break
-                    
-                if len(anomalous_regions) == 0:
-                    print('FFFFFFFFFFFFAil: using last detection...')
-                    anomalous_regions.append(bbox_last)
-
-            else:
-                for i,persons_in_frame in enumerate(persons_in_segment): #Join bboxes from close persons an tersect with dynamic regions
-                    persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
-                    persons_segment_filtered.append(only_joined_regions)
-                    # anomalous_regions_in_frame = localization_utils.filterIntersectionPersonAndDynamicRegion(persons_filtered, saliency_bboxes, 0.3)
-                    for personBox in persons_in_frame:
-                        for saliencyBox in saliency_bboxes:
-                            iou = localization_utils.IOU(personBox, saliencyBox)
-                            intersec = localization_utils.intersetionArea(personBox, saliencyBox)
-                            intersec_pct = intersec*100/personBox.area#Percentaje of intersection
-                            if iou >= iou_threshold or intersec_pct >= thres_intersec_person_saliency:
-                                saliencyBox.score = iou if iou >= iou_threshold else intersec_pct
-                                anomalous_regions.append(saliencyBox)
-                                break
+                    fail_reason = ''
+                    if bbox_last is not None:
+                        print('='*10, ' ONLINE ')
+                        dynamic_region = saliency_bboxes[0]
+                        persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
+                        print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
+                        persons_segment_filtered.append(only_joined_regions)
+                        for person in persons_filtered:
+                            iou = localization_utils.IOU(person, dynamic_region)
+                            print('----IOU (person and dynamic region): ', str(iou))
+                            if iou >= iou_threshold:
+                                # dx = abs(person.center.x - dynamic_region.center.x)
+                                # dy = abs(person.center.y - dynamic_region.center.y)
+                                # abnorm_bbox = BoundingBox(Point(dynamic_region.pmin.x - dx, dynamic_region.pmin.y - dy), Point(dynamic_region.pmax.x - dx, dynamic_region.pmax.y - dx))
+                                abnorm_bbox = localization_utils.joinBBoxes(person,dynamic_region)
+                                abnorm_bbox.score = iou
+                                anomalous_regions.append(abnorm_bbox)
+                        
                         if len(anomalous_regions) > 0:
+                            anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+                            # bbox_last = anomalous_regions[0]
                             break
-                    # anomalous_regions.extend(anomalous_regions_in_frame)
-                    # print('--------------- anomalous_regions: ', len(anomalous_regions))
-            anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
-            bbox_last = anomalous_regions[0]
-            print('anomalous_regions final: ', len(anomalous_regions))
-            ######################################              
-            segmentBox = localization_utils.getSegmentBBox(real_bboxes)
-            # l = [segmentBox]
-            # print('=========== Ground Truth Score =============')
-            # scoring.getScoresFromRegions(video_name[0], bbox_segments, l, classifier, transforms_dataset['test'])
-        
-            # for b in segment_real_info['real_bboxes']:
-            #     b.score = l[0].score
-            
+                            
+                        # if len(anomalous_regions) == 0:
+                        #     print('FFFFFFFFFFFFAil: using last detection...')
+                        #     anomalous_regions.append(bbox_last)
+
+                    else:
+                        print('='*10, ' FIRST SHOT ')
+                        persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
+                        persons_segment_filtered.append(only_joined_regions)
+                        # anomalous_regions_in_frame = localization_utils.filterIntersectionPersonAndDynamicRegion(persons_filtered, saliency_bboxes, 0.3)
+                        for personBox in persons_filtered:
+                            for saliencyBox in saliency_bboxes:
+                                iou = localization_utils.IOU(personBox, saliencyBox)
+                                # intersec = localization_utils.intersetionArea(personBox, saliencyBox)
+                                # intersec_pct = intersec*100/personBox.area#Percentaje of intersection
+                                # if iou >= iou_threshold or intersec_pct >= thres_intersec_person_saliency:
+                                if iou >= iou_threshold:
+                                    saliencyBox.score = iou if iou >= iou_threshold else intersec_pct
+                                    anomalous_regions.append(saliencyBox)
+                            
+                        if len(anomalous_regions) > 0:
+                            anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+                            bbox_last = anomalous_regions[0]
+                            break
+                            # print('anomalous_regions final: ', len(anomalous_regions))
+                        ######################################              
+                        
+                        # l = [segmentBox]
+                        # print('=========== Ground Truth Score =============')
+                        # scoring.getScoresFromRegions(video_name[0], bbox_segments, l, classifier, transforms_dataset['test'])
+                    
+                        # for b in segment_real_info['real_bboxes']:
+                        #     b.score = l[0].score
+                    if len(anomalous_regions) > 0 :
+                        break
+            if len(anomalous_regions) == 0:
+                print('Tracking Algorithm FAIL!!!!. Using last localization...')
+                anomalous_regions.append(bbox_last)   
+            # if len(anomalous_regions) == 0:
+            #     # print('No anomalous regions found...')
+            #     iou = localization_utils.IOU(segmentBox,None)
+            # else:
+            iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
+            row = [frames_names[0], iou]
+            data_rows.append(row)
+            dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
+            bbox_last = anomalous_regions[0]        
             if plot:
                 font_size = 9
                 subplot_r = 2
@@ -562,14 +578,7 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                         persons_segment_filtered, anomalous_regions)
                     
                 ######################################
-            if len(anomalous_regions) == 0:
-                # print('No anomalous regions found...')
-                iou = localization_utils.IOU(segmentBox,None)
-            else:
-                iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
-            row = [frames_names[0], iou]
-            data_rows.append(row)
-            dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
+            
             
     ############# MAP #################
     print('data rows: ', len(data_rows))
@@ -631,6 +640,7 @@ def __main__():
     # classifier = torch.load(classifierFile)
     # classifier.eval()
     # classifier.inferenceMode()
+    print(torch.__version__)
     h = 240
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
