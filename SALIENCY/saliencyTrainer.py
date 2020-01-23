@@ -21,7 +21,7 @@ import os
 import argparse
 import constants
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
-import ANOMALYCRIME.anomaly_initializeDataset as anomaly_initializeDataset
+import ANOMALYCRIME.anomalyInitializeDataset as anomaly_initializeDataset
 # from Models import AlexNet
 
 def save_checkpoint(state, filename='sal.pth.tar'):
@@ -175,9 +175,9 @@ def __anomaly_main__():
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
     dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
-                                    batch_size, num_workers, numDiPerVideos, transforms_dataset, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
+                                    batch_size, num_workers, numDiPerVideos, transforms_dataset, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle,0)
     
-    checkpoint_path = os.path.join(saliency_model_folder, 'saliency_model' + checkpoint_info + '_epochs-' + str(num_epochs) + '.tar')
+    checkpoint_path = os.path.join(saliency_model_folder,'mask_model_'+str(videoSegmentLength)+'_frames_di_'+checkpoint_info + '_epochs-' + str(num_epochs) + '.tar')
     
     # image_datasets, dataloaders_dict = init_anomaly(batch_size, num_workers, maxNumFramesOnVideo, data_transforms, numDiPerVideos, avgmaxDuration, dataset_source, shuffle, videoSegmentLength, positionSegment)
 

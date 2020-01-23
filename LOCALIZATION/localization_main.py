@@ -101,18 +101,20 @@ def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bbox
             # image_persons = localization_utils.setLabelInImage(image_persons,persons_in_segment[i], text='person',font_color='black',font_size=font_size,pos_text='left_corner',background_color='white' )
             images.append((image_persons,'persons'))
 
-            image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[i], constants.PIL_MAGENTA)
+            image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[0], constants.PIL_MAGENTA)
             # image_persons_filt = localization_utils.setLabelInImage(image_persons_filt, persons_segment_filtered[i], text='person_filter', font_color=constants.PIL_MAGENTA, font_size=font_size, pos_text='left_corner', background_color='white')
-            
             images.append((image_persons_filt,'persons close'))
-            image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions, constants.PIL_BLUE)
+            
+            image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions[0], constants.PIL_BLUE)
+            segmentBox = localization_utils.getSegmentBBox(real_bboxes)
+            image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_RED,)
             # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='anomalous', font_color=constants.PIL_BLUE, font_size=font_size, pos_text='left_corner', background_color='white')
 
-            if len(anomalous_regions) > 0:
-                segmentBox = localization_utils.getSegmentBBox(real_bboxes)
-                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_YELLOW,)
-                # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='segment', font_color=constants.PIL_YELLOW, font_size=font_size, pos_text='left_corner', background_color='white')
-                image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA)
+            # if len(anomalous_regions) > 0:
+            #     segmentBox = localization_utils.getSegmentBBox(real_bboxes)
+            #     image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_RED,)
+            #     # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='segment', font_color=constants.PIL_YELLOW, font_size=font_size, pos_text='left_corner', background_color='white')
+            #     image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA)
                 # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='anomalous', font_color=constants.PIL_MAGENTA, font_size=font_size, pos_text='left_corner', background_color='white')
 
             images.append((image_anomalous,'abnormal regions'))                    
@@ -295,7 +297,7 @@ def offline(dataloader, saliency_tester, type_person_detector, h, w, plot):
             ######################################
             if len(anomalous_regions) == 0:
                 # print('No anomalous regions found...')
-                iou = localization_utils.IOU(segment_real_info['real_bboxes'][0],None)
+                iou = localization_utils.IOU(segmentBox,None)
             else:
                 # segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
                 iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
@@ -336,8 +338,14 @@ def offline(dataloader, saliency_tester, type_person_detector, h, w, plot):
 
 def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
     person_model, classes = getPersonDetectorModel(type_person_detector)
+    bbox_last = None
+    distance_th = 30.5
+    thres_intersec_lastbbox_current = 0.4
+    data_rows = []
+    video = anomalyDataset
+    aaa = [video]
     for idx_video, data in enumerate(anomalyDataset):
-        print("-" * 150)
+        print("-" * 150, 'video No: ', idx_video)
         #di_images = [1,ndis,3,224,224]
         video_name, label = data
         video_name = [video_name]
@@ -350,10 +358,10 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
             # - labels:  <class 'torch.Tensor'> torch.Size([1])
             # - bbox_segments:  <class 'list'> [[('frame645.jpg',), tensor([0]), tensor([72]), tensor([67]), tensor([133]), tensor([148])], ...,[]
             print(video_name, dis_images.size(), len(segment_info))
-            print('- dis_images: ', type(dis_images), dis_images.size())
-            print('- video_name: ', type(video_name), video_name)
-            print('- label: ', type(label))
-            print('- segment_info: ', type(segment_info), segment_info[0])
+            # print('- dis_images: ', type(dis_images), dis_images.size())
+            # print('- video_name: ', type(video_name), video_name)
+            # print('- label: ', type(label))
+            # print('- segment_info: ', type(segment_info), segment_info[0])
             # - dis_images:  <class 'torch.Tensor'>
             # - video_name:  <class 'str'>
             # - labels:  <class 'int'>
@@ -380,66 +388,80 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
 
             ######################## mask
             masks = saliency_tester.compute_mask(dis_images, label)  #[1, 1, 224, 224]
-            
             mascara = masks.detach().cpu()#(1, 1, 224, 224)
             mascara = torch.squeeze(mascara,0)#(1, 224, 224)
             mascara = saliency_tester.min_max_normalize_tensor(mascara)  #to 0-1
-            
-            min_px = torch.min(mascara)
-            max_px = torch.max(mascara)
-            print('Mascara normal(min: ',str(min_px),' - max: ', str(max_px))
-            mascara = mascara.numpy().transpose(1, 2, 0)  
-            mascara = np.concatenate((mascara,) * 3, axis=-1)
-            min_px = np.amin(mascara)
-            max_px = np.amax(mascara)
-            print('Mascara numpy (min: ',str(min_px),' - max: ', str(max_px))
-
+            mascara = mascara.numpy().transpose(1, 2, 0)
             ##resize 
             mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+            
+            # print('Mascara 0000(min: ',str(np.amin(mascara)),' - max: ', str(np.amax(mascara)))
+            # print('mascara antest de todo: ', mascara.shape,' w: ',w,'h: ',h) 
             # plt.imshow(mascara)
             # plt.title('MASCARA')
             # plt.show()
-            mascara_dn = np.uint8(255*mascara)
-            mascara_dn = cv2.fastNlMeansDenoisingColored(mascara_dn, None, 10, 10, 7, 21)
-            # print('mascara :', mascara.shape)
 
-            # plt.imshow(mascara_dn)
+            # mascara = np.uint8(255*mascara)
+            # mascara = cv2.fastNlMeansDenoisingColored(mascara, None, 10, 10, 7, 21)
+            # _min = np.amin(mascara)
+            # _max = np.amax(mascara)
+            # # print("min:", _min.item(), ", max:", _max.item())
+            # mascara = (mascara - _min) / (_max - _min)
+
+            # plt.imshow(mascara)
             # plt.title('MASCARA denoised')
             # plt.show()
-            masks = torch.from_numpy(mascara_dn).float()  #torch.Size([224, 224, 3])
-            masks = masks.permute(2, 0, 1)  
-            masks = torch.unsqueeze(masks,dim=0) #masks : torch.Size([1, 3, 240, 320]
             
-            # unsqueeze(0)
-            # masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
-            # masks = masks.detach().cpu()
-            masks = saliency_tester.min_max_normalize_tensor(masks) #to 0-1
-            source_frame = masks[0]
+            # plt.imshow(mascara)
+            # plt.title('MASCARA binarizada')
+            # plt.show()
 
-            video_prepoc_saliencies = []
-            l_imgs_processing = []
+            saliency_bboxes, preprocesing_outs = localization_utils.computeBoundingBoxFromMask(mascara)  #only one by segment
+            # min_px = np.amin(mascara)
+            # max_px = np.amax(mascara)
+            # #0:  (min:  0.21259843  - max:  0.9015748
+            # print('Mascara (min: ',str(min_px),' - max: ', str(max_px))
 
-            # for idx_dyn_img, source_frame in enumerate(source_frames):  #Mask by mask
-            source_frame = source_frame.numpy().transpose(1,2,0)
-            print('source frane: ', source_frame.shape)
-            saliency_bboxes, preprocesing_outs = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
-
-            for bbox in saliency_bboxes:
-                crop = source_frame[bbox.pmin.y:bbox.pmax.y, bbox.pmin.x:bbox.pmax.x,:]
-                plt.imshow(crop)
-                plt.show()
+            # for bbox in saliency_bboxes:
+            #     crop = mascara[bbox.pmin.y:bbox.pmax.y, bbox.pmin.x:bbox.pmax.x]
+            #     min_px = np.amin(crop)
+            #     max_px = np.amax(crop)
+            #     #0:  (min:  0.21259843  - max:  0.9015748
+            #     print('Mascara Crop numpy (min: ',str(min_px),' - max: ', str(max_px))
+            #     plt.imshow(crop)
+            #     plt.show()
             # print('preprocesing_outs: ', len(preprocesing_outs))
+            #metricas (no decir es mejor... 2 puntos porcentuales del valor-outperform) en esa base de datos- grafico explicar ejes...porque de los resultados
+            #presentar errores
             saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)            
-            # segment_info = []
+            if bbox_last is not None:
+                bboxes_with_high_core = []
+                for bbox in saliency_bboxes:
+                    # c1 = Point(int(bbox.pmin.x + (bbox.pmax.x - bbox.pmx.x)), int(bbox.pmin.y + (bbox.pmax.y - bbox.pmin.y)))
+                    # bbox.center = c1
+                    # last_c = Point(int(bbox_last.pmin.x + (bbox_last.pmax.x - bbox_last.pmx.x) / 2), int(bbox_last.pmin.y + (bbox_last.pmax.y - bbox_last.pmin.y) / 2))
+                    # bbox_last.center = last_c
+                    pred_distance = localization_utils.distance(bbox.center, bbox_last.center)
+                    bbox.score = pred_distance
+                    if bbox.score <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
+                        bboxes_with_high_core.append(bbox)
+                if len(bboxes_with_high_core) > 0:
+                    bboxes_with_high_core.sort(key=lambda x: x.score, reverse=True)
+                    saliency_bboxes = bboxes_with_high_core
+                else:
+                    print('FFFFail in close lastBBox and saliency bboxes...')
+                    saliency_bboxes = [bbox_last]
+                       
             
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
             
             # for index, segment_real_info in enumerate(segment_info): #di by di
                 #person detection
             persons_in_segment = []
-            anomalous_regions = []  # to plot
+            
             persons_in_frame = []
-            persons_segment_filtered = []  #only to vizualice
+            
+            
             print('Real frames shot: ', len(real_frames))
             for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
                 if type_person_detector == constants.YOLO:
@@ -455,15 +477,60 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                 persons_in_segment.append(persons_in_frame)
         
             #refinement in segment
-            for i,persons_in_frame in enumerate(persons_in_segment): #Join bboxes from close persons an tersect with dynamic regions
-                persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
-                persons_segment_filtered.append(only_joined_regions)
-                # print('persons_in_frame filter: ', len(persons_filtered))
-                anomalous_regions_in_frame = localization_utils.filterIntersectionPersonAndDynamicRegion(persons_filtered, saliency_bboxes, 0.3)
-                # anomalous_regions_in_frame = sorted(anomalous_regions_in_frame, key=lambda x: x.iou, reverse=True)
-                anomalous_regions.extend(anomalous_regions_in_frame)
-                # print('--------------- anomalous_regions: ', len(anomalous_regions))
-                anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+            iou_threshold = 0.3
+            thres_intersec_person_saliency = 0.5
+            persons_segment_filtered = []  #only to vizualice
+            anomalous_regions = []  # to plot
+            fail_reason = ''
+            if bbox_last is not None:
+                print('='*10, ' ONLINE ')
+                dynamic_region = saliency_bboxes[0]
+                for i,persons_in_frame in enumerate(persons_in_segment): #Join bboxes from close persons an tersect with dynamic regions
+                    persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
+                    print('Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
+                    persons_segment_filtered.append(only_joined_regions)
+
+                    for person in persons_filtered:
+                        iou = localization_utils.IOU(person, dynamic_region)
+                        print('IOU: ', str(iou))
+                        if iou >= iou_threshold:
+                            # h1 = dynamic_region.pmax.y - dynamic_region.pmin.y
+                            # w1 = dynamic_region.pmax.x - dynamic_region.pmin.x
+                            dx = abs(person.center.x - dynamic_region.center.x)
+                            dy = abs(person.center.y - dynamic_region.center.y)
+
+                            abnorm_bbox = BoundingBox(Point(dynamic_region.pmin.x - dx, dynamic_region.pmin.y - dy), Point(dynamic_region.pmax.x - dx, dynamic_region.pmax.y - dx))
+                            abnorm_bbox.score = iou
+                            anomalous_regions.append(abnorm_bbox)
+                    
+                    if len(anomalous_regions) > 0:
+                        anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+                        break
+                    
+                if len(anomalous_regions) == 0:
+                    print('FFFFFFFFFFFFAil: using last detection...')
+                    anomalous_regions.append(bbox_last)
+
+            else:
+                for i,persons_in_frame in enumerate(persons_in_segment): #Join bboxes from close persons an tersect with dynamic regions
+                    persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
+                    persons_segment_filtered.append(only_joined_regions)
+                    # anomalous_regions_in_frame = localization_utils.filterIntersectionPersonAndDynamicRegion(persons_filtered, saliency_bboxes, 0.3)
+                    for personBox in persons_in_frame:
+                        for saliencyBox in saliency_bboxes:
+                            iou = localization_utils.IOU(personBox, saliencyBox)
+                            intersec = localization_utils.intersetionArea(personBox, saliencyBox)
+                            intersec_pct = intersec*100/personBox.area#Percentaje of intersection
+                            if iou >= iou_threshold or intersec_pct >= thres_intersec_person_saliency:
+                                saliencyBox.score = iou if iou >= iou_threshold else intersec_pct
+                                anomalous_regions.append(saliencyBox)
+                                break
+                        if len(anomalous_regions) > 0:
+                            break
+                    # anomalous_regions.extend(anomalous_regions_in_frame)
+                    # print('--------------- anomalous_regions: ', len(anomalous_regions))
+            anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+            bbox_last = anomalous_regions[0]
             print('anomalous_regions final: ', len(anomalous_regions))
             ######################################              
             segmentBox = localization_utils.getSegmentBBox(real_bboxes)
@@ -479,18 +546,11 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                 subplot_r = 2
                 subplot_c = 5
                 # img_source = source_frames[0].numpy().transpose(1, 2, 0)
-                img_source = source_frame
+                img_source = mascara
                 di_image = ttttt
                 # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
                 preprocesing_reults = np.empty( (subplot_r,subplot_c), dtype=tuple)
-                preprocesing_reults[0,0] = (source_frame,'image source')
-                # preprocesing_reults[0,1]=(video_prepoc_saliencies[index]['preprocesing'][0], 'thresholding')
-                # preprocesing_reults[0,2]=(video_prepoc_saliencies[index]['preprocesing'][1], 'morpho')
-                # preprocesing_reults[0,3]=(video_prepoc_saliencies[index]['preprocesing'][2], 'contours')
-                # preprocesing_reults[0,4]=(video_prepoc_saliencies[index]['preprocesing'][3], 'bboxes')
-                # real_frames = segment_info[index]['real_frames']
-                # real_bboxes = segment_info[index]['real_bboxes']
-                # saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
+                preprocesing_reults[0,0] = (mascara,'image source')
                 preprocesing_reults[0,1]=(preprocesing_outs[0], 'thresholding')
                 preprocesing_reults[0,2]=(preprocesing_outs[1], 'morpho')
                 preprocesing_reults[0,3]=(preprocesing_outs[2], 'contours')
@@ -502,20 +562,22 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                         persons_segment_filtered, anomalous_regions)
                     
                 ######################################
-            # if len(anomalous_regions) == 0:
-            #     # print('No anomalous regions found...')
-            #     iou = localization_utils.IOU(segmentBox,None)
-            # else:
-            #     iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
-            # row = [frames_names[0], iou]
-            # data_rows.append(row)
+            if len(anomalous_regions) == 0:
+                # print('No anomalous regions found...')
+                iou = localization_utils.IOU(segmentBox,None)
+            else:
+                iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
+            row = [frames_names[0], iou]
+            data_rows.append(row)
             dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
             
     ############# MAP #################
-    # print('data rows: ', len(data_rows))
-    # df = pd.DataFrame(data_rows, columns=['path', 'iou'])
-    # df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
-    # localization_utils.mAP(df)
+    print('data rows: ', len(data_rows))
+    df = pd.DataFrame(data_rows, columns=['path', 'iou'])
+    df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
+    prec_at_rec, avg_prec = localization_utils.mAP(df)
+    print('11 point precision is ', prec_at_rec)
+    print('\nmap is ', avg_prec)
 
 
 def __main__():
@@ -560,6 +622,7 @@ def __main__():
                                                         test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_dataset,
                                                         maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle, getRawFrames,
                                                         overlapping)
+
     saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloaders_dict['test'], test_names,
                                         input_size, saliency_model_config, numDiPerVideos, threshold)
     

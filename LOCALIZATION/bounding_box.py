@@ -21,7 +21,10 @@ class BoundingBox(object):
     @property
     def center(self):
         return self._pcenter
-    
+    @center.setter
+    def center(self, pcenter):
+        self._pcenter = pcenter
+
     @property
     def score(self): 
         return self._score 

@@ -1,13 +1,13 @@
 cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
 python3 LOCALIZATION/localization_main.py \
---saliencyModelFile SALIENCY/Models/anomaly/saliency_model_epochs-10.tar \
+--saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 --batchSize 1 \
 --numWorkers 1 \
 --numDiPerVideos 1 \
 --shuffle false \
---plot true \
---videoSegmentLength 10 \
---personDetector yolov3 \
+--plot false \
+--videoSegmentLength 8 \
+--personDetector maskrcnn \
 --positionSegment online \
 --overlapping 0.5
 
@@ -19,3 +19,7 @@ python3 LOCALIZATION/localization_main.py \
 # --shuffle true \
 # --plot true \
 # --videoSegmentLength 30 \
+
+
+
+# --saliencyModelFile SALIENCY/Models/anomaly/saliency_model_epochs-10.tar SALIENCY/Models/anomaly/mask_model_30_frames_di.tar \

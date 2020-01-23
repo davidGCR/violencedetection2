@@ -13,7 +13,7 @@ python3 SALIENCY/saliencyTrainer.py  \
 --numEpochs 12 \
 --numWorkers 4  \
 --numDiPerVideos 1 \
---blackBoxFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \
+--blackBoxFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth \
 --maxNumFramesOnVideo 0 \
---videoSegmentLength 30 \
+--videoSegmentLength 10 \
 --positionSegment random

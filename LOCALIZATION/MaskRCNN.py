@@ -36,10 +36,11 @@ def random_colour_masks(image):
 def personDetectionInFrameMaskRCNN(model, ioImage, threshold):
     masks, pred_boxes, pred_class = get_prediction(model, ioImage, threshold)
     persons = []
-    for idx, clase in enumerate(pred_class):
-        if clase == 'person':
-            bbox = BoundingBox(Point(pred_boxes[idx][0][0], pred_boxes[idx][0][1]),Point(pred_boxes[idx][1][0], pred_boxes[idx][1][1]))
-            persons.append(bbox)
+    if masks is not None:
+      for idx, clase in enumerate(pred_class):
+          if clase == 'person':
+              bbox = BoundingBox(Point(pred_boxes[idx][0][0], pred_boxes[idx][0][1]),Point(pred_boxes[idx][1][0], pred_boxes[idx][1][1]))
+              persons.append(bbox)
     return persons
     
 
@@ -82,15 +83,18 @@ def get_prediction(model, img, threshold):
         if x > threshold: 
             pred_t.append(pred_score.index(x))
     # print('pred_t: ',len(pred_t), pred_t)
-    pred_t = pred_t[-1]
-    # print('pred_t val: ',pred_t)
-    masks = (pred[0]['masks']>0.5).squeeze().detach().cpu().numpy()
-    pred_class = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in list(pred[0]['labels'].numpy())]
-    pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().numpy())]
-    masks = masks[:pred_t+1]
-    pred_boxes = pred_boxes[:pred_t+1]
-    pred_class = pred_class[:pred_t+1]
-    return masks, pred_boxes, pred_class
+    if len(pred_t) > 0:  
+      pred_t = pred_t[-1] #last element
+      # print('pred_t val: ',pred_t)
+      masks = (pred[0]['masks']>0.5).squeeze().detach().cpu().numpy()
+      pred_class = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in list(pred[0]['labels'].numpy())]
+      pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().numpy())]
+      masks = masks[:pred_t+1]
+      pred_boxes = pred_boxes[:pred_t+1]
+      pred_class = pred_class[:pred_t+1]
+      return masks, pred_boxes, pred_class
+    else:
+      return None, None, None
 
 
 def instance_segmentation_api(img_path, threshold=0.5, rect_th=1, text_size=0.5, text_th=1):

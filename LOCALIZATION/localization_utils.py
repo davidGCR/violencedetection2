@@ -85,8 +85,8 @@ def mAP(dataframe):
             prec = 0.0
         prec_at_rec.append(prec)
     avg_prec = np.mean(prec_at_rec)
-    print('11 point precision is ', prec_at_rec)
-    print('\nmap is ', avg_prec)
+    
+    return prec_at_rec, avg_prec
 
 def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
     """Join persons bboxes if they iou is greter than a threshold"""
@@ -109,6 +109,7 @@ def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
                 persons_filtered.append(p2)
     elif len(personsBBoxes) == 1:
         persons_filtered.append(personsBBoxes[0])
+        only_joined_regions.append(personsBBoxes[0])
 
     return persons_filtered, only_joined_regions
 
@@ -234,6 +235,21 @@ def plotOnlyBBoxOnImage(image, boxes, color):
         # fig.patches.extend([plt.Rectangle((box.pmin.x, box.pmin.y),w,h, color=color, alpha=0.5,zorder=1000,figure=fig)])
     return image
 
+def intersectionPersonDynamicRegion(personBBox, dynamicRegion):
+
+    iou = IOU(personBBox, dynamicRegion)
+    intersection = intersetionArea(personBBox, dynamicRegion)
+    return iou
+    # intersection = personBox.percentajeArea(iou)
+    # print('***iou: ', iou)
+    # if iou >= threshold:
+    #     personBox.iou = intersection
+    #     # anomalyRegions.append(personBox)
+    # elif intersection == personBox.area:
+    #     personBox.iou = intersection
+    #     # anomalyRegions.append(personBox)
+
+
 def filterIntersectionPersonAndDynamicRegion(personBboxes, saliencyBboxes, iou_threshold):
     """Detect anomalous regions in one frame: Iou between persons and saliency"""
     anomalyRegions = []
@@ -241,26 +257,15 @@ def filterIntersectionPersonAndDynamicRegion(personBboxes, saliencyBboxes, iou_t
     for personBox in personBboxes:
         for saliencyBox in saliencyBboxes:
             iou = IOU(personBox, saliencyBox)
-            intersection = intersetionArea(personBox, saliencyBox)
+            # intersection = intersetionArea(personBox, saliencyBox)
             # intersection = personBox.percentajeArea(iou)
             # print('***iou: ', iou)
             if iou >= iou_threshold:
-                personBox.iou = intersection
+                # personBox.iou = intersection
                 anomalyRegions.append(personBox)
-            elif intersection == personBox.area:
-                personBox.iou = intersection
-                anomalyRegions.append(personBox)
-    
-    
-    # while len(anomalyRegions) > 1:
-    #     filtered_regions = []
-    #     for p1, p2 in itertools.combinations(anomalyRegions, 2):
-    #         if verifyClosePersons(p1, p2, max_dist_persons_threshold):
-    #             joinBBox = joinBBoxes(p1, p2)
-    #             filtered_regions.append(joinBBox)
-    #     anomalyRegions = list(set(filtered_regions.copy()))
-    # if len(anomalyRegions) < 1:
-    #     return None
+            # elif intersection == personBox.area:
+                # personBox.iou = intersection
+                # anomalyRegions.append(personBox)
     return anomalyRegions
 
 def verifyClosePersons(p1, p2, d_treshold):
@@ -332,7 +337,7 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
         for frame_info in frames_segment:
             # f_info = frame_info[]
             frame_name = str(frame_info[0][0])
-            # print('frame_name000000000000: ', frame_name)
+            print('frame_name000000000000: ', frame_name)
             frame_path = os.path.join(video_name, frame_name)
             names.append(frame_path)
             # image = np.array(Image.open(frame_path))
@@ -460,13 +465,24 @@ def myPreprocessing(image):
     return bboxes, preprocesing_reults
     
 
+def binarize(mascara):
+    """
+        mask: numpy(h,w) or numpy (h,w,1)
+    """
+    suma = np.sum(mascara)
+    binary_threshold = (suma/(mascara.shape[0]*mascara.shape[1]))
+    print('Treshold: ', binary_threshold)
+    mascara = (mascara > binary_threshold) * 255
+    return mascara
+
 def computeBoundingBoxFromMask(mask):
     """
-    *** mask: [h,w,c]
+    *** mask: numpy[h, w]
     *** return: [thresholding, morpho, contours, bboxes]
     """
-    if mask.shape[2] == 3:
-        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    # if mask.shape[2] == 3:
+        # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        # mask = mask[:,:,0]
     # print('uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
     mask = thresholding_cv2(mask) #(h,w)
     # print(mask.shape)
