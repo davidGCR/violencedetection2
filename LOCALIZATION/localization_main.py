@@ -107,25 +107,19 @@ def myplot(r, c, font_size, grid_static_imgs, img_source, real_frames, real_bbox
 
             image_persons_filt = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), persons_segment_filtered[0], constants.PIL_MAGENTA)
             # image_persons_filt = localization_utils.setLabelInImage(image_persons_filt, persons_segment_filtered[i], text='person_filter', font_color=constants.PIL_MAGENTA, font_size=font_size, pos_text='left_corner', background_color='white')
-            images.append((image_persons_filt,'persons close'))
+            for k,ar in enumerate(anomalous_regions):
+                image_persons_filt = localization_utils.plotOnlyBBoxOnImage(image_persons_filt, anomalous_regions[k], constants.PIL_YELLOW)
+                image_persons_filt = localization_utils.setLabelInImage(image_persons_filt,ar, 'score' ,constants.PIL_WHITE,font_size,'right_corner','black' )
+            images.append((image_persons_filt,'persons close and anomalous regions'))
             
             image_anomalous = localization_utils.plotOnlyBBoxOnImage(real_frames[i].copy(), anomalous_regions[0], constants.PIL_BLUE)
             segmentBox = localization_utils.getSegmentBBox(real_bboxes)
-            image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_RED,)
-            # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='anomalous', font_color=constants.PIL_BLUE, font_size=font_size, pos_text='left_corner', background_color='white')
-
-            # if len(anomalous_regions) > 0:
-            #     segmentBox = localization_utils.getSegmentBBox(real_bboxes)
-            #     image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_RED,)
-            #     # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='segment', font_color=constants.PIL_YELLOW, font_size=font_size, pos_text='left_corner', background_color='white')
-            #     image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, anomalous_regions[0], constants.PIL_MAGENTA)
-                # image_anomalous = localization_utils.setLabelInImage(image_anomalous, anomalous_regions, text='anomalous', font_color=constants.PIL_MAGENTA, font_size=font_size, pos_text='left_corner', background_color='white')
-
+            image_anomalous = localization_utils.plotOnlyBBoxOnImage(image_anomalous, segmentBox, constants.PIL_RED)
             images.append((image_anomalous,'abnormal regions'))                    
         
         
         ims.append(paste_imgs_on_axes(images, axes))
-    print('ims: ', len(ims))
+    # print('ims: ', len(ims))
     ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=100)
     # ani.save('RESULTS/animations/animation.mp4', writer=writer)          
     plt.show()
@@ -340,15 +334,24 @@ def offline(dataloader, saliency_tester, type_person_detector, h, w, plot):
     df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
     localization_utils.mAP(df)
 
-def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
+def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, video_name):
     person_model, classes = getPersonDetectorModel(type_person_detector)
     bbox_last = None
     distance_th = 30.5
     thres_intersec_lastbbox_current = 0.4
     data_rows = []
-    video = anomalyDataset
-    aaa = [video]
+    indx_flac = -1
     for idx_video, data in enumerate(anomalyDataset):
+        indx_flac = idx_video
+        if video_name is not None and indx_flac==0:
+            idx = anomalyDataset.getindex(video_name)
+            if idx is not None:
+                data = anomalyDataset[idx]
+                idx_video = idx
+            else:
+                print('No valid video...')
+            break
+        
         print("-" * 150, 'video No: ', idx_video)
         #di_images = [1,ndis,3,224,224]
         video_name, label = data
@@ -446,16 +449,17 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                     # last_c = Point(int(bbox_last.pmin.x + (bbox_last.pmax.x - bbox_last.pmx.x) / 2), int(bbox_last.pmin.y + (bbox_last.pmax.y - bbox_last.pmin.y) / 2))
                     # bbox_last.center = last_c
                     pred_distance = localization_utils.distance(bbox.center, bbox_last.center)
-                    bbox.score = pred_distance
                     if bbox.score <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
+                        bbox.score = pred_distance
                         bboxes_with_high_core.append(bbox)
                 if len(bboxes_with_high_core) > 0:
-                    bboxes_with_high_core.sort(key=lambda x: x.score, reverse=True)
+                    bboxes_with_high_core.sort(key=lambda x: x.score)
                     saliency_bboxes = bboxes_with_high_core
+                    # saliency_bboxes[0].score = -1
                 else:
                     print('FFFFail in close lastBBox and saliency bboxes...')
                     saliency_bboxes = [bbox_last]
-                       
+                      
             
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
             
@@ -483,7 +487,7 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                 
                 if len(persons_in_frame) > 0:
                     persons_in_segment.append(persons_in_frame)
-                    iou_threshold = 0.3
+                    iou_threshold = 0.4
                     thres_intersec_person_saliency = 0.5
                     thresh_close_persons = 20
                     # persons_segment_filtered = []  #only to vizualice
@@ -508,6 +512,7 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                         
                         if len(anomalous_regions) > 0:
                             anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+                            anomalous_regions[0].score = -1
                             # bbox_last = anomalous_regions[0]
                             break
                             
@@ -527,11 +532,14 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot):
                                 # intersec_pct = intersec*100/personBox.area#Percentaje of intersection
                                 # if iou >= iou_threshold or intersec_pct >= thres_intersec_person_saliency:
                                 if iou >= iou_threshold:
-                                    saliencyBox.score = iou
-                                    anomalous_regions.append(saliencyBox)
+                                    abnormal_region = localization_utils.joinBBoxes(saliencyBox,personBox)
+                                    abnormal_region.score = iou
+                                    anomalous_regions.append(abnormal_region)
+
                             
                         if len(anomalous_regions) > 0:
                             anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+                            anomalous_regions[0].score = -1
                             bbox_last = anomalous_regions[0]
                             break
                             # print('anomalous_regions final: ', len(anomalous_regions))
@@ -602,6 +610,7 @@ def __main__():
     parser.add_argument("--personDetector", type=str, default=constants.YOLO)
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--overlapping", type=float)
+    parser.add_argument("--videoName", type=str, default=None)
 
     args = parser.parse_args()
     plot = args.plot
@@ -621,6 +630,7 @@ def __main__():
     shuffle = args.shuffle
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     threshold = 0.5
+    video_name = args.videoName
 
     saliency_model_config = saliency_model_file
     getRawFrames = True
@@ -644,7 +654,7 @@ def __main__():
     h = 240
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
-    online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot)
+    online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
 
     
     # raw_size = (h, w)
