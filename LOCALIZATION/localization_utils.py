@@ -143,7 +143,7 @@ def setLabelInImage(image, boxes, text, font_color, font_size, pos_text, backgro
     #         text = text_inicial
     # else:
     if text == 'score':
-        text = str(round(boxes.score, 3))
+        text = str(np.round(boxes.score, 3))
     text_size = font.getsize(text)
     button_size = (text_size[0]+1, text_size[1]+1)
     # font = ImageFont.load_default().font
