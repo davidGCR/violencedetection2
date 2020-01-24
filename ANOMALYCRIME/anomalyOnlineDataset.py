@@ -134,6 +134,21 @@ class AnomalyOnlineDataset(Dataset):
         label = self.labels[idx]
         
         return vid_name, label
+    
+    def getindex(self, vid_name):
+        matching = [s for s in self.videos if vid_name in s]
+        
+        if len(matching)>0:
+            vid_name = matching[0]
+            index = self.videos.index(vid_name)
+            print('ONLY video: ',matching,index)
+            return index
+        else:
+            return None
+        # # print(vid_name)
+        # label = self.labels[idx]
+        
+        # return vid_name, label
 
 
 

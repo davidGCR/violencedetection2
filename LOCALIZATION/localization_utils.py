@@ -40,6 +40,7 @@ def getSegmentBBox(lbboxes):
 
 def IOU(gt_bbox1, bbox2):
     if bbox2 == None:
+        print('-- -- -- -- -- -- -- -- -- -- -- IOU zero')
         return 0
     # calculate area of intersection rectangle
     inter_area = intersetionArea(gt_bbox1,bbox2)
@@ -120,28 +121,7 @@ def setLabelInImage(image, boxes, text, font_color, font_size, pos_text, backgro
     # text_size = font.getsize(text)
     # button_size = (text_size[0] + 2, text_size[1] + 2)
     text_inicial = text[:]
-    # if isinstance(boxes, list):
-    #     print('is a listtttttttttttttt ', len(boxes))
-    #     for box in boxes:
-    #         print('*** enter', text)
-    #         if text == 'score':
-    #             text = str(round(box.score, 3))
-    #         text_size = font.getsize(text)
-    #         button_size = (text_size[0]+1, text_size[1]+1)
-    #         # font = ImageFont.load_default().font
-    #         # text = str(round(box.score, 3))
-    #         canvas = Image.new('RGB', button_size, background_color)
-    #         draw2 = ImageDraw.Draw(canvas)
-    #         draw2.text((0.3, 0.3), text, font_color, font)
-    #         if pos_text == 'left_corner':
-    #             pos_text = (box.pmin.x, box.pmin.y)
-    #         elif pos_text == 'right_corner':
-    #             # width, height = canvas.size
-    #             pos_text = (box.pmax.x-button_size[0], box.pmax.y-button_size[1])
-    #         image.paste(canvas, pos_text)
-    #         # image = image.copy()
-    #         text = text_inicial
-    # else:
+    
     if text == 'score':
         text = str(np.round(boxes.score, 3))
     text_size = font.getsize(text)
@@ -276,8 +256,8 @@ def verifyClosePersons(p1, p2, d_treshold):
 
 
 def intersetionArea(bbox1, bbox2): 
-    dx = min(bbox1.pmax.x, bbox2.pmax.x) - max(bbox1.pmin.x, bbox2.pmin.x)
-    dy = min(bbox1.pmax.y, bbox2.pmax.y) - max(bbox1.pmin.y, bbox2.pmin.y)
+    dx = int(min(bbox1.pmax.x, bbox2.pmax.x) - max(bbox1.pmin.x, bbox2.pmin.x))
+    dy = int(min(bbox1.pmax.y, bbox2.pmax.y) - max(bbox1.pmin.y, bbox2.pmin.y))
     if (dx>=0) and (dy>=0):
         return dx * dy
     else: return 0

@@ -6,6 +6,9 @@ class BoundingBox(object):
 
         self._pmin = pmin
         self._pmax = pmax
+        if self._pmax.x < self._pmin.x or self._pmax.y < self._pmin.y:
+            print('NOoooooooooooooooooooooooooooooooo00.0000000000000000..0000000000')
+
         self._score = score
         self._occluded = occluded
         self._iou = iou
@@ -14,8 +17,8 @@ class BoundingBox(object):
         pcenter.y = self._pmin.y + int((self._pmax.y - self._pmin.y) / 2)
         self._pcenter = pcenter
 
-        dy = self._pmax.y - self._pmin.y
-        dx = self._pmax.x - self._pmin.x
+        dy = int(self._pmax.y - self._pmin.y)
+        dx = int(self._pmax.x - self._pmin.x)
         self._area = dx*dy
     
     @property
