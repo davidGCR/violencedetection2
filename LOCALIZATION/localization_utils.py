@@ -120,24 +120,24 @@ def setLabelInImage(image, boxes, text, font_color, font_size, pos_text, backgro
     font = ImageFont.load_default().font
     # text_size = font.getsize(text)
     # button_size = (text_size[0] + 2, text_size[1] + 2)
-    text_inicial = text[:]
-    
-    if text == 'score':
-        text = str(np.round(boxes.score, 3))
-    text_size = font.getsize(text)
-    button_size = (text_size[0]+1, text_size[1]+1)
-    # font = ImageFont.load_default().font
-    # text = str(round(boxes.score, 3))
-    canvas = Image.new('RGB', button_size, background_color)
-    draw2 = ImageDraw.Draw(canvas)
-    draw2.text((0.3, 0.3), text, font_color, font)
-    if pos_text == 'left_corner':
-        pos_text = (boxes.pmin.x, boxes.pmin.y)
-    elif pos_text == 'right_corner':
-        # width, height = canvas.size
-        pos_text = (boxes.pmax.x-button_size[0], boxes.pmax.y-button_size[1])
-    image.paste(canvas, pos_text)
-    text = text_inicial
+    if boxes is not None:
+        text_inicial = text[:]
+        if text == 'score':
+            text = str(np.round(boxes.score, 3))
+        text_size = font.getsize(text)
+        button_size = (text_size[0]+1, text_size[1]+1)
+        # font = ImageFont.load_default().font
+        # text = str(round(boxes.score, 3))
+        canvas = Image.new('RGB', button_size, background_color)
+        draw2 = ImageDraw.Draw(canvas)
+        draw2.text((0.3, 0.3), text, font_color, font)
+        if pos_text == 'left_corner':
+            pos_text = (boxes.pmin.x, boxes.pmin.y)
+        elif pos_text == 'right_corner':
+            # width, height = canvas.size
+            pos_text = (int(boxes.pmax.x-button_size[0]), int(boxes.pmax.y-button_size[1]))
+        image.paste(canvas, pos_text)
+        text = text_inicial
     return image
         # else:
         #     draw.text(pos_text, text, fill=color, font = font, align ="left")  
