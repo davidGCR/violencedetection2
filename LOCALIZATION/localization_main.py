@@ -449,7 +449,7 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, vi
                     # last_c = Point(int(bbox_last.pmin.x + (bbox_last.pmax.x - bbox_last.pmx.x) / 2), int(bbox_last.pmin.y + (bbox_last.pmax.y - bbox_last.pmin.y) / 2))
                     # bbox_last.center = last_c
                     pred_distance = localization_utils.distance(bbox.center, bbox_last.center)
-                    if bbox.score <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
+                    if pred_distance <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
                         bbox.score = pred_distance
                         bboxes_with_high_core.append(bbox)
                 if len(bboxes_with_high_core) > 0:

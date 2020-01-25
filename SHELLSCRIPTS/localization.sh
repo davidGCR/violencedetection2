@@ -6,7 +6,7 @@ python3 LOCALIZATION/localization_main.py \
 --numWorkers 1 \
 --numDiPerVideos 1 \
 --shuffle false \
---plot false \
+--plot true \
 --videoSegmentLength 20 \
 --personDetector yolov3 \
 --positionSegment online \
