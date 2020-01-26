@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+import  include
 import os
 import constants
 import glob
@@ -61,7 +62,7 @@ def mAP(dataframe):
 
     TP = FP = 0
     FN = len(dataframe['tp/fp'] == 'TP')
-    print('all TP', FN)
+    # print('all TP', FN)
     for index , row in dataframe.iterrows():     
         if row.iou > 0.5:
             TP =TP+1
@@ -88,6 +89,48 @@ def mAP(dataframe):
     avg_prec = np.mean(prec_at_rec)
     
     return prec_at_rec, avg_prec, dataframe
+
+
+def mAPPascal(dataframe):
+    # calculating Precision and recall
+    Precision = []
+    Recall = []
+
+    TP = FP = 0
+    FN = len(dataframe['tp/fp'] == 'TP')
+    gt = len(dataframe.index)
+    # print('all TP', FN)
+    for index , row in dataframe.iterrows():     
+        if row.iou >= 0.5:
+            TP =TP+1
+        else:
+            FP =FP+1  
+        prec = TP/(index+1)
+        rec = TP/gt
+        # try:
+        #     AP = TP/(TP+FP)
+        #     Rec = TP/(TP+FN)
+        # except ZeroDivisionError:
+        #     AP = Recall = 0.0
+        Precision.append(prec)
+        Recall.append(rec)
+    dataframe['Precision'] = Precision
+    dataframe['Recall'] = Recall
+
+    prec_at_rec, avg_prec = None, None
+    # dataframe['ip'] = dataframe.groupby('Recall')['Precision'].transform('max')
+    # prec_at_rec = []
+    # for recall_level in np.linspace(0.0, 1.0, 11):
+    #     try:
+    #         x = dataframe[dataframe['Recall'] >= recall_level]['Precision']
+    #         prec = max(x)
+    #     except:
+    #         prec = 0.0
+    #     prec_at_rec.append(prec)
+    # avg_prec = np.mean(prec_at_rec)
+    
+    return prec_at_rec, avg_prec, dataframe
+
 
 def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
     """Join persons bboxes if they iou is greter than a threshold"""

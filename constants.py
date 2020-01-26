@@ -1,6 +1,6 @@
 import os
-root = '/media/david/datos/Violence DATA/'
-# root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/'
+# root = '/media/david/datos/Violence DATA/'
+root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/'
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'HockeyFights/frames/violence'
 PATH_HOCKEY_FRAMES_NON_VIOLENCE = root+'HockeyFights/frames/nonviolence'
 PATH_VIOLENTFLOWS_FRAMES = root+'violentflows/movies Frames'

@@ -6,12 +6,12 @@ python3 LOCALIZATION/localization_main.py \
 --numWorkers 4 \
 --numDiPerVideos 1 \
 --shuffle false \
---videoSegmentLength 20 \
+--videoSegmentLength 10 \
 --personDetector yolov3 \
 --positionSegment online \
 --overlapping 0.5 \
 --plot false
-# --videoName Vandalism032
+# --videoName Arrest003
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \
