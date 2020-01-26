@@ -3,15 +3,15 @@ cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 python3 LOCALIZATION/localization_main.py \
 --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 --batchSize 1 \
---numWorkers 1 \
+--numWorkers 4 \
 --numDiPerVideos 1 \
 --shuffle false \
---plot true \
---videoSegmentLength 20 \
+--videoSegmentLength 10 \
 --personDetector yolov3 \
 --positionSegment online \
 --overlapping 0.5 \
-# --videoName Arrest028
+--plot true \
+--videoName Arrest003
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \
