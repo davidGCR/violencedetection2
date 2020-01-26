@@ -548,6 +548,9 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, on
                 else:
                     print('FFFFail in close lastBBox and saliency bboxes...')
                     saliency_bboxes = [bbox_last]
+
+            if len(saliency_bboxes) == 0:
+                saliency_bboxes = [BoundingBox(Point(0,0),Point(w,h))]
             
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
             video_real_frames.append(real_frames)
