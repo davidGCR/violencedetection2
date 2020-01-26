@@ -11,7 +11,7 @@ python3 LOCALIZATION/localization_main.py \
 --positionSegment online \
 --overlapping 0.5 \
 --plot true \
---videoName Arrest003
+--videoName Vandalism014
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \

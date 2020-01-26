@@ -547,6 +547,9 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, vi
                 else:
                     print('FFFFail in close lastBBox and saliency bboxes...')
                     saliency_bboxes = [bbox_last]
+
+            if len(saliency_bboxes) == 0:
+                saliency_bboxes = [BoundingBox(Point(0,0),Point(w,h))]
             
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
             video_real_frames.append(real_frames)
@@ -767,17 +770,17 @@ def __main__():
     h = 240
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
-    # online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
-    df = pd.read_csv('final.csv')
-    print(df.head(10))
-    df = df.sort_values('iou',ascending=False)
-    df = df.reset_index(drop=True)
-    print(df.head(10))
-    # print(len(df.index))
+    online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
+    # df = pd.read_csv('final.csv')
+    # print(df.head(10))
+    # df = df.sort_values('iou',ascending=False)
+    # df = df.reset_index(drop=True)
+    # print(df.head(10))
+    # # print(len(df.index))
 
-    prec_at_rec, avg_prec, df = localization_utils.mAPPascal(df)
-    export_csv = df.to_csv ('finalmAPPascal.csv', index = None, header=True)
-    print(df.head(10))
+    # prec_at_rec, avg_prec, df = localization_utils.mAPPascal(df)
+    # export_csv = df.to_csv ('finalmAPPascal.csv', index = None, header=True)
+    # print(df.head(10))
 
     
     # raw_size = (h, w)
