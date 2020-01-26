@@ -628,11 +628,11 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, vi
                 # mascara = np.stack((mascara,)*3, axis=-1)
                 preprocess = np.concatenate((mascara_by_summarized,preprocesing_outs[0], preprocesing_outs[1], preprocesing_outs[2], preprocesing_outs[3]), axis=1)
                 plotOpencv(real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, mascara, preprocess, saliency_bboxes)
-            else:
-                df = pd.DataFrame(data_rows_video, columns=['path', 'iou'])
-                df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
-                prec_at_rec, avg_prec = localization_utils.mAP(df)
-                videos_scores.append([video_name[0], str(avg_prec)])
+            # else:
+            #     df = pd.DataFrame(data_rows_video, columns=['path', 'iou'])
+            #     df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
+            #     prec_at_rec, avg_prec = localization_utils.mAP(df)
+            #     videos_scores.append([video_name[0], str(avg_prec)])
                 
             #     font_size = 9
             #     subplot_r = 2
@@ -650,43 +650,25 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, vi
                     
                 ######################################
             
-    with open("videos_scores.txt", "w") as txt_file:
-        for line in videos_scores:
-            txt_file.write(" ".join(line) + "\n")
+    # with open("videos_scores.txt", "w") as txt_file:
+    #     for line in videos_scores:
+    #         txt_file.write(" ".join(line) + "\n")
 
-    print(videos_scores)
+    # print(videos_scores)
 
     ############# MAP #################
     print('data rows: ', len(data_rows))
     df = pd.DataFrame(data_rows, columns=['path', 'iou'])
+    export_csv = df.to_csv ('ious.csv', index = None, header=True) #Don't forget to add '.csv' at the end of the path
     df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
-    prec_at_rec, avg_prec = localization_utils.mAP(df)
+    export_csv = df.to_csv ('initial.csv', index = None, header=True) #Don't forget to add '.csv' at the end of the path
+    # np.savetxt(r'initial.txt', df.values, fmt='%d', delimiter='\t')
+    prec_at_rec, avg_prec, df = localization_utils.mAP(df)
+    export_csv = df.to_csv ('final.csv', index = None, header=True) #Don't forget to add '.csv' at the end of the path
     print('11 point precision is ', prec_at_rec)
     print('\nmap is ', avg_prec)
 
-    # if plot and video_name is not None:
-    #     font_size = 9
-    #     subplot_r = 2
-    #     subplot_c = 5
-    #     for i in range(num_video_segments):
-    #         di_image = video_dynamic_images[i]
-    #         preprocesing_reults = np.empty((subplot_r, subplot_c), dtype=tuple)
-    #         preprocesing_outs = video_preprocesing_outs[i]
-    #         mascara = video_mascaras[i]
-
-    #         preprocesing_reults[0,0] = (mascara,'image source')
-    #         preprocesing_reults[0,1]=(preprocesing_outs[0], 'thresholding')
-    #         preprocesing_reults[0,2]=(preprocesing_outs[1], 'morpho')
-    #         preprocesing_reults[0,3]=(preprocesing_outs[2], 'contours')
-    #         preprocesing_reults[0, 4] = (preprocesing_outs[3], 'bboxes')
-    #         real_frames = video_real_frames[i]
-    #         real_bboxes = video_real_bboxes[i]
-    #         saliency_bboxes = video_saliency_bboxes[i]
-    #         persons_in_segment = video_persons_in_segment[i]
-    #         persons_segment_filtered = video_persons_segment_filtered[i]
-    #         anomalous_regions = video_anomalous_regions[i]
-    #         myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment,
-    #                 persons_segment_filtered, anomalous_regions)
+    #
 
     
 

@@ -87,7 +87,7 @@ def mAP(dataframe):
         prec_at_rec.append(prec)
     avg_prec = np.mean(prec_at_rec)
     
-    return prec_at_rec, avg_prec
+    return prec_at_rec, avg_prec, dataframe
 
 def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
     """Join persons bboxes if they iou is greter than a threshold"""
