@@ -21,7 +21,8 @@ from torch.optim import lr_scheduler
 import argparse
 import sys
 
-sys.path.insert(1, "/media/david/datos/PAPERS-SOURCE_CODE/MyCode")
+# sys.path.insert(1, "/media/david/datos/PAPERS-SOURCE_CODE/MyCode")
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 from AlexNet import *
 from ViolenceDatasetV2 import *
 from trainer import *
@@ -34,7 +35,7 @@ from parameters import *
 from transforms import *
 from MaskDataset import MaskDataset
 from saliency_model import *
-import initialize_dataset
+import initializeDataset
 import constants
 
 
@@ -48,7 +49,7 @@ def init(dataset, vif_path, hockey_path_violence, hockey_path_noviolence, path_l
         test_lost = []
         test_acc = []
         if dataset == 'hockey' or  dataset == 'masked':
-            datasetAll, labelsAll, numFramesAll = initialize_dataset.createDataset(hockey_path_violence, hockey_path_noviolence) #shuffle
+            datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(hockey_path_violence, hockey_path_noviolence) #shuffle
             # combined = list(zip(datasetAll, labelsAll, numFramesAll))
             # random.shuffle(combined)
             # datasetAll[:], labelsAll[:], numFramesAll[:] = zip(*combined) 
