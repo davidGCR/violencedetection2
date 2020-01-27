@@ -680,14 +680,16 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, on
     ############# MAP #################
     print('data rows: ', len(data_rows))
     df = pd.DataFrame(data_rows, columns=['path', 'iou'])
-    # export_csv = df.to_csv ('ious.csv', index = None, header=True)
-    df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
+    df = df.sort_values('iou',ascending=False)
+    df = df.reset_index(drop=True)
+    export_csv = df.to_csv ('metrics_yolo.csv', index = None, header=True)
+    # df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
     # export_csv = df.to_csv ('initial.csv', index = None, header=True)
-    prec_at_rec, avg_prec, df = localization_utils.mAP(df)
-    export_csv = df.to_csv ('metrics.csv', index = None, header=True)
+    # prec_at_rec, avg_prec, df = localization_utils.mAP(df)
+    # export_csv = df.to_csv ('metrics.csv', index = None, header=True)
 
-    print('11 point precision is ', prec_at_rec)
-    print('\nmap is ', avg_prec)
+    # print('11 point precision is ', prec_at_rec)
+    # print('\nmap is ', avg_prec)
 
     #
 
@@ -751,12 +753,19 @@ def __main__():
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
     online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
-    # df = pd.read_csv('final.csv')
-    # print(df.head(10))
-    # df = df.sort_values('iou',ascending=False)
-    # df = df.reset_index(drop=True)
-    # print(df.head(10))
-    # # print(len(df.index))
+    
+    # import csv
+    # df = pd.read_csv('metrics.csv',quoting=csv.QUOTE_NONE, error_bad_lines=False)
+    # # print(df.head(10))
+    # # df = df.sort_values('iou',ascending=False)
+    # # df = df.reset_index(drop=True)
+    # total_rows = df.shape[0]
+    # seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
+    
+    # numOfRows = len(seriesObj[seriesObj == True].index)
+    # localization_error = numOfRows/total_rows
+    # # numOfRows = 0
+    # print('BAd localizations num: ', numOfRows, ', Total frames: ', total_rows, 'Loc Error: ', str(localization_error))
 
     # prec_at_rec, avg_prec, df = localization_utils.mAPPascal(df)
     # export_csv = df.to_csv ('finalmAPPascal.csv', index = None, header=True)
