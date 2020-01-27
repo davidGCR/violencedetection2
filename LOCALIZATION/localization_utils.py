@@ -511,13 +511,13 @@ def computeBoundingBoxFromMask(mask):
     # print(mask.shape)
     img_process_mask = process_mask(mask) #(h,w)
     # print(img_process_mask.shape)
-    img_contuors, contours = findContours(img_process_mask, remove_fathers=True) #(h,w,c)
+    img_contuors, contours, hierarchy = findContours(img_process_mask, remove_fathers=True) #(h,w,c)
     # print(img_contuors.shape)
 
     img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
     # preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
     preprocesing_reults = [mask, img_process_mask, img_contuors, img_bboxes]
-    return bboxes, preprocesing_reults
+    return bboxes, preprocesing_reults, contours, hierarchy
 
 def process_mask(img):
     kernel_exp = np.ones((5, 5), np.uint8)
@@ -544,7 +544,7 @@ def findContours(img, remove_fathers = True):
         contours = removed
     for i in range(len(contours)):
         cv2.drawContours(img, contours, i, (0, 255, 0), 2, cv2.LINE_8, hierarchy, 0)
-    return img, contours
+    return img, contours, hierarchy
 
 
 
