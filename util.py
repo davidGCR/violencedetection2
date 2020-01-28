@@ -12,7 +12,7 @@ def print_balance(train_y,name):
     print(name +'-balance: ', dict(zip(unique, counts)))
 
 def get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType,num_epochs):
-    model_name = str(modelType) + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+joinType +'_num_epochs-' +str(num_epochs)
+    model_name = str(modelType) + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+str(joinType) +'_num_epochs-' +str(num_epochs)
     return model_name
     
 def save_checkpoint(state, path):
@@ -35,8 +35,8 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 
-def saveList(path_out,model, scheduler_type,curve, numDI, source_type, feature_extract, joinType,lista):
-  data_file = path_out+'/'+str(model)+'-'+source_type+'-Finetuned:'+str(not feature_extract)+'-'+str(numDI)+'di-'+joinType+'-'+scheduler_type+'-'+str(curve)+'.txt'
+def saveList(path_out,model, scheduler_type,curve, numDI, feature_extract, joinType,lista):
+  data_file = path_out+'/'+str(model)+'-Finetuned:'+str(not feature_extract)+'-'+str(numDI)+'di-'+joinType+'-'+scheduler_type+'-'+str(curve)+'.txt'
   with open(data_file, 'wb') as filehandle:
       # store the data as binary data stream
     pickle.dump(lista, filehandle)

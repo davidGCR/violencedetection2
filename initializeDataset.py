@@ -4,7 +4,7 @@ import os
 import glob
 from violenceDataset import ViolenceDataset
 from MaskDataset import MaskDataset
-import Saliency.saliencyModel as saliencyModel
+# import Saliency.saliencyModel as saliencyModel
 import constants
 import util
 from operator import itemgetter
@@ -79,7 +79,7 @@ def print_balance(train_y, test_y):
     unique, counts = np.unique(ty, return_counts=True)
     print('test_balance: ', dict(zip(unique, counts)))
 
-def createDataset(path_violence, path_noviolence):
+def createDataset(path_violence, path_noviolence, suffle):
     """ Create Violence dataset with paths and labels """
     imagesF = []
 
@@ -101,45 +101,35 @@ def createDataset(path_violence, path_noviolence):
     Labels = list([1] * len(imagesF)) + list([0] * len(imagesNoF))
     NumFrames = [len(glob.glob1(Dataset[i], "*.jpg")) for i in range(len(Dataset))]
     #Shuffle data
-    combined = list(zip(Dataset, Labels, NumFrames))
-    random.shuffle(combined)
-    Dataset[:], Labels[:], NumFrames[:] = zip(*combined)
+    if suffle:
+        combined = list(zip(Dataset, Labels, NumFrames))
+        random.shuffle(combined)
+        Dataset[:], Labels[:], NumFrames[:] = zip(*combined)
 
     print('Dataset, Labels, NumFrames: ', len(Dataset), len(Labels), len(NumFrames))
     return Dataset, Labels, NumFrames
 
-def getViolenceDataLoader(x, y, data_transform, numDiPerVideos, dataset_source, avgmaxDuration, interval_duration, batch_size, num_workers, debugg_mode):
-    """ Get Dataloader for violence dataset """
-    dataset = ViolenceDataset( dataset=x, labels=y, spatial_transform=data_transform, source=dataset_source,
-            interval_duration=interval_duration,difference=3, maxDuration=avgmaxDuration, nDynamicImages=numDiPerVideos, debugg_mode=debugg_mode, )
-    dataloader = torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    return dataloader
+# def getViolenceDataLoader(x, y, data_transform, numDiPerVideos, dataset_source, avgmaxDuration, interval_duration, batch_size, num_workers, debugg_mode):
+#     """ Get Dataloader for violence dataset """
+#     dataset = ViolenceDataset( dataset=x, labels=y, spatial_transform=data_transform, source=dataset_source,
+#             interval_duration=interval_duration,difference=3, maxDuration=avgmaxDuration, nDynamicImages=numDiPerVideos, debugg_mode=debugg_mode, )
+#     dataloader = torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+#     return dataloader
 
-def getDataLoaders(datasetType, train_x, train_y, test_x, test_y, data_transforms, numDiPerVideos, dataset_source, avgmaxDuration, interval_duration, batch_size, num_workers, debugg_mode, salModelFile):
+def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegment):
     """ Get train - test dataloaders for violence dataset or masked dataset """
     image_datasets = None
-    if datasetType == 'hockey':
-        image_datasets = {
-            "train": ViolenceDataset( dataset=train_x, labels=train_y, spatial_transform=data_transforms["train"], source=dataset_source,
-                interval_duration=interval_duration,difference=3, maxDuration=avgmaxDuration, nDynamicImages=numDiPerVideos, debugg_mode=debugg_mode, ),
-            "test": ViolenceDataset( dataset=test_x, labels=test_y, spatial_transform=data_transforms["test"], source=dataset_source,
-                interval_duration=interval_duration, difference=3, maxDuration=avgmaxDuration, nDynamicImages=numDiPerVideos, debugg_mode=debugg_mode, )
-        }
-        
-    elif datasetType == 'masked':
-        net = saliencyModel.SaliencyModel(num_classes=2)
-        # net = net.cuda()
-        net = torch.load(salModelFile, map_location=lambda storage, loc: storage)
-
-        image_datasets = {
-            "train": MaskDataset( dataset=train_x, labels=train_y, spatial_transform=data_transforms["train"], source=dataset_source,
-                difference=3, maxDuration=avgmaxDuration, nDynamicImages=numDiPerVideos, saliency_model=net ),
-            "test": MaskDataset( dataset=test_x, labels=test_y, spatial_transform=data_transforms["test"], source=dataset_source,
-                difference=3, maxDuration=avgmaxDuration, nDynamicImages=numDiPerVideos, saliency_model=net )
-        }
+    image_datasets = {
+        #dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo, videoSegmentLength, positionSegment
+        "train": ViolenceDataset(dataset=train_x, labels=train_y, numFrames=train_numFrames, spatial_transform=data_transforms["train"], numDynamicImagesPerVideo=numDiPerVideos,
+         videoSegmentLength= videoSegmentLength, positionSegment = positionSegment ),
+        "val": ViolenceDataset(dataset=test_x, labels=test_y, numFrames=test_numFrames , spatial_transform=data_transforms["val"], numDynamicImagesPerVideo=numDiPerVideos,
+        videoSegmentLength= videoSegmentLength, positionSegment = positionSegment )
+    }
+    
 
     dataloaders_dict = {
         "train": torch.utils.data.DataLoader( image_datasets["train"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
-        "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
+        "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
     }
     return dataloaders_dict
