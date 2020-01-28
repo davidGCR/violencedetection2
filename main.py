@@ -166,7 +166,7 @@ def __main__():
     parser.add_argument("--featureExtract",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
     parser.add_argument("--schedulerType",type=str,default="OnPlateau",help="learning rate scheduler")
     parser.add_argument("--ndis", nargs='+', type=int, help="num dyn imgs")
-    parser.add_argument("--joinType", type=str, default="tempMaxPool", help="show prints")
+    parser.add_argument("--joinType", type=str)
     parser.add_argument("--foldsNumber", type=int, default=5)
     parser.add_argument("--numWorkers", type=int, default=4)
     parser.add_argument("--videoSegmentLength", type=int)

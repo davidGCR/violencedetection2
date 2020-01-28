@@ -7,6 +7,6 @@
 
  python3 plot.py \
 --learningCurvesFolder VIOLENCE_RESULTS/learningCurves \
---modelName probando \
+--modelName resnet18-3-maxTempPool-segmentLength:30-positionSegment:begin-numEpochs:30 \
 --numFolds 5 \
---lastEpoch 2
+--lastEpoch 30
