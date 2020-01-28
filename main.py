@@ -1,7 +1,8 @@
 
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')import torch
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+import torch
 import torchvision
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
@@ -41,7 +42,243 @@ from MaskDataset import MaskDataset
 import initializeDataset
 import constants
 import pandas as pd
+import LOCALIZATION.localization_utils as localization_utils
+import SALIENCY.saliencyTester as saliencyTester
 
+def online(violenceDataset, saliency_tester, type_person_detector, h, w, plot, only_video_name):
+    person_model, classes = localization_utils.getPersonDetectorModel(type_person_detector)
+    bbox_last = None
+    distance_th = 35.5
+    thres_intersec_lastbbox_current = 0.4
+    data_rows = []
+    indx_flac = -1
+    num_video_segments = 0
+    videos_scores = []
+
+    for idx_video, data in enumerate(violenceDataset):
+        indx_flac = idx_video
+        if only_video_name is not None and indx_flac==0:
+            if indx_flac==0:
+                idx = anomalyDataset.getindex(only_video_name)
+                if idx is not None:
+                    data = anomalyDataset[idx]
+                    idx_video = idx
+                    print('TEsting only one video...' , only_video_name)
+                else:
+                    print('No valid video...')
+            else:
+                break
+
+        if only_video_name is not None and indx_flac>0:
+            break
+        # else:
+        #     break
+        bbox_last = None
+        print("-" * 150, 'video No: ', idx_video)
+        #di_images = [1,ndis,3,224,224]
+        video_name, label = data
+        video_name = [video_name]
+        label = torch.tensor(label)
+        # data_rows_video = []
+        #First Segment
+        dis_images, segment_info, idx_next_segment = violenceDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
+        num_segment = 0
+        while (dis_images is not None):
+            num_segment += 1
+            print(video_name, '---segment No: ', str(num_segment),'-----', dis_images.size(), len(segment_info))
+            
+    #         dis_images = torch.unsqueeze(dis_images, 0)
+    #         segment_info = default_collate([segment_info])
+    #         segment_info = np.array(segment_info)
+    #         # dis_images = dis_images / 2 + 0.5 
+    #         ttttt = saliency_tester.min_max_normalize_tensor(dis_images) 
+    #         ttttt = ttttt.numpy()[0].transpose(1, 2, 0)
+    #         ttttt = cv2.resize(ttttt, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+    #         # video_dynamic_images.append(ttttt)
+
+    #         # plt.imshow(ttttt)
+    #         # plt.title('Input for Classifier')
+    #         # plt.show()
+    #         # cv2.imshow('image', ttttt)
+    #         # k = cv2.waitKey(0)
+    #         # if k == 27:         # wait for ESC key to exit
+    #         #     cv2.destroyAllWindows()
+            
+
+    #         ######################## mask
+    #         masks = saliency_tester.compute_mask(dis_images, label)  #[1, 1, 224, 224]
+    #         mascara = masks.detach().cpu()#(1, 1, 224, 224)
+    #         mascara = torch.squeeze(mascara,0)#(1, 224, 224)
+    #         mascara = saliency_tester.min_max_normalize_tensor(mascara)  #to 0-1
+    #         mascara = mascara.numpy().transpose(1, 2, 0)
+    #         ##resize 
+    #         mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+    #         # video_mascaras.append(mascara)
+            
+    #         # plt.imshow(mascara_gray)
+    #         # plt.title('MASCARA gray')
+    #         # plt.show()
+
+    #         # plt.imshow(img)
+    #         # plt.title('MASCARA gray contours')
+    #         # plt.show()
+    #         # mascara = mascara_by_summarized[:,:,0]
+
+            
+    #         # mascara = ttttt[:,:,0]
+    #         saliency_bboxes, preprocesing_outs, contours, hierarchy = localization_utils.computeBoundingBoxFromMask(mascara)  #only one by segment
+    #         # video_preprocesing_outs.append(preprocesing_outs)
+    #         # video_saliency_bboxes.append(saliency_bboxes)
+            
+    #         #metricas (no decir es mejor... 2 puntos porcentuales del valor-outperform) en esa base de datos- grafico explicar ejes...porque de los resultados
+    #         #presentar errores
+    #         saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)            
+    #         if bbox_last is not None:
+    #             bboxes_with_high_core = []
+    #             for bbox in saliency_bboxes:
+    #                 pred_distance = localization_utils.distance(bbox.center, bbox_last.center)
+    #                 if pred_distance <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
+    #                     bbox.score = pred_distance
+    #                     bboxes_with_high_core.append(bbox)
+    #             if len(bboxes_with_high_core) > 0:
+    #                 bboxes_with_high_core.sort(key=lambda x: x.score)
+    #                 saliency_bboxes = bboxes_with_high_core
+    #                 # saliency_bboxes[0].score = -1
+    #             else:
+    #                 print('FFFFail in close lastBBox and saliency bboxes...')
+    #                 saliency_bboxes = [bbox_last]
+
+    #         if len(saliency_bboxes) == 0:
+    #             saliency_bboxes = [BoundingBox(Point(0,0),Point(w,h))]
+            
+    #         frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
+    #         # video_real_frames.append(real_frames)
+    #         # video_real_bboxes.append(real_bboxes)
+            
+    #         persons_in_segment = []
+    #         persons_segment_filtered = []
+    #         anomalous_regions = []  # to plot
+    #         segmentBox = localization_utils.getSegmentBBox(real_bboxes)
+            
+    #         print('Real frames shot: ', len(real_frames))
+    #         temporal_ious_regions = []
+    #         for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
+    #             print('Shot frame to process: ',idx)
+    #             persons_in_frame = []
+    #             persons_filtered = []
+    #             if type_person_detector == constants.YOLO:
+    #                 img_size = 416
+    #                 conf_thres = 0.8
+    #                 nms_thres = 0.4
+    #                 persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres, nms_thres, classes, frame)
+    #             elif type_person_detector == constants.MASKRCNN:
+    #                 mask_rcnn_threshold = 0.4
+    #                 persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
+    #             print('--num Persons in frame: ', len(persons_in_frame))
+                
+    #             if len(persons_in_frame) > 0:
+    #                 persons_in_segment.append(persons_in_frame)
+    #                 iou_threshold = 0.3
+    #                 thres_intersec_person_saliency = 0.5
+    #                 thresh_close_persons = 20
+                
+    #                 if bbox_last is not None:
+    #                     print('='*10, ' ONLINE ')
+    #                     dynamic_region = saliency_bboxes[0]
+    #                     persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
+    #                     print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
+    #                     # persons_segment_filtered.append(persons_filtered)
+    #                     for person in persons_filtered:
+    #                         iou = localization_utils.IOU(person, dynamic_region)
+    #                         print('----IOU (person and dynamic region): ', str(iou))
+    #                         if iou >= iou_threshold:
+    #                             abnorm_bbox = localization_utils.joinBBoxes(person,dynamic_region)
+    #                             abnorm_bbox.score = iou
+    #                             anomalous_regions.append(abnorm_bbox)
+                        
+    #                     if len(anomalous_regions) > 0:
+    #                         anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+    #                         anomalous_regions[0].score = -1
+    #                         # bbox_last = anomalous_regions[0]
+    #                         break
+
+    #                 else:
+    #                     print('='*10, ' FIRST SHOT ')
+    #                     persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
+    #                     print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
+    #                     # persons_segment_filtered.append(persons_filtered)
+                        
+    #                     for personBox in persons_filtered:
+    #                         for saliencyBox in saliency_bboxes:
+    #                             iou = localization_utils.IOU(personBox, saliencyBox)
+    #                             # tmp_rgion = localization_utils.joinBBoxes(saliencyBox,personBox) #Nooo si el saliente bbox es todo frame
+    #                             tmp_rgion = personBox
+    #                             tmp_rgion.score = iou
+    #                             temporal_ious_regions.append(tmp_rgion)
+    #                             print('----IOU (person and dynamic region): ', str(iou))
+    #                             if iou >= iou_threshold:
+    #                                 abnormal_region = localization_utils.joinBBoxes(saliencyBox,personBox)
+    #                                 abnormal_region.score = iou
+    #                                 anomalous_regions.append(abnormal_region)
+                            
+    #                     if len(anomalous_regions) > 0:
+    #                         anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+    #                         anomalous_regions[0].score = -1
+    #                         bbox_last = anomalous_regions[0]
+    #                         break
+    #                     else: # 
+    #                         temporal_ious_regions.sort(key=lambda x: x.iou, reverse=True)
+    #                         anomalous_regions.append(temporal_ious_regions[0])
+    #                         break
+
+    #                         # print('anomalous_regions final: ', len(anomalous_regions))
+    #                     ######################################              
+                        
+    #                     # l = [segmentBox]
+    #                     # print('=========== Ground Truth Score =============')
+    #                     # scoring.getScoresFromRegions(video_name[0], bbox_segments, l, classifier, transforms_dataset['test'])
+                    
+    #                     # for b in segment_real_info['real_bboxes']:
+    #                     #     b.score = l[0].score
+    #                 if len(anomalous_regions) > 0 :
+    #                     break
+    #             else:
+    #                 persons_in_segment.append(None) #only to plot
+
+    #         if len(anomalous_regions) == 0:
+    #             print('Tracking Algorithm FAIL!!!!. Using last localization...')
+    #             anomalous_regions.append(bbox_last)   
+            
+    #         # video_persons_in_segment.append(persons_in_frame)
+    #         # video_persons_segment_filtered.append(persons_segment_filtered)
+    #         # video_anomalous_regions.append(anomalous_regions)
+
+    #         iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
+    #         row = [video_name[0]+'---segment No: '+str(num_segment), iou]
+    #         data_rows.append(row)
+    #         # data_rows_video.append(row)
+    #         dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
+    #         bbox_last = anomalous_regions[0]        
+    #         if plot:
+    #             dynamic_image = ttttt
+    #             # preprocess = preprocesing_outs[3]
+    #             saliencia_suave = np.array(real_frames[0])
+    #             img_contuors, contours, hierarchy = localization_utils.findContours(preprocesing_outs[0], remove_fathers=True)
+    #             for i in range(len(contours)):
+    #                 cv2.drawContours(saliencia_suave, contours, i, (0, 0, 255),2, cv2.LINE_8, hierarchy, 0)
+    #             # saliencia_suave = (saliencia_suave - (0, 0, 255)) / 2
+    #             # saliencia_suave = np.array(real_frames[0])-saliencia_suave
+
+    #             preprocesing_outs[0] = np.stack((preprocesing_outs[0],)*3, axis=-1)
+    #             preprocesing_outs[1] = np.stack((preprocesing_outs[1],)*3, axis=-1)
+    #             # print('preprocess: ', preprocesing_outs[0].shape, preprocesing_outs[1].shape, preprocesing_outs[2].shape, preprocesing_outs[3].shape)
+    #             mascara = np.stack((mascara,)*3, axis=-1)
+    #             BORDER = np.ones((h,20,3))
+                
+    #             preprocess = np.concatenate((BORDER, mascara,BORDER, preprocesing_outs[0], BORDER, preprocesing_outs[1], BORDER, preprocesing_outs[2], BORDER, preprocesing_outs[3],BORDER), axis=1)
+    #             plotOpencv(real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 350)
+    #             ######################################
+            
 
 
 def init(dataset, hockey_path_violence, hockey_path_noviolence, path_learning_curves, path_checkpoints, modelType, ndis, num_workers, data_transforms,
@@ -201,12 +438,25 @@ def __main__():
     # path_results = '/media/david/datos/Violence DATA/violentflows/Results/'+dataset_source
     # gpath = '/media/david/datos/Violence DATA/violentflows/movies Frames'
 
+    # init(dataset, path_violence, path_noviolence, path_learning_curves, path_checkpoints, modelType, ndis, num_workers, transforms,
+    #         batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment)
+    num_classes = 2
+    saliency_model_file = 'd'
+    input_size = (224,224)
+    saliency_model_file = 'SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar'
+    threshold = 0.5
+    saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, None, test_names,
+                                        input_size, saliency_model_config, ndis, None)
+    typePersonDetector = 'yolov3'
+    only_video_name = None
+    plot = True
+    h = 288
+    w = 360
+    overlapping = 0.5
+    datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_noviolence, suffle=False)
+    dataloader, violenceDataset = getOnlineDataLoader(datasetAll, labelsAll, numFramesAll, transform, numDiPerVideos, batch_size, num_workers, overlapping)
 
-
-# def init(dataset, hockey_path_violence, hockey_path_noviolence, path_learning_curves, path_checkpoints, modelType, ndis, num_workers, data_transforms,
-#     batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment
-    init(dataset, path_violence, path_noviolence, path_learning_curves, path_checkpoints, modelType, ndis, num_workers, transforms,
-            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment)
+    online(violenceDataset, saliency_tester, type_person_detector, h, w, plot, only_video_name)
 
 __main__()
 

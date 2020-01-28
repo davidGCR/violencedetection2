@@ -20,6 +20,25 @@ import copy
 import itertools
 import random
 
+from YOLOv3 import yolo_inference
+import MaskRCNN
+
+def getPersonDetectorModel(detector_type):
+    classes = None
+    if detector_type == constants.YOLO:
+        img_size = 416
+        weights_path = "YOLOv3/weights/yolov3.weights"
+        class_path = "YOLOv3/data/coco.names"
+        model_def = "YOLOv3/config/yolov3.cfg"
+        person_model, classes = yolo_inference.initializeYoloV3(img_size, class_path, model_def, weights_path)
+        
+        # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
+    elif detector_type == constants.MASKRCNN:
+        person_model = maskRCNN()
+        
+
+    return person_model, classes
+
 def getSegmentBBox(lbboxes):
     xmin = 10000
     ymin = 10000

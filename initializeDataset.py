@@ -3,6 +3,7 @@ import torch
 import os
 import glob
 from violenceDataset import ViolenceDataset
+from violenceDatasetOnline import ViolenceOnlineDataset
 from MaskDataset import MaskDataset
 # import Saliency.saliencyModel as saliencyModel
 import constants
@@ -133,3 +134,16 @@ def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFr
         "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
     }
     return dataloaders_dict
+
+def getOnlineDataLoader(datasetAll, labelsAll, numFramesAll, transform, numDiPerVideos, batch_size, num_workers, overlapping):
+    """ Get train - test dataloaders for violence dataset or masked dataset """
+    image_datasets = None
+
+    # dataset, labels, numFrames, spatial_transform, nDynamicImages,
+    #                 videoSegmentLength, positionSegment, overlapping
+    dataset = ViolenceOnlineDataset(dataset=datasetAll, labels=labelsAll, numFrames=numFramesAll, spatial_transform=transform, numDynamicImagesPerVideo=numDiPerVideos,
+                                            overlapping =overlapping )
+    
+
+    dataloader = torch.utils.data.DataLoader( image_datasets, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    return dataloader, dataset
