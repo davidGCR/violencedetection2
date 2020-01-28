@@ -736,19 +736,19 @@ def __main__():
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
 
-    # online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
-    import csv
-    df = pd.read_csv('metrics_yolo.csv',quoting=csv.QUOTE_NONE, error_bad_lines=False)
-    # print(df.head(10))
-    # df = df.sort_values('iou',ascending=False)
-    # df = df.reset_index(drop=True)
-    total_rows = df.shape[0]
-    seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
+    online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
+    # import csv
+    # df = pd.read_csv('metrics_yolo.csv',quoting=csv.QUOTE_NONE, error_bad_lines=False)
+    # # print(df.head(10))
+    # # df = df.sort_values('iou',ascending=False)
+    # # df = df.reset_index(drop=True)
+    # total_rows = df.shape[0]
+    # seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
     
-    numOfRows = len(seriesObj[seriesObj == True].index)
-    localization_error = numOfRows/total_rows
-    # numOfRows = 0
-    print('BAd localizations num: ', numOfRows, ', Total frames: ', total_rows, 'Loc Error: ', str(localization_error))
+    # numOfRows = len(seriesObj[seriesObj == True].index)
+    # localization_error = numOfRows/total_rows
+    # # numOfRows = 0
+    # print('BAd localizations num: ', numOfRows, ', Total frames: ', total_rows, 'Loc Error: ', str(localization_error))
     # # print(df.head(10))
     # # # print(len(df.index))
 
