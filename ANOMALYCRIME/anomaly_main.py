@@ -140,6 +140,7 @@ def __main__():
     parser.add_argument("--maxNumFramesOnVideo", type=int, default=0)
     parser.add_argument("--videoSegmentLength", type=int, default=0)
     parser.add_argument("--positionSegment", type=str)
+    parser.add_argument("--transferModel", type=str)
 
 
     args = parser.parse_args()
@@ -163,7 +164,8 @@ def __main__():
     numDiPerVideos = args.ndis
     path_checkpoints = args.checkpointPath
     plot_samples = args.plotSamples
-    additional_info = '_videoSegmentLength-'+str(videoSegmentLength)+'_positionSegment-'+str(positionSegment)
+    transferModel = args.transferModel
+    additional_info = 'transferModel: '+transferModel+'_videoSegmentLength-'+str(videoSegmentLength)+'_positionSegment-'+str(positionSegment)
     transforms = transforms_anomaly.createTransforms(input_size)
     num_classes = 2 #{'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
@@ -171,10 +173,12 @@ def __main__():
     
     # Dalaloaders
     if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TESTING:
-        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
+        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
+                                                            batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
     elif operation == constants.OPERATION_TRAINING_FINAL:
-        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers,
+        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
+                                                            batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
 
     #Training

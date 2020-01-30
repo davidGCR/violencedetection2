@@ -39,8 +39,9 @@ class ViolenceModelResNet(nn.Module):
             self.linear = nn.Linear(512, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
     
-    def inferenceMode(self):
+    def inferenceMode(self, numDiPerVideos):
         self.inference = True
+        self.numDiPerVideos = numDiPerVideos
 
     def forward(self, x):
         # x size= torch.Size([ndi, bs, 3, 224, 224])
@@ -50,9 +51,9 @@ class ViolenceModelResNet(nn.Module):
             # num_dyn_imgs_infer = x.size()[1]
             if self.numDiPerVideos > 1:
                 x = torch.unsqueeze(x, dim=1)
-                x = x.repeat(1, self.numDiPerVideos, 1, 1, 1)
-                # print('hereseeee: ', x.size())
-                x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
+                # x = x.repeat(1, self.numDiPerVideos, 1, 1, 1) ###no se porque puse esto..
+                # x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
+                print('x forward: ', x.size())
             
 
         if self.numDiPerVideos == 1:

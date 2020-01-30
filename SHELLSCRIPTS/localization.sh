@@ -4,14 +4,17 @@ python3 LOCALIZATION/localization_main.py \
 --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 --batchSize 1 \
 --numWorkers 4 \
---numDiPerVideos 1 \
 --shuffle false \
 --videoSegmentLength 10 \
+--videoBlockLength 40 \
+--numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
 --positionSegment online \
---overlapping 0.5 \
---plot false
-# --videoName Arrest003
+--overlappingBlock 0 \
+--overlappingSegment 0.5 \
+--plot true \
+--videoName Robbery144 \
+--delay 1
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \

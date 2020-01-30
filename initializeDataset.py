@@ -117,6 +117,18 @@ def createDataset(path_violence, path_noviolence, suffle):
 #     dataloader = torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 #     return dataloader
 
+def getTrainDataLoader(train_x, train_y, train_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegment):
+    """ Get train - test dataloaders for violence dataset or masked dataset """
+    # image_datasets = None
+    # dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo, videoSegmentLength, positionSegment
+    image_datasets = ViolenceDataset(dataset=train_x, labels=train_y, numFrames=train_numFrames, spatial_transform=data_transforms["train"],
+            numDynamicImagesPerVideo=numDiPerVideos,
+            videoSegmentLength= videoSegmentLength, positionSegment = positionSegment )
+       
+    dataloader= torch.utils.data.DataLoader( image_datasets, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
+        
+    return dataloader
+
 def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegment):
     """ Get train - test dataloaders for violence dataset or masked dataset """
     image_datasets = None

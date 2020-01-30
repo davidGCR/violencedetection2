@@ -34,6 +34,7 @@ import MaskRCNN
 from torchvision.utils import make_grid
 import scoring
 from torch.utils.data._utils.collate import default_collate
+from tester import Tester
 
 def maskRCNN():
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -334,22 +335,30 @@ def offline(dataloader, saliency_tester, type_person_detector, h, w, plot):
     df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
     localization_utils.mAP(df)
 
-def plotOpencv(images, gt_bboxes, persons_in_segment, bbox_predictions, dynamic_image, mascara, preprocess, saliency_bboxes, sep):
+def plotOpencv(prediction, images,gt_bboxes, persons_in_segment, bbox_predictions, dynamic_image, mascara, preprocess, saliency_bboxes, sep, delay):
     red = (0, 0, 255)
     green = (0, 255, 0)
     blue = (255, 0, 0)
-    yellow = (0,255,255)
+    yellow = (0, 255, 255)
+    magenta = (255,50,255)
     for idx,image in enumerate(images):
         
         image = np.array(image)
+        w = image.shape[0]
+        h = image.shape[1]
+        if prediction == 1:
+            cv2.rectangle(image, (0, 0), (h, w), magenta, 4)
+
         image_saliencies = image.copy()
         image_persons = image.copy()
         image_persons_close = image.copy()
         image_anomalous = image.copy()
         # image_contours = image.copy()
 
-        # for gt_bbox in gt_bboxes:
-        #     cv2.rectangle(image, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), red, 1)
+        for gt_bbox in gt_bboxes:
+            # print('ccooooooooooocluded: ', gt_bbox.occluded)
+            if gt_bbox.occluded != 1:
+                cv2.rectangle(image, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), red, 2)
         
         
         for s_bbox in saliency_bboxes:
@@ -398,12 +407,12 @@ def plotOpencv(images, gt_bboxes, persons_in_segment, bbox_predictions, dynamic_
         cv2.namedWindow("preprocess");
         cv2.moveWindow("preprocess", 20,500);
         # k = cv2.waitKey(0)
-        if cv2.waitKey(1200) & 0xFF == ord('q'):
+        if cv2.waitKey(delay) & 0xFF == ord('q'):
             break   
         # if k == 27:         # wait for ESC key to exit
         #     cv2.destroyAllWindows()
 
-def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, only_video_name):
+def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay):
     person_model, classes = getPersonDetectorModel(type_person_detector)
     bbox_last = None
     distance_th = 35.5
@@ -449,11 +458,18 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, on
         label = torch.tensor(label)
         # data_rows_video = []
         #First Segment
+        block_dinamyc_images, idx_next_block = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0)
+        # dynamic_img = torch.unsqueeze(dis_images, dim=0)
+        # print('block_dinamyc_images: ', block_dinamyc_images.size())
+        prediction = class_tester.predict(block_dinamyc_images)
+        # print('prediction', prediction)
         dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
         num_segment = 0
-        while (dis_images is not None):
-            num_segment += 1
+        while (dis_images is not None): #dis_images : torch.Size([3, 224, 224])
+            # 
+            num_segment += 1            
             print(video_name, '---segment No: ', str(num_segment),'-----', dis_images.size(), len(segment_info))
+            
             # print('- dis_images: ', type(dis_images), dis_images.size())
             # print('- video_name: ', type(video_name), video_name)
             # print('- label: ', type(label))
@@ -527,6 +543,7 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, on
                 saliency_bboxes = [BoundingBox(Point(0,0),Point(w,h))]
             
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
+            tp, fp = localization_utils.countTruePositiveFalsePositive(real_bboxes,prediction)
             # video_real_frames.append(real_frames)
             # video_real_bboxes.append(real_bboxes)
             
@@ -632,6 +649,12 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, on
             row = [video_name[0]+'---segment No: '+str(num_segment), iou]
             data_rows.append(row)
             # data_rows_video.append(row)
+            if idx_next_segment > idx_next_block:
+                block_dinamyc_images, idx_next_block = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block)
+                # dynamic_img = torch.unsqueeze(dis_images, dim=0)
+                # print('block_dinamyc_images: ', block_dinamyc_images.size())
+                prediction = class_tester.predict(block_dinamyc_images)
+
             dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
             bbox_last = anomalous_regions[0]        
             if plot:
@@ -651,32 +674,44 @@ def online(anomalyDataset, saliency_tester, type_person_detector, h, w, plot, on
                 BORDER = np.ones((h,20,3))
                 
                 preprocess = np.concatenate((BORDER, mascara,BORDER, preprocesing_outs[0], BORDER, preprocesing_outs[1], BORDER, preprocesing_outs[2], BORDER, preprocesing_outs[3],BORDER), axis=1)
-                plotOpencv(real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 350)
+                plotOpencv(prediction, real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 300, delay)
                 ######################################
+                
+        # with open("videos_scores.txt", "w") as txt_file:
+        #     for line in videos_scores:
+        #         txt_file.write(" ".join(line) + "\n")
+
+        # print(videos_scores)
+
+        ############# MAP #################
+        print('data rows: ', len(data_rows))
+        df = pd.DataFrame(data_rows, columns=['path', 'iou'])
+        total_rows = df.shape[0]
+        seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
+        numOfRows = len(seriesObj[seriesObj == True].index)
+        localization_error = numOfRows/total_rows
+        print('BAd localizations num: ', numOfRows, ', Total frames: ', total_rows, 'Loc Error: ', str(localization_error))
+        # df = df.sort_values('iou',ascending=False)
+        # df = df.reset_index(drop=True)
+        # export_csv = df.to_csv ('metrics_yolo.csv', index = None, header=True)
+        # df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')   
+
+
+        # for frame in segment:
+        #     # print('frame: ', frame)
+        #     num_frame = int(frame[len(frame) - 7:-4])
+        #     if num_frame != int(data[num_frame, 5]):
+        #         sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
             
-    # with open("videos_scores.txt", "w") as txt_file:
-    #     for line in videos_scores:
-    #         txt_file.write(" ".join(line) + "\n")
-
-    # print(videos_scores)
-
-    ############# MAP #################
-    print('data rows: ', len(data_rows))
-    df = pd.DataFrame(data_rows, columns=['path', 'iou'])
-    df = df.sort_values('iou',ascending=False)
-    df = df.reset_index(drop=True)
-    export_csv = df.to_csv ('metrics_yolo.csv', index = None, header=True)
-    # df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
-    # export_csv = df.to_csv ('initial.csv', index = None, header=True)
-    # prec_at_rec, avg_prec, df = localization_utils.mAP(df)
-    # export_csv = df.to_csv ('metrics.csv', index = None, header=True)
-
-    # print('11 point precision is ', prec_at_rec)
-    # print('\nmap is ', avg_prec)
-
-    #
-
-    
+        #     flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
+        #     xmin = int(data[num_frame, 1])
+        #     ymin= int(data[num_frame, 2])
+        #     xmax = int(data[num_frame, 3])
+        #     ymax = int(data[num_frame, 4])
+        #     # print(type(frame), type(flac), type(xmin), type(ymin))
+        #     info_frame = [frame, flac, xmin, ymin, xmax, ymax]
+        #     segment_info.append(info_frame)
+        # return segment_inf
 
 def __main__():
     parser = argparse.ArgumentParser()
@@ -684,23 +719,28 @@ def __main__():
     parser.add_argument("--batchSize", type=int, default=3)
     # parser.add_argument("--numEpochs", type=int, default=10)
     parser.add_argument("--numWorkers", type=int, default=1)
-    parser.add_argument("--numDiPerVideos", type=int, default=5)
+    parser.add_argument("--numDynamicImgsPerBlock", type=int, default=5)
     parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--plot", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--videoSegmentLength", type=int, default=15)
+    parser.add_argument("--videoBlockLength", type=int)
     parser.add_argument("--personDetector", type=str, default=constants.YOLO)
     parser.add_argument("--positionSegment", type=str)
-    parser.add_argument("--overlapping", type=float)
+    parser.add_argument("--overlappingBlock", type=float)
+    parser.add_argument("--overlappingSegment", type=float)
     parser.add_argument("--videoName", type=str, default=None)
+    parser.add_argument("--delay", type=int, default=1)
 
     args = parser.parse_args()
     plot = args.plot
     maxNumFramesOnVideo = 0
     videoSegmentLength = args.videoSegmentLength
+    videoBlockLength = args.videoBlockLength
     typePersonDetector = args.personDetector
-    numDiPerVideos = args.numDiPerVideos
+    numDynamicImgsPerBlock = args.numDynamicImgsPerBlock
     positionSegment = args.positionSegment
-    overlapping = args.overlapping
+    overlappingSegment = args.overlappingSegment
+    overlappingBlock = args.overlappingBlock
     num_classes = 2 #anomalus or not
     input_size = (224,224)
     transforms_dataset = transforms_anomaly.createTransforms(input_size)
@@ -712,19 +752,22 @@ def __main__():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     threshold = 0.5
     video_name = args.videoName
+    delay = args.delay
 
     saliency_model_config = saliency_model_file
     getRawFrames = True
-    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
+    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    dataloaders_dict, test_names, anomalyDataset = anomalyInitializeDataset.initialize_final_only_test_anomaly_dataset(path_dataset, train_videos_path,
-                                                        test_videos_path, batch_size, num_workers, numDiPerVideos, transforms_dataset,
-                                                        maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle, getRawFrames,
-                                                        overlapping)
+# path_dataset, test_videos_path, batch_size, num_workers, videoBlockLength,
+#                     numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment
+    # videoBlockLength = 30
+    dataloader_test, test_names, anomalyDataset = anomalyInitializeDataset.initialize_final_only_test_online_anomaly_dataset(path_dataset,
+                                                        test_videos_path, batch_size, num_workers, videoBlockLength, numDynamicImgsPerBlock, transforms_dataset['test'],
+                                                        videoSegmentLength, shuffle, overlappingBlock, overlappingSegment)
 
-    saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloaders_dict['test'], test_names,
-                                        input_size, saliency_model_config, numDiPerVideos, threshold)
+    saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloader_test, test_names,
+                                        input_size, saliency_model_config, 1, threshold)
     
     #classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth'
     # classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
@@ -735,8 +778,15 @@ def __main__():
     h = 240
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
-
-    online(anomalyDataset, saliency_tester, typePersonDetector, h, w, plot, video_name)
+    classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
+    classifier = torch.load(classifier_file)
+    classifier = classifier.cuda()
+    classifier.inferenceMode(numDynamicImgsPerBlock)
+    
+    tester = Tester(classifier, None, device, None, None)
+    online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    
+   
     # import csv
     # df = pd.read_csv('metrics_yolo.csv',quoting=csv.QUOTE_NONE, error_bad_lines=False)
     # # print(df.head(10))

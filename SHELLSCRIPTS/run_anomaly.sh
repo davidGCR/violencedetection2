@@ -1,28 +1,30 @@
 # # TEST : ROC - AUC curve
-cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection 
-python3 ANOMALYCRIME/anomaly_main.py \
---operation testing \
---ndis 3 \
---batchSize 8 \
---videoSegmentLength 30 \
---numWorkers 1 \
---testModelFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth
+# cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection 
+# python3 ANOMALYCRIME/anomaly_main.py \
+# --operation testing \
+# --ndis 3 \
+# --batchSize 8 \
+# --videoSegmentLength 30 \
+# --numWorkers 1 \
+# --testModelFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth
 
 # TRAIN-MODEL
-# python3 ANOMALYCRIME/anomaly_main.py \
-# --checkpointPath ANOMALYCRIME/checkpoints \
-# --operation trainfinal \
-# --modelType resnet18 \
-# --joinType maxTempPool \
-# --featureExtract true \
-# --numEpochs 23 \
-# --ndis 3 \
-# --maxNumFramesOnVideo 0 \
-# --videoSegmentLength 30 \
-# --positionSegment begin \
-# --batchSize 8 \
-# --numWorkers 1 \
-# --shuffle true
+python3 ANOMALYCRIME/anomaly_main.py \
+--checkpointPath ANOMALYCRIME/checkpoints \
+--operation trainfinal \
+--modelType resnet18 \
+--joinType maxTempPool \
+--featureExtract true \
+--numEpochs 23 \
+--ndis 3 \
+--maxNumFramesOnVideo 0 \
+--videoSegmentLength 30 \
+--positionSegment begin \
+--batchSize 8 \
+--numWorkers 1 \
+--shuffle true \
+# --typeTrain final \
+# --transferModel ninguno
 
 
 

@@ -42,3 +42,12 @@ class Tester:
                 # print(indices,p,p2)
 
         return gt_labels, predictions, scores
+    
+    def predict(self, dynamic_img):
+        self.model.eval()
+        dynamic_img = dynamic_img.to(self.device)
+        with torch.set_grad_enabled(False):
+            outputs = self.model(dynamic_img)
+            values, indices = torch.max(outputs, 1)
+            # print('Prediction: ', indices)
+            return indices.cpu().item()

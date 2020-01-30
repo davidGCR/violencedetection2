@@ -14,7 +14,7 @@ from torch.utils.data._utils.collate import default_collate
 
 class AnomalyDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, nDynamicImages,
-                    videoSegmentLength, maxNumFramesOnVideo, positionSegment, overlapping, getRawFrames=False):
+                    videoSegmentLength, maxNumFramesOnVideo, positionSegment):
         self.spatial_transform = spatial_transform
         self.images = dataset
         self.labels = labels
@@ -27,8 +27,8 @@ class AnomalyDataset(Dataset):
         self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
         self.positionSegment = positionSegment  #could be at begin, central or random
         self.skipPercentage = 35
-        self.getRawFrames = getRawFrames
-        self.overlapping = overlapping
+        # self.getRawFrames = getRawFrames
+        # self.overlapping = overlapping
 
     def __len__(self):
         return len(self.images)

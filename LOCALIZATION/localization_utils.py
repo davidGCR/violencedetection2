@@ -7,8 +7,8 @@ import glob
 import numpy as np
 import cv2
 import math
-from point import Point
-from bounding_box import BoundingBox
+from LOCALIZATION.point import Point
+from LOCALIZATION.bounding_box import BoundingBox
 from YOLOv3 import yolo_inference
 import torch
 from PIL import Image, ImageDraw, ImageFont
@@ -46,14 +46,15 @@ def getSegmentBBox(lbboxes):
     ymax = 0
     
     for bbox in lbboxes:
-        if bbox.pmin.x < xmin:
-            xmin = bbox.pmin.x
-        if bbox.pmin.y < ymin:
-            ymin = bbox.pmin.y
-        if bbox.pmax.x > xmax:
-            xmax = bbox.pmax.x
-        if bbox.pmax.y > ymax:
-            ymax = bbox.pmax.y
+        if bbox.occluded == 0:
+            if bbox.pmin.x < xmin:
+                xmin = bbox.pmin.x
+            if bbox.pmin.y < ymin:
+                ymin = bbox.pmin.y
+            if bbox.pmax.x > xmax:
+                xmax = bbox.pmax.x
+            if bbox.pmax.y > ymax:
+                ymax = bbox.pmax.y
     
     return BoundingBox(Point(xmin,ymin),Point(xmax, ymax))
 
@@ -367,6 +368,16 @@ def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     #     bbox.iou = bbox1.iou + bbox2.iou
     return bbox
 
+def countTruePositiveFalsePositive(gt_bboxes, prediction):
+    tp = 0
+    fp = 0
+    for bbox in gt_bboxes:
+        if prediction == 1 and bbox.occluded == 0:
+            tp+=1
+        else:
+            fp+=1
+    return tp, fp
+
 def getFramesFromSegment(video_name, frames_segment, num_frames):
     """
     return: names: list(str), frames: list(PILImage), bboxes: list(Bbox)
@@ -374,18 +385,20 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
     names = []
     frames = []
     bboxes = []
-    print('getFramesFromSegment Video: ', video_name, len(frames_segment))
+    # print('getFramesFromSegment Video: ', video_name, len(frames_segment))
     if num_frames == 'all':
         for frame_info in frames_segment:
             # f_info = frame_info[]
             frame_name = str(frame_info[0][0])
-            print('frame_name000000000000: ', frame_name)
+            occluded = int(frame_info[1].cpu().item())
+            # print('frame_name000000000000: ', frame_name, 'occluded: ', occluded)
             frame_path = os.path.join(video_name, frame_name)
             names.append(frame_path)
             # image = np.array(Image.open(frame_path))
             image = Image.open(frame_path)
             frames.append(image)
-            bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN].float(), frame_info[constants.IDX_YMIN].float()), Point(frame_info[constants.IDX_XMAX].float(), frame_info[constants.IDX_YMAX].float()))
+            bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN].float(), frame_info[constants.IDX_YMIN].float()),
+                                Point(frame_info[constants.IDX_XMAX].float(), frame_info[constants.IDX_YMAX].float()),occluded=occluded)
             bboxes.append(bbox)
     elif num_frames == 'first':
         frame_info = frames_segment[0]

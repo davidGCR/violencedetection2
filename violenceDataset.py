@@ -124,7 +124,7 @@ class ViolenceDataset(Dataset):
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
         
         
-        return dinamycImages, label, vid_name, 0#dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+        return dinamycImages, label, vid_name, 0 #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
     
 
