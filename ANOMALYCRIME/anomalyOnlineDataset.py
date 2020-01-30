@@ -84,11 +84,7 @@ class AnomalyOnlineDataset(Dataset):
             data = np.array(data)
         segment_info=[]
         for frame in segment:
-
-            
             splits = re.split('(\d+)', frame)
-            # print('frame: ', frame, splits[1])
-            # num_frame = int(frame[len(frame) - 7:-4])
             num_frame = int(splits[1])
             if num_frame != int(data[num_frame, 5]):
                 sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
@@ -111,8 +107,14 @@ class AnomalyOnlineDataset(Dataset):
         dinamycImages = []
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        bdx_file_path = self.bbox_files[idx_video]
         if idx_next_block < self.numFrames[idx_video]:
             block, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block)
+            one_segment = []
+            for segment in segments_block:
+                one_segment.extend(segment)
+            
+            block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
             # print('segments_block: ', segments_block, idx_next_block)
             for segment in segments_block:
                 frames = []
@@ -127,7 +129,7 @@ class AnomalyOnlineDataset(Dataset):
             dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
             # if self.numDynamicImgsPerBlock == 1:
             #     dinamycImages = dinamycImages.squeeze(dim=0)
-            return dinamycImages, idx_next_block
+            return dinamycImages, idx_next_block, block_boxes_info
         else:
             return None, None
 

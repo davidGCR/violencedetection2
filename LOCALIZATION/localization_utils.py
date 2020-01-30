@@ -368,15 +368,31 @@ def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     #     bbox.iou = bbox1.iou + bbox2.iou
     return bbox
 
-def countTruePositiveFalsePositive(gt_bboxes, prediction):
+def countTruePositiveFalsePositive(l_infos, prediction):
     tp = 0
     fp = 0
-    for bbox in gt_bboxes:
-        if prediction == 1 and bbox.occluded == 0:
+    y_pred = []
+    for info in l_infos:
+        if prediction == 1 and info[1] == 0:
             tp+=1
+            y_pred.append(1)
         else:
             fp+=1
-    return tp, fp
+            y_pred.append(0)
+    return tp, fp, y_pred
+
+def countPositiveFramesNegativeFrames(l_infos):
+    p = 0
+    n = 0
+    y_truth = []
+    for info in l_infos:
+        if info[1]== 0:
+            p+=1
+            y_truth.append(1)
+        else:
+            n+=1
+            y_truth.append(0)
+    return p, n, y_truth
 
 def getFramesFromSegment(video_name, frames_segment, num_frames):
     """
