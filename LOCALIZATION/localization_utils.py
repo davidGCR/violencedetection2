@@ -407,7 +407,7 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
             # f_info = frame_info[]
             frame_name = str(frame_info[0][0])
             occluded = int(frame_info[1].cpu().item())
-            # print('frame_name000000000000: ', frame_name, 'occluded: ', occluded)
+            print('frame_name000000000000: ', frame_name, 'occluded: ', occluded)
             frame_path = os.path.join(video_name, frame_name)
             names.append(frame_path)
             # image = np.array(Image.open(frame_path))

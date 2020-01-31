@@ -1,5 +1,5 @@
-cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
-# cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
+# cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
+cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 python3 LOCALIZATION/localization_main.py \
 --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 --batchSize 1 \
@@ -13,7 +13,7 @@ python3 LOCALIZATION/localization_main.py \
 --overlappingBlock 0 \
 --overlappingSegment 0.5 \
 --plot true \
---videoName Robbery144 \
+--videoName Arrest003 \
 --delay 1
 
 # python3 LOCALIZATION/dense_sampling.py \
