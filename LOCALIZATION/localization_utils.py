@@ -368,17 +368,18 @@ def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     #     bbox.iou = bbox1.iou + bbox2.iou
     return bbox
 
-def countTruePositiveFalsePositive(l_infos, prediction):
+def countTruePositiveFalsePositive(l_infos, prediction, score):
     tp = 0
     fp = 0
     y_pred = []
     for info in l_infos:
-        if prediction == 1 and info[1] == 0:
-            tp+=1
-            y_pred.append(1)
-        else:
-            fp+=1
-            y_pred.append(0)
+        # if prediction == 1 and info[1] == 0:
+        # # if prediction == 1:
+        #     tp+=1
+        #     y_pred.append(score)
+        # else:
+        #     fp+=1
+        y_pred.append(score)
     return tp, fp, y_pred
 
 def countPositiveFramesNegativeFrames(l_infos):
@@ -414,7 +415,8 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
             image = Image.open(frame_path)
             frames.append(image)
             bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN].float(), frame_info[constants.IDX_YMIN].float()),
-                                Point(frame_info[constants.IDX_XMAX].float(), frame_info[constants.IDX_YMAX].float()),occluded=occluded)
+                                Point(frame_info[constants.IDX_XMAX].float(), frame_info[constants.IDX_YMAX].float()), occluded=occluded)
+            print('frame_name000000000000: ', frame_name, 'occluded: ', occluded, bbox)
             bboxes.append(bbox)
     elif num_frames == 'first':
         frame_info = frames_segment[0]

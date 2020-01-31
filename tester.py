@@ -48,6 +48,8 @@ class Tester:
         dynamic_img = dynamic_img.to(self.device)
         with torch.set_grad_enabled(False):
             outputs = self.model(dynamic_img)
+            p = torch.nn.functional.softmax(outputs, dim=1)
+            p = p.cpu().numpy()
             values, indices = torch.max(outputs, 1)
             # print('Prediction: ', indices)
-            return indices.cpu().item()
+            return indices.cpu().item(), p[0][1]
