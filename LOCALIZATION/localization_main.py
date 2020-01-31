@@ -1,8 +1,8 @@
 
 import sys
 # import include
-sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 # from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
@@ -467,6 +467,16 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
             # print('Dynamic image block: ', block_dinamyc_images.size()) #torch.Size([1, 3, 224, 224])
             # dynamic_img = torch.unsqueeze(dis_images, dim=0)
             print('---numBlock: ', num_block)
+            prediction, score = class_tester.predict(block_dinamyc_images)
+            tp, fp, y_block_pred = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score)
+            p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
+            num_pos_frame += p
+            num_neg_frame += n
+            total_fp += fp
+            total_tp += tp
+            y_truth.extend(y_block_truth)
+            y_pred.extend(y_block_pred)
+            num_block += 1
             if plot:
                 frames_names, real_frames, real_bboxes = localization_utils.getFramesFromBlock(video_name[0], block_boxes_info)
 
@@ -476,16 +486,7 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
                 dynamic_image_plot = cv2.resize(dynamic_image_plot, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
                 # plt.imshow(dynamic_image_plot)
                 # plt.show()
-                prediction, score = class_tester.predict(block_dinamyc_images)
-                tp, fp, y_block_pred = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score)
-                p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
-                num_pos_frame += p
-                num_neg_frame += n
-                total_fp += fp
-                total_tp += tp
-                y_truth.extend(y_block_truth)
-                y_pred.extend(y_block_pred)
-                num_block += 1
+                
 
                 pos_x = 20
                 sep = 400
