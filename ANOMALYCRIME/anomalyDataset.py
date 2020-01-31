@@ -14,7 +14,7 @@ from torch.utils.data._utils.collate import default_collate
 
 class AnomalyDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, nDynamicImages,
-                    videoSegmentLength, maxNumFramesOnVideo, positionSegment):
+                    videoSegmentLength, maxNumFramesOnVideo, positionSegment, dataAumentation):
         self.spatial_transform = spatial_transform
         self.images = dataset
         self.labels = labels
@@ -27,6 +27,7 @@ class AnomalyDataset(Dataset):
         self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
         self.positionSegment = positionSegment  #could be at begin, central or random
         self.skipPercentage = 35
+        self.dataAumentation = dataAumentation
         # self.getRawFrames = getRawFrames
         # self.overlapping = overlapping
 
@@ -187,54 +188,9 @@ class AnomalyDataset(Dataset):
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         if self.numDynamicImagesPerVideo == 1:
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
-        # if self.getRawFrames:
-        #     return dinamycImages, label, vid_name, bbox_segments, video_raw_frames
-        # else:
-        # if self.positionSegment == 'begin':
-        #     return default_collate([dinamycImages, label, vid_name, bbox_segments])            
-        # else:
         return dinamycImages, label, vid_name, bbox_segments
 
-    def getVideoSegments_old(self, vid_name, idx):
-        frames_list = os.listdir(vid_name)
-        frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        bbox_file = self.bbox_files[idx]
-        video_segments = []
-        seqLen = 0 #number of frames for each segment
-        if self.numDynamicImagesPerVideo == 1 and self.videoSegmentLength > 0:
-            if self.numFrames[idx] <= self.videoSegmentLength:
-                # print('hereeeeeeeeeeeeeee....')
-                seqLen = self.numFrames[idx]
-            else:
-                seqLen = self.videoSegmentLength
-            num_frames_on_video = self.numFrames[idx] 
-            video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
-            if self.positionSegment == 'random':
-                segment = self.getRandomSegment(video_splits_by_no_Di, idx)
-            elif self.positionSegment == 'central':
-                segment = self.getCentralSegment(video_splits_by_no_Di, idx)
-            elif self.positionSegment == 'begin':
-                self.skipPercentage = 0
-                segment = self.getBeginSegment(frames_list, self.skipPercentage)
-            video_segments = []
-            video_segments.append(segment)
-        else:
-            if self.maxNumFramesOnVideo == 0: #use all frames from video
-                num_frames_on_video = self.numFrames[idx]
-            else: #use some frames from video
-                num_frames_on_video = self.maxNumFramesOnVideo if self.numFrames[idx] >= self.maxNumFramesOnVideo else self.numFrames[idx]
-            seqLen = num_frames_on_video // self.numDynamicImagesPerVideo  # calculate num frames by segment
-            # print('num_frames_on_video , segment length: ', num_frames_on_video, seqLen)
-            cut = 0
-            if self.labels[idx] == 0: # normal videos
-                video_segments, cut = self.skip_initial_segments(self.skipPercentage, video_segments)  #skip 35% of initial segments
-            video_segments = [frames_list[x:x + seqLen] for x in range(cut, num_frames_on_video + cut, seqLen)]
-            if len(video_segments) > self.numDynamicImagesPerVideo: #cut last segments
-                diff = len(video_segments) - self.numDynamicImagesPerVideo
-                video_segments = video_segments[: - diff]
-            # print(len(video_segments))
-        bbox_segments =  self.get_bbox_segmet(video_segments, bbox_file, idx)
-        return video_segments, seqLen, bbox_segments
+    
 
 
 

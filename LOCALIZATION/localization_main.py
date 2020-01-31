@@ -1,8 +1,8 @@
 
 import sys
 # import include
-sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 # from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
