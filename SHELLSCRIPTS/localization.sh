@@ -5,8 +5,8 @@ python3 LOCALIZATION/localization_main.py \
 --batchSize 1 \
 --numWorkers 4 \
 --shuffle false \
---videoSegmentLength 10 \
---videoBlockLength 40 \
+--videoSegmentLength 0 \
+--videoBlockLength 5 \
 --numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
 --positionSegment online \

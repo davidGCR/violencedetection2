@@ -1,9 +1,9 @@
 
 import sys
 # import include
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-# import include
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
 import ANOMALYCRIME.anomalyInitializeDataset as anomalyInitializeDataset
@@ -418,6 +418,114 @@ def plotOpencv(prediction, images,gt_bboxes, persons_in_segment, bbox_prediction
         # if k == 27:         # wait for ESC key to exit
         #     cv2.destroyAllWindows()
 
+def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay):
+    person_model, classes = getPersonDetectorModel(type_person_detector)
+    bbox_last = None
+    distance_th = 35.5
+    thres_intersec_lastbbox_current = 0.4
+    data_rows = []
+    indx_flac = -1
+    num_video_segments = 0
+    videos_scores = []
+    total_tp = 0
+    total_fp = 0
+    num_pos_frame = 0
+    num_neg_frame = 0
+    y_truth = []
+    y_pred = []
+
+    for idx_video, data in enumerate(anomalyDataset):
+        indx_flac = idx_video
+        if only_video_name is not None and indx_flac==0:
+            if indx_flac==0:
+                idx = anomalyDataset.getindex(only_video_name)
+                if idx is not None:
+                    data = anomalyDataset[idx]
+                    idx_video = idx
+                    print('TEsting only one video...' , only_video_name)
+                else:
+                    print('No valid video...')
+            else:
+                break
+            print('dskfgljksdhgkjshgksglksdjglksdjglksdgiuegjhfgiowijgowo')
+
+        if only_video_name is not None and indx_flac>0:
+            break
+        # else:
+        #     break
+        bbox_last = None
+       
+        video_name, label = data
+        print("-" * 150, 'video No: ', idx_video, ' name: ', video_name)
+        video_name = [video_name]
+        label = torch.tensor(label)
+        block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0)
+        print(block_boxes_info)
+        # dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
+        num_block = 0
+        while (block_dinamyc_images is not None): #dis_images : torch.Size([3, 224, 224])
+            # print('Dynamic image block: ', block_dinamyc_images.size()) #torch.Size([1, 3, 224, 224])
+            # dynamic_img = torch.unsqueeze(dis_images, dim=0)
+            print('---numBlock: ', num_block)
+            if plot:
+                frames_names, real_frames, real_bboxes = localization_utils.getFramesFromBlock(video_name[0], block_boxes_info)
+
+                # block_dinamyc_images = torch.unsqueeze(block_dinamyc_images, 0)
+                dynamic_image_plot = saliency_tester.min_max_normalize_tensor(block_dinamyc_images) 
+                dynamic_image_plot = dynamic_image_plot.numpy()[0].transpose(1, 2, 0)
+                dynamic_image_plot = cv2.resize(dynamic_image_plot, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+                # plt.imshow(dynamic_image_plot)
+                # plt.show()
+                prediction, score = class_tester.predict(block_dinamyc_images)
+                tp, fp, y_block_pred = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score)
+                p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
+                num_pos_frame += p
+                num_neg_frame += n
+                total_fp += fp
+                total_tp += tp
+                y_truth.extend(y_block_truth)
+                y_pred.extend(y_block_pred)
+                num_block += 1
+
+                pos_x = 20
+                sep = 400
+                for i, frame in enumerate(real_frames):
+                    frame = np.array(frame)
+                    wn = frame.shape[0]
+                    hn = frame.shape[1]
+                    if prediction == 1:
+                        cv2.rectangle(frame, (0, 0), (hn, wn), constants.magenta, 4)
+
+                    gt_bbox = real_bboxes[i]
+                    if gt_bbox.occluded == 0:
+                        cv2.rectangle(frame, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), constants.red, 2)
+                    cv2.imshow('frame', frame)
+                    cv2.imshow('dynamic_image', dynamic_image_plot)
+                    cv2.namedWindow("frame");#x,y
+                    cv2.moveWindow("frame", pos_x, 100);
+                    cv2.namedWindow("dynamic_image");
+                    cv2.moveWindow("dynamic_image", pos_x+sep, 100);
+                    if cv2.waitKey(delay) & 0xFF == ord('q'):
+                        break
+
+
+            
+
+            block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block)
+            
+        # return segment_inf
+    fpr, tpr, _ = roc_curve(y_truth, y_pred)
+    lr_auc = roc_auc_score(y_truth, y_pred)
+    plt.plot(fpr, tpr, marker='.', label='test')
+        # axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+        # show the legend
+        # pyplot.legend()
+        # show the plot
+    plt.show()
+    print('AUC: ', str(lr_auc))
+
 def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay):
     person_model, classes = getPersonDetectorModel(type_person_detector)
     bbox_last = None
@@ -455,7 +563,6 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
         #     break
         bbox_last = None
         print("-" * 150, 'video No: ', idx_video)
-        #di_images = [1,ndis,3,224,224]
         video_name, label = data
         video_name = [video_name]
         label = torch.tensor(label)
@@ -804,7 +911,8 @@ def __main__():
     classifier.inferenceMode(numDynamicImgsPerBlock)
     
     tester = Tester(classifier, None, device, None, None)
-    online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    # online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    temporalTest(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
     
    
     # import csv

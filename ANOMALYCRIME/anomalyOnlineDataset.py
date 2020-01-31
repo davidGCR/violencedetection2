@@ -134,7 +134,7 @@ class AnomalyOnlineDataset(Dataset):
             #     dinamycImages = dinamycImages.squeeze(dim=0)
             return dinamycImages, idx_next_block, block_boxes_info
         else:
-            return None, None
+            return None, None, None
 
     def computeSegmentDynamicImg(self, idx_video, idx_next_segment):
         vid_name = self.videos[idx_video]

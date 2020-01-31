@@ -54,6 +54,12 @@ PIL_GREEN = (0, 255, 0)
 PIL_MAGENTA = (255, 0, 255)
 PIL_BLUE = (0,0,255)
 
+red = (0, 0, 255)
+green = (0, 255, 0)
+blue = (255, 0, 0)
+yellow = (0, 255, 255)
+magenta = (255,50,255)
+
 FRAME_POS_FIRST = 'first'
 FRAME_POS_END = 'end'
 FRAME_POS_ALL = 'all'

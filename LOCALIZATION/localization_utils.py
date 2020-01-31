@@ -395,6 +395,29 @@ def countPositiveFramesNegativeFrames(l_infos):
             y_truth.append(0)
     return p, n, y_truth
 
+def getFramesFromBlock(video_name, frames_block):
+    """
+    return: names: list(str), frames: list(PILImage), bboxes: list(Bbox)
+    """
+    names = []
+    frames = []
+    bboxes = []
+    for frame_info in frames_block:
+        # f_info = frame_info[]
+        frame_name = str(frame_info[0])
+        occluded = int(frame_info[1])
+        # print('frame_name000000000000: ', frame_name, 'occluded: ', occluded)
+        frame_path = os.path.join(video_name, frame_name)
+        names.append(frame_path)
+        # image = np.array(Image.open(frame_path))
+        image = Image.open(frame_path)
+        frames.append(image)
+        bbox = BoundingBox(Point(float(frame_info[constants.IDX_XMIN]), float(frame_info[constants.IDX_YMIN])),
+                            Point(float(frame_info[constants.IDX_XMAX]), float(frame_info[constants.IDX_YMAX])), occluded=occluded)
+        print('frame_name000000000000: ', frame_name, 'occluded: ', occluded, bbox)
+        bboxes.append(bbox)
+    return names, frames, bboxes
+
 def getFramesFromSegment(video_name, frames_segment, num_frames):
     """
     return: names: list(str), frames: list(PILImage), bboxes: list(Bbox)
@@ -408,7 +431,7 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
             # f_info = frame_info[]
             frame_name = str(frame_info[0][0])
             occluded = int(frame_info[1].cpu().item())
-            print('frame_name000000000000: ', frame_name, 'occluded: ', occluded)
+            # print('frame_name000000000000: ', frame_name, 'occluded: ', occluded)
             frame_path = os.path.join(video_name, frame_name)
             names.append(frame_path)
             # image = np.array(Image.open(frame_path))
