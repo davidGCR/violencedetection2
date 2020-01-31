@@ -86,17 +86,20 @@ class AnomalyOnlineDataset(Dataset):
         for frame in segment:
             splits = re.split('(\d+)', frame)
             num_frame = int(splits[1])
-            if num_frame != int(data[num_frame, 5]):
-                sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
+            num_frame = num_frame - 1
             
-            flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
-            xmin = int(data[num_frame, 1])
-            ymin= int(data[num_frame, 2])
-            xmax = int(data[num_frame, 3])
-            ymax = int(data[num_frame, 4])
-            # print(type(frame), type(flac), type(xmin), type(ymin))
-            info_frame = [frame, flac, xmin, ymin, xmax, ymax]
-            
+            # if num_frame != int(data[num_frame, 5]):
+            #     sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
+            if num_frame < len(data):
+                flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
+                xmin = int(data[num_frame, 1])
+                ymin= int(data[num_frame, 2])
+                xmax = int(data[num_frame, 3])
+                ymax = int(data[num_frame, 4])
+                # print(type(frame), type(flac), type(xmin), type(ymin))
+                info_frame = [frame, flac, xmin, ymin, xmax, ymax]
+            else:
+                info_frame = [frame, -1, -1, -1, -1, -1]
             segment_info.append(info_frame)
         # print(segment_info)
         return segment_info
