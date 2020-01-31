@@ -455,7 +455,6 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
         #     break
         bbox_last = None
         print("-" * 150, 'video No: ', idx_video)
-        #di_images = [1,ndis,3,224,224]
         video_name, label = data
         video_name = [video_name]
         label = torch.tensor(label)

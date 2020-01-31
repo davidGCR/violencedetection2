@@ -6,15 +6,15 @@ python3 LOCALIZATION/localization_main.py \
 --numWorkers 4 \
 --shuffle false \
 --videoSegmentLength 10 \
---videoBlockLength 40 \
+--videoBlockLength 10 \
 --numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
 --positionSegment online \
 --overlappingBlock 0 \
 --overlappingSegment 0.5 \
---plot true \
---videoName Robbery144 \
---delay 1
+--plot false \
+# --videoName Burglary099 \
+# --delay 1
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \
