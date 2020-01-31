@@ -1,8 +1,8 @@
 # from torch.utils.data import Dataset
 import sys
 # import include
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 from PIL import Image
 import numpy as np
 import os
@@ -108,11 +108,11 @@ def __main__():
     # print(train_labels)
     # dataset = DataAumentation(videos, labels, numFrames, bbox_files, spatial_transform,
     #                 videoSegmentLength, output_path)
-    dataset = DataAumentation(['/media/david/datos/Violence DATA/AnomalyCRIMEDATASET/UCFCrime2Local/frames_reduced/Arrest002'], [1], [279], None,
+    dataset = DataAumentation([os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED,'Arrest002')], [1], [279], None,
                     10, constants.PATH_DATA_AUMENTATION_OUTPUT)
     for video in dataset:
         a=0
-    dataset.__getitem__(0)
+    # dataset.__getitem__(0)
 __main__()
 
 
