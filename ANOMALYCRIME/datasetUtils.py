@@ -6,6 +6,22 @@ import glob
 import pandas as pd
 import cv2
 import numpy as np
+import re
+
+def sorted_nicely( l ):
+    """ Sorts the given iterable in the way that is expected.
+
+    Required arguments:
+    l -- The iterable to be sorted.
+
+    From https://arcpy.wordpress.com/2012/05/11/sorting-alphanumeric-strings-in-python/
+    and http://stackoverflow.com/questions/2669059/how-to-sort-alpha-numeric-set-in-python    
+
+    """
+    convert = lambda text: int(text) if text.isdigit() else text
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key = alphanum_key)
+
 
 def labels_2_binary(multi_labels):
     binary_labels = multi_labels.copy()
@@ -15,6 +31,63 @@ def labels_2_binary(multi_labels):
         else:
             binary_labels[idx]=1
     return binary_labels
+
+def train_test_videos_aumented(g_path):
+    """ load train-test split from original dataset """
+    train_names = []
+    train_labels = []
+    test_names = []
+    test_labels = []
+    train_bbox_files = []
+    test_bbox_files = []
+    classes = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
+    lista_videos = os.listdir(g_path)
+    lista_videos.sort()
+# find . -name ".DS_Store" -print -delete
+    for video in lista_videos:
+        label_str = video[:-3]
+        dynamic_frames =  os.listdir(os.path.join(g_path,video))
+        # results = list(map(int, results))
+        dynamic_frames = sorted_nicely(dynamic_frames)
+        for image in dynamic_frames:
+            sample_path = g_path+'/'+video+'/'+image
+            # print(sample_path)
+            train_names.append(str(sample_path))
+            if label_str != 'Normal_Videos':
+                train_labels.append(0)
+            else:
+                train_labels.append(1)
+
+    # with open(train_file, 'r') as file:
+    #     for row in file:
+    #         train_names.append(os.path.join(g_path,row[:-1]))
+    #         train_labels.append(row[:-4])
+    #         label = row[:-4]
+    #         if label != 'Normal_Videos':
+    #             file = row[:-1] + '.txt'
+    #             file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+    #             train_bbox_files.append(file)
+    #         else:
+    #             train_bbox_files.append(None)
+
+    # with open(test_file, 'r') as file:
+    #     for row in file:
+    #         test_names.append(os.path.join(g_path,row[:-1]))
+    #         test_labels.append(row[:-4])
+    #         label = row[:-4]
+    #         if label != 'Normal_Videos':
+    #             file = row[:-1] + '.txt'
+    #             file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+    #             test_bbox_files.append(file)
+    #         else:
+    #             test_bbox_files.append(None)
+    # train_labels = [classes[label] for label in train_labels]
+    # test_labels = [classes[label] for label in test_labels]
+    # # for i in range(len(train_names)):
+    # #      print(train_names[i])
+    # NumFrames_train = [len(glob.glob1(train_names[i], "*.jpg")) for i in range(len(train_names))]
+    # NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
+    return train_names, train_labels
 
 def train_test_videos(train_file, test_file, g_path):
     """ load train-test split from original dataset """

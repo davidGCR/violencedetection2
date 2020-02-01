@@ -98,26 +98,21 @@ class DataAumentation(Dataset):
 
     
 def __main__():
-    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
-    train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
-    test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
-    # combined_train_names, combined_val_names, train_labels, val_labels = train_test_split(combined, train_labels, stratify=train_labels, test_size=0.30)
-    # train_names, train_num_frames, train_bbox_files = zip(*combined_train_names)
-    # val_names, val_num_frames, val_bbox_files = zip(*combined_val_names)
-    train_labels = datasetUtils.labels_2_binary(train_labels)
-    # val_labels = datasetUtils.labels_2_binary(val_labels)
-    # test_labels = datasetUtils.labels_2_binary(test_labels)
-    # print(train_labels)
-    # dataset = DataAumentation(videos, labels, numFrames, bbox_files, spatial_transform,
-    #                 videoSegmentLength, output_path)
-    # dataset = DataAumentation([os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED,'Arrest002')], [1], [279], None,
-    #                 10, constants.PATH_DATA_AUMENTATION_OUTPUT)
-    num_frames_to_dynamic_images = 10
-    dataset = DataAumentation(train_names, train_labels, train_num_frames, None,
-                    num_frames_to_dynamic_images, constants.PATH_DATA_AUMENTATION_OUTPUT)
-    for video_name in dataset:
-        print('Processing: ', video_name, '...')
+    ### Create aumented data
+    # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
+    # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
+    # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
+    # train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
+    # train_labels = datasetUtils.labels_2_binary(train_labels)
+    
+    # num_frames_to_dynamic_images = 10
+    # dataset = DataAumentation(train_names, train_labels, train_num_frames, None,
+    #                 num_frames_to_dynamic_images, constants.PATH_DATA_AUMENTATION_OUTPUT)
+    # for video_name in dataset:
+    #     print('Processing: ', video_name, '...')
+
+    train_names, train_labels = datasetUtils.train_test_videos_aumented(constants.PATH_DATA_AUMENTATION_OUTPUT)
+    print(len(train_names), len(train_labels))
         
     # dataset.__getitem__(0)
 __main__()
