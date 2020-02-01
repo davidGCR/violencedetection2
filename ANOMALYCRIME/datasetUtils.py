@@ -48,17 +48,6 @@ def train_test_videos(train_file, test_file, g_path):
                 test_bbox_files.append(file)
             else:
                 test_bbox_files.append(None)
-
-    # for idx,label in enumerate(train_labels):
-    #     if label == 'Normal_Videos':
-    #         train_labels[idx]=0
-    #     else:
-    #         train_labels[idx]=1
-    # for idx,label in enumerate(test_labels):
-    #     if label == 'Normal_Videos':
-    #         test_labels[idx]=0
-    #     else:
-    #         test_labels[idx]=1       
     train_labels = [classes[label] for label in train_labels]
     test_labels = [classes[label] for label in test_labels]
     # for i in range(len(train_names)):
