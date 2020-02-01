@@ -16,9 +16,9 @@ python3 ANOMALYCRIME/anomaly_main.py \
 --joinType maxTempPool \
 --featureExtract true \
 --numEpochs 23 \
---ndis 3 \
+--ndis 1 \
 --maxNumFramesOnVideo 0 \
---videoSegmentLength 30 \
+--videoSegmentLength 10 \
 --positionSegment begin \
 --batchSize 8 \
 --numWorkers 1 \

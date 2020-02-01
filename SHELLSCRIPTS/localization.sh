@@ -1,13 +1,13 @@
-# cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
-cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
+cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
+# cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 python3 LOCALIZATION/localization_main.py \
 --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 --batchSize 1 \
 --numWorkers 4 \
 --shuffle false \
 --videoSegmentLength 0 \
---videoBlockLength 5 \
---numDynamicImgsPerBlock 1 \
+--videoBlockLength 90 \
+--numDynamicImgsPerBlock 3 \
 --personDetector yolov3 \
 --positionSegment online \
 --overlappingBlock 0 \

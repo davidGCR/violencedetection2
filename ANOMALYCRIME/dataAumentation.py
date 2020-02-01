@@ -21,7 +21,7 @@ from torch.utils.data import Dataset
 
 class DataAumentation(Dataset):
     def __init__(self, videos, labels, numFrames, spatial_transform,
-                    videoSegmentLength, output_path):
+                    videoSegmentLength, folder_output_path):
         self.spatial_transform = spatial_transform
         self.videos = videos
         self.labels = labels
@@ -30,7 +30,7 @@ class DataAumentation(Dataset):
         self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
     
         self.skipPercentage = 35
-        self.output_path = output_path
+        self.folder_output_path = folder_output_path
         # self.getRawFrames = getRawFrames
         # self.overlapping = overlapping
 
@@ -82,11 +82,14 @@ class DataAumentation(Dataset):
             #     video_raw_frames.append(frames)
             imgPIL, img = getDynamicImage(frames)
             # imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            # if not os.path.exists(path_frames_out):
-            #     os.makedirs(path_frames_out)
-            imgPIL.save(os.path.join(self.output_path,str(idx)+'.png'))
+            head, tail = os.path.split(vid_name)
+            folder_out = os.path.join(self.folder_output_path, tail)
+            if not os.path.exists(folder_out):
+                os.makedirs(folder_out)
+            imgPIL.save(os.path.join(folder_out,str(idx)+'.png'))
 
             # dinamycImages.append(imgPIL)
+        return vid_name
             
         # dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         # if self.numDynamicImagesPerVideo == 1:
@@ -108,11 +111,15 @@ def __main__():
     # print(train_labels)
     # dataset = DataAumentation(videos, labels, numFrames, bbox_files, spatial_transform,
     #                 videoSegmentLength, output_path)
-    dataset = DataAumentation(['/media/david/datos/Violence DATA/AnomalyCRIMEDATASET/UCFCrime2Local/frames_reduced/Arrest002'], [1], [279], None,
-                    10, constants.PATH_DATA_AUMENTATION_OUTPUT)
-    for video in dataset:
-        a=0
-    dataset.__getitem__(0)
+    # dataset = DataAumentation([os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED,'Arrest002')], [1], [279], None,
+    #                 10, constants.PATH_DATA_AUMENTATION_OUTPUT)
+    num_frames_to_dynamic_images = 10
+    dataset = DataAumentation(train_names, train_labels, train_num_frames, None,
+                    num_frames_to_dynamic_images, constants.PATH_DATA_AUMENTATION_OUTPUT)
+    for video_name in dataset:
+        print('Processing: ', video_name, '...')
+        
+    # dataset.__getitem__(0)
 __main__()
 
 

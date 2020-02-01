@@ -1,8 +1,8 @@
 
 import sys
 # import include
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 # from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
@@ -460,7 +460,7 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
         video_name = [video_name]
         label = torch.tensor(label)
         block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0)
-        # print(block_boxes_info)
+        print('block_dinamyc_images: ', block_dinamyc_images.size())
         # dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
         num_block = 0
         while (block_dinamyc_images is not None): #dis_images : torch.Size([3, 224, 224])
