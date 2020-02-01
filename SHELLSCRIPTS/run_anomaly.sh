@@ -1,4 +1,5 @@
 # # TEST : ROC - AUC curve
+cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 # cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection 
 # python3 ANOMALYCRIME/anomaly_main.py \
 # --operation testing \
@@ -11,14 +12,18 @@
 # TRAIN-MODEL
 python3 ANOMALYCRIME/anomaly_main.py \
 --checkpointPath ANOMALYCRIME/checkpoints \
---operation trainfinal \
+--operation aumented \
 --modelType resnet18 \
 --joinType maxTempPool \
 --featureExtract true \
 --numEpochs 23 \
 --ndis 1 \
 --maxNumFramesOnVideo 0 \
+<<<<<<< HEAD
 --videoSegmentLength 10 \
+=======
+--videoSegmentLength 0 \
+>>>>>>> 3cccd6c126e769d0cceada704f548a7c92d90849
 --positionSegment begin \
 --batchSize 8 \
 --numWorkers 1 \

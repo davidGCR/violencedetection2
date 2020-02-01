@@ -48,7 +48,7 @@ class Trainer:
         # Iterate over data.
         for inputs, labels, video_names, bbox_segments in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
             # print('inputs, labels: ',type(inputs),inputs.size(), type(labels), labels.size())
-            # print(video_names)
+            print('inputs trainer: ', inputs.size())
             if self.plot_samples:
                 print(video_names)
                 plt.figure(figsize=(10,12))

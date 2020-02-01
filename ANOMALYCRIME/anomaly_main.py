@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 import anomalyDataset
 import os
 import re
@@ -61,7 +62,8 @@ def testing(model, dataloaders, device, numDiPerVideos, plot_samples):
 
 def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves, 
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples, operation):
-    model, input_size = initialize_model( model_name=modelType, num_classes=num_classes, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
+    model, input_size = initialize_model( model_name=modelType, num_classes=num_classes, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, 
+                                            joinType=joinType, use_pretrained=True)
     print(model)
     model.to(device)
 
@@ -87,7 +89,7 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
     for epoch in range(1, num_epochs + 1):
         print("----- Epoch {}/{}".format(epoch, num_epochs))
         # Train and evaluate
-        if operation == constants.OPERATION_TRAINING_FINAL:
+        if operation == constants.OPERATION_TRAINING_FINAL or operation == constants.OPERATION_TRAINING_AUMENTED:
             epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
             train_lost.append(epoch_loss_train)
             train_acc.append(epoch_acc_train)
@@ -165,14 +167,29 @@ def __main__():
     path_checkpoints = args.checkpointPath
     plot_samples = args.plotSamples
     transferModel = args.transferModel
-    additional_info = 'transferModel: '+transferModel+'_videoSegmentLength-'+str(videoSegmentLength)+'_positionSegment-'+str(positionSegment)
+    # additional_info = 'transferModel: '+transferModel+'_videoSegmentLength-'+str(videoSegmentLength)+'_positionSegment-'+str(positionSegment)
+    additional_info = '-'
     transforms = transforms_anomaly.createTransforms(input_size)
     num_classes = 2 #{'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
     
     # Dalaloaders
-    if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TESTING:
+    # if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TESTING:
+        
+    # elif operation == constants.OPERATION_TRAINING_FINAL:
+        
+
+    #Training
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    if operation == constants.OPERATION_TRAINING_AUMENTED:
+        # path_dataset, batch_size, num_workers, transform, shuffle
+        dataloaders_dict = anomalyInitializeDataset.initialize_train_aumented_anomaly_dataset(constants.PATH_DATA_AUMENTATION_OUTPUT,batch_size, 
+                                                                                                num_workers,transforms['train'],shuffle)
+        additional_info = 'aumented-data'
+        training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
+                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
+    elif operation == constants.OPERATION_TRAINING:
         dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
                                                             batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
@@ -180,15 +197,12 @@ def __main__():
         dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
                                                             batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
-
-    #Training
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_FINAL:
         training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
-    
-    #testing
     elif operation == constants.OPERATION_TESTING:
+        dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
+                                                            batch_size, num_workers,
+                                                            numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
         model = torch.load(testModelFile)
         testing(model, dataloaders_dict['test'], device, numDiPerVideos, plot_samples)
     

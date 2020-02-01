@@ -3,6 +3,7 @@
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/MyCode')
 import ANOMALYCRIME.anomalyDataset as anomalyDataset
 import ANOMALYCRIME.anomalyOnlineDataset as anomalyOnlineDataset
+import ANOMALYCRIME.anomalyDatasetAumented as anomalyDatasetAumented
 import ANOMALYCRIME.datasetUtils as datasetUtils
 import ANOMALYCRIME.denseDataset as denseDataset
 # import anomaly_dataset
@@ -162,3 +163,16 @@ def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_v
           "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
      }
      return dataloaders_dict, test_names
+
+
+def initialize_train_aumented_anomaly_dataset(path_dataset, batch_size, num_workers, transform, shuffle):
+     
+     train_names, train_labels = datasetUtils.train_test_videos_aumented(path_dataset)
+     print(len(train_names), len(train_labels))
+     image_datasets = {
+          "train": anomalyDatasetAumented.AnomalyDatasetAumented(images=train_names, labels=train_labels, spatial_transform=transform),
+     }
+     dataloaders_dict = {
+          "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
+     }
+     return dataloaders_dict
