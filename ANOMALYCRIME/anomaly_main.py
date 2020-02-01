@@ -1,6 +1,6 @@
 import sys
-# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 import anomalyDataset
 import os
 import re
@@ -106,7 +106,7 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
             val_acc.append(epoch_acc_val)
     
     print("saving loss and acc history...")
-    if operation == constants.OPERATION_TRAINING_FINAL:
+    if operation == constants.OPERATION_TRAINING_FINAL or operation == constants.OPERATION_TRAINING_AUMENTED:
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
     elif operation == constants.OPERATION_TRAINING:
