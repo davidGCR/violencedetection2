@@ -165,14 +165,23 @@ def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_v
      return dataloaders_dict, test_names
 
 
-def initialize_train_aumented_anomaly_dataset(path_dataset, batch_size, num_workers, transform, shuffle):
+def initialize_train_aumented_anomaly_dataset(path_dataset, batch_size, num_workers, transforms, shuffle):
      
      train_names, train_labels = datasetUtils.train_test_videos_aumented(path_dataset)
-     print(len(train_names), len(train_labels))
+     # combined = list(zip(train_names, train_num_frames))
+     train_names, val_names, train_labels, val_labels = train_test_split(train_names, train_labels, stratify=train_labels, test_size=0.30)
+
+     # print(len(train_names), len(train_labels))
+     # print(len(train_names), len(train_labels))
+     util.print_balance(train_labels, 'train')
+     util.print_balance(val_labels, 'val')
+
      image_datasets = {
-          "train": anomalyDatasetAumented.AnomalyDatasetAumented(images=train_names, labels=train_labels, spatial_transform=transform),
+          "train": anomalyDatasetAumented.AnomalyDatasetAumented(images=train_names, labels=train_labels, spatial_transform=transforms["train"]),
+          "val": anomalyDatasetAumented.AnomalyDatasetAumented(images=val_names, labels=val_labels, spatial_transform=transforms["val"])
      }
      dataloaders_dict = {
           "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
+          "val": torch.utils.data.DataLoader(image_datasets["val"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
      }
      return dataloaders_dict

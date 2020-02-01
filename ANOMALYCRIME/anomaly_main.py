@@ -1,6 +1,6 @@
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 import anomalyDataset
 import os
 import re
@@ -89,14 +89,14 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
     for epoch in range(1, num_epochs + 1):
         print("----- Epoch {}/{}".format(epoch, num_epochs))
         # Train and evaluate
-        if operation == constants.OPERATION_TRAINING_FINAL or operation == constants.OPERATION_TRAINING_AUMENTED:
+        if operation == constants.OPERATION_TRAINING_FINAL:
             epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
             train_lost.append(epoch_loss_train)
             train_acc.append(epoch_acc_train)
             exp_lr_scheduler.step(epoch_loss_train)
             
 
-        elif operation == constants.OPERATION_TRAINING:
+        elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_AUMENTED:
             epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
             train_lost.append(epoch_loss_train)
             train_acc.append(epoch_acc_train)
@@ -106,10 +106,10 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
             val_acc.append(epoch_acc_val)
     
     print("saving loss and acc history...")
-    if operation == constants.OPERATION_TRAINING_FINAL or operation == constants.OPERATION_TRAINING_AUMENTED:
+    if operation == constants.OPERATION_TRAINING_FINAL:
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-    elif operation == constants.OPERATION_TRAINING:
+    elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_AUMENTED:
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
@@ -185,8 +185,8 @@ def __main__():
     if operation == constants.OPERATION_TRAINING_AUMENTED:
         # path_dataset, batch_size, num_workers, transform, shuffle
         dataloaders_dict = anomalyInitializeDataset.initialize_train_aumented_anomaly_dataset(constants.PATH_DATA_AUMENTATION_OUTPUT,batch_size, 
-                                                                                                num_workers,transforms['train'],shuffle)
-        additional_info = 'aumented-data'
+                                                                                                num_workers,transforms,shuffle)
+        additional_info = '-aumented-data'
         training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
     elif operation == constants.OPERATION_TRAINING:

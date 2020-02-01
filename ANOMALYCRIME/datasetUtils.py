@@ -57,36 +57,6 @@ def train_test_videos_aumented(g_path):
                 train_labels.append(0)
             else:
                 train_labels.append(1)
-
-    # with open(train_file, 'r') as file:
-    #     for row in file:
-    #         train_names.append(os.path.join(g_path,row[:-1]))
-    #         train_labels.append(row[:-4])
-    #         label = row[:-4]
-    #         if label != 'Normal_Videos':
-    #             file = row[:-1] + '.txt'
-    #             file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-    #             train_bbox_files.append(file)
-    #         else:
-    #             train_bbox_files.append(None)
-
-    # with open(test_file, 'r') as file:
-    #     for row in file:
-    #         test_names.append(os.path.join(g_path,row[:-1]))
-    #         test_labels.append(row[:-4])
-    #         label = row[:-4]
-    #         if label != 'Normal_Videos':
-    #             file = row[:-1] + '.txt'
-    #             file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-    #             test_bbox_files.append(file)
-    #         else:
-    #             test_bbox_files.append(None)
-    # train_labels = [classes[label] for label in train_labels]
-    # test_labels = [classes[label] for label in test_labels]
-    # # for i in range(len(train_names)):
-    # #      print(train_names[i])
-    # NumFrames_train = [len(glob.glob1(train_names[i], "*.jpg")) for i in range(len(train_names))]
-    # NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
     return train_names, train_labels
 
 def train_test_videos(train_file, test_file, g_path):
