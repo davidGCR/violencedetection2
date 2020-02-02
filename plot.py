@@ -68,11 +68,12 @@ def plotScalarCombined(trainlist,testlist, tepochs,title, ylabel, fig2, rows, co
 # modelType = 'alexnetv2-frames-Finetuned:False-5-decay-'
 # path = '/media/david/datos/Violence DATA/HockeyFights/Results/frames/'
 
-def plot_results(path, lastEpoch, nfolds,title):
+def plot_results(path, lastEpoch, nfolds,title, only_train):
     train_lost = loadList(str(path)+'-train_lost.txt')
-    train_acc = loadList(str(path)+'-train_acc.txt')
-    test_lost = loadList(str(path)+'-val_lost.txt')
-    test_acc = loadList(str(path)+'-val_acc.txt')
+    train_acc = loadList(str(path) + '-train_acc.txt')
+    if not only_train:
+      test_lost = loadList(str(path)+'-val_lost.txt')
+      test_acc = loadList(str(path)+'-val_acc.txt')
 
     num_epochs = int(len(train_lost)/nfolds)
     # num_epochs = 30
@@ -110,9 +111,15 @@ def plot_results(path, lastEpoch, nfolds,title):
       fig2.suptitle(title, fontsize=14)
       rows = 1
       cols = 2
-      acc = np.max(test_acc[0:lastEpoch+1])
-      plotScalarCombined(train_acc, test_acc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, rows, cols, 1, lastEpoch)
-      plotScalarCombined(train_lost, test_lost, num_epochs, 'Error Promedio', 'Error',fig2,rows,cols,2, lastEpoch)
+      
+      if only_train:
+        acc = 0
+        plotScalarCombined(train_acc, train_acc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, rows, cols, 1, lastEpoch)
+        plotScalarCombined(train_lost, train_lost, num_epochs, 'Error Promedio', 'Error',fig2,rows,cols,2, lastEpoch)
+      else:
+        acc = np.max(test_acc[0:lastEpoch + 1])
+        plotScalarCombined(train_acc, test_acc, num_epochs, 'Tasa de Acierto Promedio', 'Tasa de Acierto', fig2, rows, cols, 1, lastEpoch)
+        plotScalarCombined(train_lost, test_lost, num_epochs, 'Error Promedio', 'Error',fig2,rows,cols,2, lastEpoch)
 
     # plt.axvline(x=lastEpoch, color='g', linestyle='--')
     
@@ -131,11 +138,13 @@ def __main__():
     parser.add_argument('--modelName', type=str, help='model name')
     parser.add_argument('--lastEpoch', type=int, default=5, help='last epoch before overfiting')
     parser.add_argument('--numFolds', type=int, default=5)
+    parser.add_argument('--onlyTrain', type=lambda x: (str(x).lower() == 'true'), default=False)
     args = parser.parse_args()
     model_name = args.modelName
     path = os.path.join(args.learningCurvesFolder,model_name)
     lastEpoch = args.lastEpoch
     nfolds = args.numFolds
-    plot_results(path, lastEpoch, nfolds, model_name)
+    onlyTrain = args.onlyTrain
+    plot_results(path, lastEpoch, nfolds, model_name, onlyTrain)
 
 __main__()

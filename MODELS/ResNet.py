@@ -42,6 +42,9 @@ class ViolenceModelResNet(nn.Module):
     def inferenceMode(self, numDiPerVideos):
         self.inference = True
         self.numDiPerVideos = numDiPerVideos
+    
+    def enableTransferLearning(self, feature_extract):
+        set_parameter_requires_grad(self.convLayers, feature_extract)
 
     def forward(self, x):
         # x size= torch.Size([ndi, bs, 3, 224, 224])

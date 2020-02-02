@@ -1,6 +1,6 @@
 import sys
-# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 import anomalyDataset
 import os
 import re
@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import torch.nn as nn
 import torch
-from initializeModel import initialize_model
+from initializeModel import initialize_model, initializeTransferModel
 from parameters import verifiParametersToTrain
 import transforms_anomaly
 import torch.optim as optim
@@ -115,7 +115,71 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
         util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_acc.txt"),val_acc)
 
+def transferLearning(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves, 
+                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples, operation):
+    classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
+    model = initializeTransferModel( model_name=modelType, num_classes=num_classes, feature_extract=False, numDiPerVideos=numDiPerVideos, 
+                                            joinType=joinType, classifier_file=classifier_file)
+    # print(model)
+    
+    # if str(device) == 'cpu':
+    #     model = torch.load(classifier_file, map_location=torch.device('cpu'))
+    # else:
+    #     model = torch.load(classifier_file)
+    #     model = model.cuda()
+    # model.inferenceMode(numDiPerVideos)
+    # model, input_size = ( model_name=modelType, num_classes=num_classes, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, 
+    #                                         joinType=joinType, use_pretrained=True)
 
+    MODEL_NAME = 'Model-transfered-fine'
+    # MODEL_NAME = util.get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType, num_epochs)
+    # MODEL_NAME += additional_info
+    # MODEL_NAME = MODEL_NAME+'-FINAL' if operation == constants.OPERATION_TRAINING_FINAL else MODEL_NAME
+    print(MODEL_NAME)
+
+    params_to_update = verifiParametersToTrain(model, feature_extract)
+    optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    # Decay LR by a factor of 0.1 every 7 epochs
+    if scheduler_type == "StepLR":
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+    elif scheduler_type == "OnPlateau":
+        exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
+    criterion = nn.CrossEntropyLoss()
+    trainer = Trainer(model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device, num_epochs,
+                       os.path.join(path_checkpoints,MODEL_NAME), numDiPerVideos, plot_samples, operation)
+    train_lost = []
+    train_acc = []
+    val_lost = []
+    val_acc = []
+    for epoch in range(1, num_epochs + 1):
+        print("----- Epoch {}/{}".format(epoch, num_epochs))
+        # Train and evaluate
+        if operation == constants.OPERATION_TRAINING_FINAL:
+            epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
+            train_lost.append(epoch_loss_train)
+            train_acc.append(epoch_acc_train)
+            exp_lr_scheduler.step(epoch_loss_train)
+            
+
+        elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_TRANSFER:
+            epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
+            train_lost.append(epoch_loss_train)
+            train_acc.append(epoch_acc_train)
+            epoch_loss_val, epoch_acc_val = trainer.val_epoch(epoch)
+            exp_lr_scheduler.step(epoch_loss_val)
+            val_lost.append(epoch_loss_val)
+            val_acc.append(epoch_acc_val)
+    
+    print("saving loss and acc history...")
+    if operation == constants.OPERATION_TRAINING_FINAL:
+        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
+        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
+    elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_TRANSFER:
+        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
+        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
+        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
+        util.saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-val_acc.txt"), val_acc)
+        
 def __main__():
     # print(train_names)
     # print(train_labels)
@@ -182,17 +246,27 @@ def __main__():
 
     #Training
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if operation == constants.OPERATION_TRAINING_AUMENTED:
+    if operation == constants.OPERATION_TRAINING_TRANSFER:
         # path_dataset, batch_size, num_workers, transform, shuffle
         dataloaders_dict = anomalyInitializeDataset.initialize_train_aumented_anomaly_dataset(constants.PATH_DATA_AUMENTATION_OUTPUT,batch_size, 
                                                                                                 num_workers,transforms,shuffle)
-        additional_info = '-aumented-data'
+        additional_info = '-transfered-data'
+        transferLearning(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
+                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
+    elif operation == constants.OPERATION_TRAINING_AUMENTED:
+        # path_dataset, batch_size, num_workers, transform, shuffle
+        dataloaders_dict = anomalyInitializeDataset.initialize_train_aumented_anomaly_dataset(constants.PATH_DATA_AUMENTATION_OUTPUT,batch_size, 
+                                                                                                num_workers,transforms,shuffle, val_split=0.35)
+        additional_info = '-aumented-data-30'
+        feature_extract = False
         training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
     elif operation == constants.OPERATION_TRAINING:
         dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
                                                             batch_size, num_workers,
                                                             numDiPerVideos, transforms, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle)
+        training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
+                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
     elif operation == constants.OPERATION_TRAINING_FINAL:
         dataloaders_dict, test_names = anomalyInitializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
                                                             batch_size, num_workers,

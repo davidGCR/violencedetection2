@@ -53,7 +53,7 @@ def train_test_videos_aumented(g_path):
             sample_path = g_path+'/'+video+'/'+image
             # print(sample_path)
             train_names.append(str(sample_path))
-            if label_str != 'Normal_Videos':
+            if label_str == 'Normal_Videos':
                 train_labels.append(0)
             else:
                 train_labels.append(1)

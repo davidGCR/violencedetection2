@@ -99,20 +99,21 @@ class DataAumentation(Dataset):
     
 def __main__():
     ### Create aumented data
-    # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
-    # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
-    # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    # train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
-    # train_labels = datasetUtils.labels_2_binary(train_labels)
+    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
+    train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
+    test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
+    train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)
+    train_labels = datasetUtils.labels_2_binary(train_labels)
     
-    # num_frames_to_dynamic_images = 10
-    # dataset = DataAumentation(train_names, train_labels, train_num_frames, None,
-    #                 num_frames_to_dynamic_images, constants.PATH_DATA_AUMENTATION_OUTPUT)
-    # for video_name in dataset:
-    #     print('Processing: ', video_name, '...')
+    num_frames_to_dynamic_images = 30
+    dataset = DataAumentation(train_names, train_labels, train_num_frames, None,
+                    num_frames_to_dynamic_images, constants.PATH_DATA_AUMENTATION_OUTPUT)
+    for video_name in dataset:
+        print('Processing: ', video_name, '...')
 
-    train_names, train_labels = datasetUtils.train_test_videos_aumented(constants.PATH_DATA_AUMENTATION_OUTPUT)
-    print(len(train_names), len(train_labels))
+    # train_names, train_labels = datasetUtils.train_test_videos_aumented(constants.PATH_DATA_AUMENTATION_OUTPUT)
+    # print(train_names)
+    # print(train_num_frames)
         
     # dataset.__getitem__(0)
 __main__()
