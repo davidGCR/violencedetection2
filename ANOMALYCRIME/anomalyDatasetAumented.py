@@ -27,7 +27,7 @@ class AnomalyDatasetAumented(Dataset):
         label = self.labels[idx]
         img1 = Image.open(img_name).convert("RGB")
         dynamicImage = self.spatial_transform(img1)
-        return dynamicImage, label, 0, 0
+        return dynamicImage, label, img_name, 0
 
     
 
