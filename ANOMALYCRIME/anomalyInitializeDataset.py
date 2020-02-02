@@ -165,11 +165,11 @@ def initialize_train_val_anomaly_dataset(path_dataset, train_videos_path, test_v
      return dataloaders_dict, test_names
 
 
-def initialize_train_aumented_anomaly_dataset(path_dataset, batch_size, num_workers, transforms, shuffle):
+def initialize_train_aumented_anomaly_dataset(path_dataset, batch_size, num_workers, transforms, shuffle, val_split):
      
      train_names, train_labels = datasetUtils.train_test_videos_aumented(path_dataset)
      # combined = list(zip(train_names, train_num_frames))
-     train_names, val_names, train_labels, val_labels = train_test_split(train_names, train_labels, stratify=train_labels, test_size=0.30)
+     train_names, val_names, train_labels, val_labels = train_test_split(train_names, train_labels, stratify=train_labels, test_size=val_split)
 
      # print(len(train_names), len(train_labels))
      # print(len(train_names), len(train_labels))

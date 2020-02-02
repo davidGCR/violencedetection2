@@ -10,6 +10,14 @@ import MODELS.AlexNet as alexnet
 import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg
 
+def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
+    # if model_name == "resnet18" or model_name == "resnet34":
+    model = torch.load(classifier_file)
+    model = model.cuda()
+    model.inferenceMode(numDiPerVideos)
+    model.enableTransferLearning(feature_extract)
+    return model
+
 def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, joinType, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
