@@ -99,6 +99,22 @@ def initialize_final_only_test_online_anomaly_dataset(path_dataset, test_videos_
      
      return dataloader, test_names, dataset
 
+def initialize_test_anomaly_dataset(path_dataset, test_videos_path, batch_size, num_workers, videoBlockLength,
+                    numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment):
+     test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.test_videos(test_videos_path, path_dataset)
+     test_labels = datasetUtils.labels_2_binary(test_labels)
+     util.print_balance(test_labels, 'test')
+
+     # dataset, labels, numFrames, bbox_files, spatial_transform, videoBlockLength, numDynamicImgsPerBlock,
+     #           videoSegmentLength, overlappingBlock, overlappingSegment
+     dataset = anomalyOnlineDataset.AnomalyOnlineDataset(dataset=test_names, labels=test_labels, numFrames=test_num_frames, bbox_files=test_bbox_files,
+                         spatial_transform=transform, videoBlockLength = videoBlockLength, numDynamicImgsPerBlock=numDynamicImgsPerBlock, videoSegmentLength=videoSegmentLength,
+                         overlappingBlock=overlappingBlock, overlappingSegment=overlappingSegment)
+
+     dataloader =  torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+     
+     return dataloader, test_names, test_labels, dataset
+
 def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos,
                                         transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):
      train_names, train_labels, train_num_frames, train_bbox_files, test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.train_test_videos(train_videos_path, test_videos_path, path_dataset)

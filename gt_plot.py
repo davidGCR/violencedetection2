@@ -16,6 +16,9 @@ def plotVideo(video_path, bdx_file_path, delay):
         num_frame = 0
         magenta = (255, 50, 255)
         cap = cv2.VideoCapture(video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
+     
         while(cap.isOpened()):
             ret, frame = cap.read()
             
