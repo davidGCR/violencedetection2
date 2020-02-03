@@ -1,8 +1,8 @@
 
 import sys
 # import include
-sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 # from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
@@ -525,14 +525,14 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
                         break
             
             block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block,skip=skip)
-        vid_auc = roc_auc_score(video_y_gt, video_y_pred)
-        print('Video: ', video_name[0],str(vid_auc))
+        # vid_auc = roc_auc_score(video_y_gt, video_y_pred)
+        # print('Video: ', video_name[0],str(vid_auc))
             
         # return segment_inf
     # fpr, tpr, _ = roc_curve(y_truth, y_pred_scored_based)
     fpr, tpr, _ = roc_curve(y_truth, y_pred)
     lr_auc = roc_auc_score(y_truth, y_pred)
-    vauc = auc(fpr,fpr)
+    vauc = auc(fpr,tpr)
     plt.plot(fpr, tpr, marker='.', label='test')
         # axis labels
     plt.xlabel('False Positive Rate')
@@ -541,6 +541,7 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
         # pyplot.legend()
         # show the plot
     plt.show()
+    print('Frames processed: ', len(y_truth), len(y_pred))
     print('AUC: ', str(lr_auc), vauc)
 
 def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay):
@@ -919,7 +920,7 @@ def __main__():
     print(torch.__version__)
     h = 240
     w = 320
-    # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
+    # # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
     classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
     # classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data.pth'
     # classifier_file = 'ANOMALYCRIME/checkpoints/Model-transfered-fine.pth'
