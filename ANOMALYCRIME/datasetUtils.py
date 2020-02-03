@@ -121,6 +121,14 @@ def only_anomaly_test_videos(test_file, g_path):
     return test_names, test_labels, NumFrames_test, test_bbox_files
 
 
+def waqas_dataset(test_file):
+    with open(test_file, 'r') as file:
+        for row in file:
+            fields = row.split()
+            print(fields)
+            label = fields[1]
+            video_name = fields[0] 
+
 def test_videos(test_file, g_path):
     """ load train-test split from original dataset """
     test_names = []

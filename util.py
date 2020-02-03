@@ -103,6 +103,22 @@ def video2Images2(video_path, path_out):
       print ('Creating...' + name)
       cv2.imwrite(name, frame)
       index_frame += 1
+
+def waqasVideos2Frames(videos_folder, path_txt_videos, output_path):
+  with open(path_txt_videos, 'r') as file:
+        for row in file:
+            video_folder_name = row
+            video_name = row.split('/')[1]#
+            folderName = video_name[:-10]
+            # print(video_name)
+            video_path = os.path.join(videos_folder,video_folder_name)
+            video_out_path = os.path.join(output_path,folderName)
+            # print(video_out_path)
+            if not os.path.exists(video_out_path):
+              os.makedirs(video_out_path)
+            video2Images2(video_path,video_out_path)
+
+
       
 def hockeyVideos2Frames(path_videos, path_frames):
   listViolence = os.listdir(os.path.join(path_videos, 'violence'))
