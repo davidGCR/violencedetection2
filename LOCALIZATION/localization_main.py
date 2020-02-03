@@ -903,10 +903,10 @@ def __main__():
     h = 240
     w = 320
     # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
-    # classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
+    classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
     # classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data.pth'
     # classifier_file = 'ANOMALYCRIME/checkpoints/Model-transfered-fine.pth'
-    classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-True-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data-30.pth'
+    # classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-True-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data-30.pth'
     if str(device) == 'cpu':
         classifier = torch.load(classifier_file, map_location=torch.device('cpu'))
     else:
