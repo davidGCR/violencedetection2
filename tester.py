@@ -44,7 +44,7 @@ class Tester:
         return gt_labels, predictions, scores
     
     def predict(self, dynamic_img):
-        self.model.eval()
+        # self.model.eval()
         dynamic_img = dynamic_img.to(self.device)
         with torch.set_grad_enabled(False):
             outputs = self.model(dynamic_img)

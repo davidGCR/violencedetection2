@@ -368,19 +368,23 @@ def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     #     bbox.iou = bbox1.iou + bbox2.iou
     return bbox
 
-def countTruePositiveFalsePositive(l_infos, prediction, score):
+def countTruePositiveFalsePositive(l_infos, prediction, score, threshold):
     tp = 0
     fp = 0
     y_pred = []
+    y_score_based = []
     for info in l_infos:
         # if prediction == 1 and info[1] == 0:
-        # # if prediction == 1:
-        #     tp+=1
-        #     y_pred.append(score)
-        # else:
+        if score >= threshold:
+            # tp+=1
+            y_score_based.append(1)
+        else:
+            y_score_based.append(0)
         #     fp+=1
+        # if score >= 0.4:
+
         y_pred.append(score)
-    return tp, fp, y_pred
+    return tp, fp, y_pred, y_score_based
 
 def countPositiveFramesNegativeFrames(l_infos):
     p = 0
@@ -414,7 +418,7 @@ def getFramesFromBlock(video_name, frames_block):
         frames.append(image)
         bbox = BoundingBox(Point(float(frame_info[constants.IDX_XMIN]), float(frame_info[constants.IDX_YMIN])),
                             Point(float(frame_info[constants.IDX_XMAX]), float(frame_info[constants.IDX_YMAX])), occluded=occluded)
-        print('frame_name000000000000: ', frame_name, 'occluded: ', occluded, bbox)
+        # print('frame_name000000000000: ', frame_name, 'occluded: ', occluded, bbox)
         bboxes.append(bbox)
     return names, frames, bboxes
 

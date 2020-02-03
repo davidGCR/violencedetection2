@@ -54,16 +54,38 @@ class AnomalyOnlineDataset(Dataset):
         
         return segment, idx_next_segment
 
-    def getOneBlock(self, frames_list, start):
+    def incrementOneBlock(self, frames_list, start_current_block, increment, idx_next_block, maxLengthBlock):
+        # segments_block = []
+        if (idx_next_block+increment) > maxLengthBlock:
+            start_current_block = idx_next_block
+            incremented_block = frames_list[start_current_block:start_current_block + self.videoBlockLength]
+            idx_next_block = start_current_block + self.videoBlockLength
+        if start_current_block == 0: #first segment
+            incremented_block = frames_list[0:self.videoBlockLength]
+            idx_next_block = self.videoBlockLength
+        else:
+            incremented_block = frames_list[start_current_block:idx_next_block + increment]
+            idx_next_block = start_current_block + len(incremented_block)
+        return incremented_block, start_current_block, idx_next_block
+    
+    def getOneBlock(self, frames_list, start, skip):
         segments_block = []
         if start == 0: #first segment
-            block = frames_list[start:start + self.videoBlockLength]
+            block = []
+            for i in range(start,start + self.videoBlockLength, skip):
+                # print('FFFRFRFRFRFR: ', frames_list[i])
+                block.append(frames_list[i])
+            # block = frames_list[start:start + self.videoBlockLength]
             idx_next_block = self.videoBlockLength
             
         else:
             start = start - int(self.videoBlockLength * self.overlappingBlock)
             end = start + self.videoBlockLength
-            block = frames_list[start:end]
+            # block = frames_list[start:end]
+            block = []
+            for i in range(start,end, skip):
+                if i<len(frames_list):
+                    block.append(frames_list[i])
             idx_next_block = end
             
         
@@ -73,39 +95,50 @@ class AnomalyOnlineDataset(Dataset):
             segments_block = [block[x:x + seqLen] for x in range(0, len(block), seqLen)]
         else:
             segments_block.append(block)
+        # print('block: ',block)
         return block, idx_next_block, segments_block
   
     def getSegmentInfo(self, segment, bdx_file_path):
         data = []
+        segment_info=[]
         if bdx_file_path is not None:
             with open(bdx_file_path, 'r') as file:
                 for row in file:
                     data.append(row.split())
             data = np.array(data)
-        segment_info=[]
-        for frame in segment:
-            splits = re.split('(\d+)', frame)
-            num_frame = int(splits[1])
-            num_frame = num_frame - 1
-            
-            # if num_frame != int(data[num_frame, 5]):
-            #     sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
-            if num_frame < len(data):
-                flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
-                xmin = int(data[num_frame, 1])
-                ymin= int(data[num_frame, 2])
-                xmax = int(data[num_frame, 3])
-                ymax = int(data[num_frame, 4])
-                # print(type(frame), type(flac), type(xmin), type(ymin))
-                info_frame = [frame, flac, xmin, ymin, xmax, ymax]
-            else:
+            for frame in segment:
+                # frame = segment[i]
+                # print('frame: ', frame)
+                splits = re.split('(\d+)', frame)
+                num_frame = int(splits[1])
+                num_frame = num_frame - 1
+                
+                # if num_frame != int(data[num_frame, 5]):
+                #     sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
+                if num_frame < len(data):
+                    flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
+                    xmin = int(data[num_frame, 1])
+                    ymin= int(data[num_frame, 2])
+                    xmax = int(data[num_frame, 3])
+                    ymax = int(data[num_frame, 4])
+                    # print(type(frame), type(flac), type(xmin), type(ymin))
+                    info_frame = [frame, flac, xmin, ymin, xmax, ymax]
+                else:
+                    info_frame = [frame, -1, -1, -1, -1, -1]
+                segment_info.append(info_frame)
+        else:
+            print('fgmdsofjhdfopjhodjh')
+            for frame in segment:
                 info_frame = [frame, -1, -1, -1, -1, -1]
-            segment_info.append(info_frame)
+                segment_info.append(info_frame)
+
+        
+        
         # print(segment_info)
         return segment_info
 
     
-    def computeBlockDynamicImg(self, idx_video, idx_next_block):
+    def computeIncrementalBlockDynamicImg(self, idx_video, start_current_block, increment, idx_next_block):
         vid_name = self.videos[idx_video]
         dinamycImages = []
         frames_list = os.listdir(vid_name)
@@ -122,6 +155,38 @@ class AnomalyOnlineDataset(Dataset):
             for segment in segments_block:
                 frames = []
                 for frame in segment:
+                    img_dir = str(vid_name) + "/" + frame
+                    img1 = Image.open(img_dir).convert("RGB")
+                    img = np.array(img1)
+                    frames.append(img)
+                imgPIL, img = getDynamicImage(frames)
+                imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+                dinamycImages.append(imgPIL)
+            dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+            # if self.numDynamicImgsPerBlock == 1:
+            #     dinamycImages = dinamycImages.squeeze(dim=0)
+            return dinamycImages, idx_next_block, block_boxes_info
+        else:
+            return None, None, None
+
+    def computeBlockDynamicImg(self, idx_video, idx_next_block, skip):
+        vid_name = self.videos[idx_video]
+        dinamycImages = []
+        frames_list = os.listdir(vid_name)
+        frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        bdx_file_path = self.bbox_files[idx_video]
+        if idx_next_block < self.numFrames[idx_video]:
+            block, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block,skip)
+            one_segment = []
+            for segment in segments_block:
+                one_segment.extend(segment)
+            
+            block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
+            # print('segments_block: ', segments_block, idx_next_block)
+            for segment in segments_block:
+                frames = []
+                for i in range(len(segment)):
+                    frame = segment[i]
                     img_dir = str(vid_name) + "/" + frame
                     img1 = Image.open(img_dir).convert("RGB")
                     img = np.array(img1)
@@ -184,6 +249,8 @@ class AnomalyOnlineDataset(Dataset):
         # label = self.labels[idx]
         
         # return vid_name, label
+    def getNumFrames(self, idx):
+        return self.numFrames[idx]
 
 
 
