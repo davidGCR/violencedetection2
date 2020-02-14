@@ -16,7 +16,7 @@ python3 ANOMALYCRIME/anomaly_main.py \
 --modelType resnet18 \
 --joinType maxTempPool \
 --featureExtract true \
---numEpochs 23 \
+--numEpochs 30 \
 --ndis 1 \
 --maxNumFramesOnVideo 0 \
 --videoSegmentLength 0 \

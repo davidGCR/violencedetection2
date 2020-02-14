@@ -11,7 +11,7 @@ import util
 #     def __init__(self,):
 
 def computeDynamicImage(frames):
-    print('compute DY: ', type(frames[0]), frames.size()) #torch.Size([30, 240, 320, 3])
+    # print('compute DY: ', type(frames[0]), frames.size()) #torch.Size([30, 240, 320, 3])
     seqLen = frames.size()[0]
 
     if seqLen < 2:
@@ -20,10 +20,10 @@ def computeDynamicImage(frames):
     fw = np.zeros(seqLen)  
     for i in range(seqLen): #frame by frame
       fw[i] = np.sum(np.divide((2 * np.arange(i + 1, seqLen + 1) - seqLen - 1), np.arange(i + 1, seqLen + 1)))
-    fw = torch.from_numpy(fw).float()
+    
+    fw = torch.from_numpy(fw).float().cuda()
     
     sm = frames * fw[:,None, None, None]
-    
     sm = sm.sum(0)
     # print('min :', torch.min(sm))
 
@@ -33,9 +33,7 @@ def computeDynamicImage(frames):
     # print('max :', torch.max(sm))
     img = sm
     #img = sm.type(dtype=torch.uint8)
-
-    # print('IMG: ', img.size())
-    # print('IMG final : min :', torch.min(img), 'max:',torch.max(img))
+    img = img.cpu()
     imgPIL = Image.fromarray(np.uint8(img.numpy()))
     return imgPIL, img
 

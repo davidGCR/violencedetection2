@@ -13,6 +13,7 @@ class Tester:
         self.numDiPerVideos = numDiPerVideos
         # self.tb = TensorBoardColab()
         self.device = device
+        self.model  = self.model.to(device)
 
     def test_model(self):
         self.model.eval()
@@ -43,13 +44,39 @@ class Tester:
 
         return gt_labels, predictions, scores
     
-    def predict(self, dynamic_img):
-        # self.model.eval()
+    def predict(self, dynamic_img, num_iter):
+        self.model.eval()
         dynamic_img = dynamic_img.to(self.device)
+
         with torch.set_grad_enabled(False):
+            # torch.cuda.synchronize()
             outputs = self.model(dynamic_img)
+            
             p = torch.nn.functional.softmax(outputs, dim=1)
             p = p.cpu().numpy()
             values, indices = torch.max(outputs, 1)
-            # print('Prediction: ', indices)
-            return indices.cpu().item(), p[0][1]
+            # print('Prediction: ', indices, type(indices))
+        return indices.cpu().item(), p[0][1]
+
+    def predict_time(self, dynamic_img, num_iter):
+        self.model.eval()
+        dynamic_img = dynamic_img.to(self.device)
+        inference_times = []
+
+        for i in range(num_iter):
+            start_time = time.time()
+            with torch.set_grad_enabled(False):
+                # torch.cuda.synchronize()
+                outputs = self.model(dynamic_img)
+                
+                p = torch.nn.functional.softmax(outputs, dim=1)
+                p = p.cpu().numpy()
+                values, indices = torch.max(outputs, 1)
+                torch.cuda.synchronize()
+            end_time = time.time()
+            inference_times.append(end_time - start_time)
+        inference_time = sum(inference_times) / len(inference_times)
+        fps = 1.0 / inference_time
+        print('FPS: ', fps, dynamic_img.size())
+            # print('Prediction: ', indices, type(indices))
+        return indices.cpu().item(), p[0][1], fps

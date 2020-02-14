@@ -6,7 +6,8 @@
 
 
  python3 plot.py \
---learningCurvesFolder VIOLENCE_RESULTS/learningCurves \
---modelName resnet18-3-maxTempPool-segmentLength:30-positionSegment:begin-numEpochs:30 \
+--learningCurvesFolder ANOMALYCRIME/learning_curves \
+--modelName resnet18_Finetuned-True-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data-30 \
 --numFolds 1 \
+--onlyTrain False \
 --lastEpoch 30

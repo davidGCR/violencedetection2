@@ -12,16 +12,17 @@ import sys
 import torchvision.transforms as transforms
 from torch.utils.data._utils.collate import default_collate
 import re
+import time
 
 class AnomalyOnlineDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, videoBlockLength, numDynamicImgsPerBlock,
-                    videoSegmentLength, overlappingBlock, overlappingSegment):
+                    videoSegmentLength, overlappingBlock, overlappingSegment, temporal_gts=None):
         self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
         self.numFrames = numFrames  #dataset total num frames by video
         self.bbox_files = bbox_files  # dataset bounding box txt file associated to video
-        
+        self.temporal_gts = temporal_gts
         self.numDynamicImgsPerBlock = numDynamicImgsPerBlock  #number of segments from the video/ -1 means all the segments from the video
         self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
         
@@ -98,6 +99,20 @@ class AnomalyOnlineDataset(Dataset):
         # print('block: ',block)
         return block, idx_next_block, segments_block
   
+    def getTemporalGroundTruth(self, idx_video, segment):
+        gt = self.temporal_gts[idx_video]
+        # print('gt: ', type(gt[0]), gt)
+        gt_segment = []
+        for frame in segment:
+            frame_number = re.findall(r'\d+', frame)
+            frame_number = int(frame_number[0])
+            if frame_number >= gt[0] and frame_number <= gt[1] or frame_number >= gt[2] and frame_number <= gt[3]:
+                gt_segment.append(1)
+            else:
+                gt_segment.append(0)
+        return gt_segment
+
+
     def getSegmentInfo(self, segment, bdx_file_path):
         data = []
         segment_info=[]
@@ -127,13 +142,10 @@ class AnomalyOnlineDataset(Dataset):
                     info_frame = [frame, -1, -1, -1, -1, -1]
                 segment_info.append(info_frame)
         else:
-            print('fgmdsofjhdfopjhodjh')
+            # print('fgmdsofjhdfopjhodjh')
             for frame in segment:
                 info_frame = [frame, -1, -1, -1, -1, -1]
                 segment_info.append(info_frame)
-
-        
-        
         # print(segment_info)
         return segment_info
 
@@ -174,14 +186,18 @@ class AnomalyOnlineDataset(Dataset):
         dinamycImages = []
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        bdx_file_path = self.bbox_files[idx_video]
+        
         if idx_next_block < self.numFrames[idx_video]:
             block, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block,skip)
             one_segment = []
             for segment in segments_block:
                 one_segment.extend(segment)
             
-            block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
+            if self.temporal_gts is not None:
+                block_boxes_info = self.getTemporalGroundTruth(idx_video,one_segment)
+            else:
+                bdx_file_path = self.bbox_files[idx_video]
+                block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
             # print('segments_block: ', segments_block, idx_next_block)
             for segment in segments_block:
                 frames = []
@@ -191,42 +207,65 @@ class AnomalyOnlineDataset(Dataset):
                     img1 = Image.open(img_dir).convert("RGB")
                     img = np.array(img1)
                     frames.append(img)
+                start_time = time.time()
                 imgPIL, img = getDynamicImage(frames)
+                end_time = time.time()
+                spend_time = end_time - start_time
+                # print('Dynamic image time: ', spend_time)
                 imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
                 dinamycImages.append(imgPIL)
             dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
             # if self.numDynamicImgsPerBlock == 1:
             #     dinamycImages = dinamycImages.squeeze(dim=0)
-            return dinamycImages, idx_next_block, block_boxes_info
+            return dinamycImages, idx_next_block, block_boxes_info, spend_time
         else:
-            return None, None, None
+            return None, None, None, 0
 
     def computeSegmentDynamicImg(self, idx_video, idx_next_segment):
         vid_name = self.videos[idx_video]
         bbox_file = self.bbox_files[idx_video]
         dinamycImages = []
         frames_list = os.listdir(vid_name)
+        
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         if idx_next_segment < self.numFrames[idx_video]:
             segment, idx_next_segment = self.getOneSegment(frames_list, idx_next_segment)
+            # print(segment)
             segment_info =  self.getSegmentInfo(segment, bbox_file)
             frames = []
             for frame in segment:
                 img_dir = str(vid_name) + "/" + frame
                 img1 = Image.open(img_dir).convert("RGB")
                 img = np.array(img1)
+                # print('Frame size: ', img.shape)
                 frames.append(img)
 
+            #### USING CPU NUMPY
+            start_time = time.time()
             imgPIL, img = getDynamicImage(frames)
+            end_time = time.time()
+            # spend_time = end_time - start_time
+
+            # ### USING CUDA PYTORCH
+            # frames_tensor = torch.tensor(frames).type(torch.FloatTensor)
+            # frames_tensor = frames_tensor.cuda()
+            # torch.cuda.synchronize()
+            # start_time = time.time()
+            # imgPIL, img = computeDynamicImage(frames_tensor)
+            # torch.cuda.synchronize()
+            # end_time = time.time()
+            spend_time = end_time - start_time
+            # spend_time = 0
+            
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dinamycImages.append(imgPIL)
                 
             dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
             
             dinamycImages = dinamycImages.squeeze(dim=0)  ## get normal pytorch tensor [bs, ch, h, w]
-            return dinamycImages, segment_info, idx_next_segment
+            return dinamycImages, segment_info, idx_next_segment, spend_time
         else:
-            return None, None, None
+            return None, None, None, 0
 
     def __getitem__(self, idx):
         vid_name = self.videos[idx]

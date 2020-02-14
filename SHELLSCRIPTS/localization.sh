@@ -5,16 +5,16 @@ python3 LOCALIZATION/localization_main.py \
 --batchSize 1 \
 --numWorkers 4 \
 --shuffle false \
---videoSegmentLength 0 \
---videoBlockLength 90 \
---numDynamicImgsPerBlock 3 \
+--videoSegmentLength 30 \
+--videoBlockLength 0 \
+--numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
 --positionSegment online \
 --overlappingBlock 0 \
---overlappingSegment 0.5 \
+--overlappingSegment 0 \
 --plot true \
---videoName Arrest003 \
---delay 1
+--videoName Arrest028 \
+# --delay 10
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \

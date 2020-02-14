@@ -92,32 +92,22 @@ def saveArray(path, array):
 #######################################################################################
 
 def video2Images2(video_path, path_out):
-  vid = cv2.VideoCapture(video_path)
+  cap = cv2.VideoCapture(video_path)
+  if (cap.isOpened()== False):
+    print("Error opening video stream or file: ", video_path)
+  #   return 0
   index_frame = 1
-  while(True):
-      ret, frame = vid.read()
-      if not ret:
-        # print('video can not read ...')
-        break
+  # print(video_path)
+  while(cap.isOpened()):
+      ret, frame = cap.read()
+      # if not ret:
+      #   print('video can not read ...')
+      #   break
       name = path_out+'/'+'frame' + str("{0:03}".format(index_frame)) + '.jpg'
       print ('Creating...' + name)
       cv2.imwrite(name, frame)
       index_frame += 1
-
-def waqasVideos2Frames(videos_folder, path_txt_videos, output_path):
-  with open(path_txt_videos, 'r') as file:
-        for row in file:
-            video_folder_name = row
-            video_name = row.split('/')[1]#
-            folderName = video_name[:-10]
-            # print(video_name)
-            video_path = os.path.join(videos_folder,video_folder_name)
-            video_out_path = os.path.join(output_path,folderName)
-            # print(video_out_path)
-            if not os.path.exists(video_out_path):
-              os.makedirs(video_out_path)
-            video2Images2(video_path,video_out_path)
-
+          
 
       
 def hockeyVideos2Frames(path_videos, path_frames):

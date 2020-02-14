@@ -38,6 +38,9 @@ from torch.utils.data._utils.collate import default_collate
 from tester import Tester
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score, auc
+import ANOMALYCRIME.datasetUtils as datasetUtils
+import time
+from FPS import FPSMeter
 
 def maskRCNN():
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -418,7 +421,7 @@ def plotOpencv(prediction, images,gt_bboxes, persons_in_segment, bbox_prediction
         # if k == 27:         # wait for ESC key to exit
         #     cv2.destroyAllWindows()
 
-def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay):
+def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay, datasetType='UCF2Local'):
     person_model, classes = getPersonDetectorModel(type_person_detector)
     bbox_last = None
     distance_th = 35.5
@@ -478,7 +481,10 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
             tp, fp, y_block_pred, y_score_based = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score,0.8)
             video_y_pred.extend(y_block_pred)
             y_pred_scored_based.extend(y_score_based)
-            p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
+            if datasetType == 'waqas':
+                p, n, y_block_truth = localization_utils.countTemporalGroundTruth(block_boxes_info)
+            else:
+                p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
             video_y_gt.extend(y_block_truth)
             num_pos_frame += p
             num_neg_frame += n
@@ -488,6 +494,8 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
             y_pred.extend(y_block_pred)
             num_block += 1
             if plot:
+                # if datasetType == 'waqas':
+                # else:
                 frames_names, real_frames, real_bboxes = localization_utils.getFramesFromBlock(video_name[0], block_boxes_info)
 
                 # block_dinamyc_images = torch.unsqueeze(block_dinamyc_images, 0)
@@ -530,21 +538,28 @@ def temporalTest(anomalyDataset, class_tester, saliency_tester, type_person_dete
             
         # return segment_inf
     # fpr, tpr, _ = roc_curve(y_truth, y_pred_scored_based)
-    fpr, tpr, _ = roc_curve(y_truth, y_pred)
-    lr_auc = roc_auc_score(y_truth, y_pred)
-    vauc = auc(fpr,tpr)
-    plt.plot(fpr, tpr, marker='.', label='test')
+    # fpr, tpr, _ = roc_curve(y_truth, y_pred)
+    # lr_auc = roc_auc_score(y_truth, y_pred)
+    # vauc = auc(fpr,tpr)
+    # plt.plot(fpr, tpr, marker='.', label='test')
         # axis labels
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+
+    num_positive_pred = len([i for i in y_pred if i >= 0.5])
+    false_alarm_rate = num_positive_pred / len(y_pred)
+    print('False alarm rate: ', str(false_alarm_rate))
+    print('num positive: ', str(num_positive_pred))
+    # print(y_truth)
+
         # show the legend
         # pyplot.legend()
         # show the plot
-    plt.show()
+    # plt.show()
     print('Frames processed: ', len(y_truth), len(y_pred))
-    print('AUC: ', str(lr_auc), vauc)
+    # print('AUC: ', str(lr_auc), vauc)
 
-def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay):
+def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay, device):
     person_model, classes = getPersonDetectorModel(type_person_detector)
     bbox_last = None
     distance_th = 35.5
@@ -559,6 +574,8 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
     num_neg_frame = 0
     y_truth = []
     y_pred = []
+    num_iter = 1
+    fpsMeter = FPSMeter()
 
     for idx_video, data in enumerate(anomalyDataset):
         indx_flac = idx_video
@@ -573,35 +590,54 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
                     print('No valid video...')
             else:
                 break
-            print('dskfgljksdhgkjshgksglksdjglksdjglksdgiuegjhfgiowijgowo')
+            # print('dskfgljksdhgkjshgksglksdjglksdjglksdgiuegjhfgiowijgowo')
 
         if only_video_name is not None and indx_flac>0:
             break
         # else:
         #     break
+        di_spend_times = []
         bbox_last = None
         print("-" * 150, 'video No: ', idx_video)
         video_name, label = data
         video_name = [video_name]
         label = torch.tensor(label)
-        block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0)
-       
-        prediction, score = class_tester.predict(block_dinamyc_images)
-        # print('Score: ', score)
-        tp, fp, y_block_pred = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score)
-        p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
-        y_truth.extend(y_block_truth)
-        y_pred.extend(y_block_pred)
-        num_pos_frame += p
-        num_neg_frame += n
-        total_fp += fp
-        total_tp += tp
 
-        dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
+        #################### BLOCK ####################
+        # block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
+       
+        # prediction, score = class_tester.predict(block_dinamyc_images)
+        # # print('Score: ', score)
+        # tp, fp, y_block_pred, y_score_based = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score, threshold=0)
+        # p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
+        # y_truth.extend(y_block_truth)
+        # y_pred.extend(y_block_pred)
+        # num_pos_frame += p
+        # num_neg_frame += n
+        # total_fp += fp
+        # total_tp += tp
+        
+        dis_images, segment_info, idx_next_segment, spend_time_dyImg = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
+        # fpsMeter.update(spend_time)
+        # dis_images = dis_images.to(device)
+        start_time = time.time()
+        prediction, score = class_tester.predict(torch.unsqueeze(dis_images, dim=0), num_iter)
+        torch.cuda.synchronize()
+        end_time = time.time()
+        inference_time = end_time - start_time
+        total_time = spend_time_dyImg + inference_time
+        print('Time in seconds: ', total_time)
+        fpsMeter.update(total_time)
+        
+        # end_time = time.time()
+        # spend_time = end_time - start_time
+        # print('Score: ', prediction, score)
+        # di_spend_times.append(s_time)
+        # print('spend_time: ', s_time)
         num_segment = 0
         while (dis_images is not None): #dis_images : torch.Size([3, 224, 224])
             num_segment += 1            
-            print(video_name, '---segment No: ', str(num_segment),'-----', dis_images.size(), len(segment_info))
+            print(video_name, '---segment No: ', str(num_segment),'-----', dis_images.size(), len(segment_info), dis_images.is_cuda)
             
             # print('- dis_images: ', type(dis_images), dis_images.size())
             # print('- video_name: ', type(video_name), video_name)
@@ -615,9 +651,9 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             segment_info = default_collate([segment_info])
             segment_info = np.array(segment_info)
             # dis_images = dis_images / 2 + 0.5 
-            ttttt = saliency_tester.min_max_normalize_tensor(dis_images) 
-            ttttt = ttttt.numpy()[0].transpose(1, 2, 0)
-            ttttt = cv2.resize(ttttt, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+            # ttttt = saliency_tester.min_max_normalize_tensor(dis_images) 
+            # ttttt = ttttt.numpy()[0].transpose(1, 2, 0)
+            # ttttt = cv2.resize(ttttt, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
 
             # plt.imshow(ttttt)
             # plt.title('Input for Classifier')
@@ -636,21 +672,26 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             # ##resize 
             # mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
             
-            # # plt.imshow(mascara_gray)
-            # # plt.title('MASCARA gray')
-            # # plt.show()
+            # plt.imshow(mascara_gray)
+            # plt.title('MASCARA gray')
+            # plt.show()
 
-            # # plt.imshow(img)
-            # # plt.title('MASCARA gray contours')
-            # # plt.show()
-            # # mascara = mascara_by_summarized[:,:,0]
+            # plt.imshow(img)
+            # plt.title('MASCARA gray contours')
+            # plt.show()
+            # mascara = mascara_by_summarized[:,:,0]
 
-            
-            # # mascara = ttttt[:,:,0]
+        
             # saliency_bboxes, preprocesing_outs, contours, hierarchy = localization_utils.computeBoundingBoxFromMask(mascara)  #only one by segment
+            # if plot:
+            #     cv2.imshow('Dynamic Image', ttttt)
+            #     if cv2.waitKey(delay) & 0xFF == ord('q'):
+            #         break
             
-            # #metricas (no decir es mejor... 2 puntos porcentuales del valor-outperform) en esa base de datos- grafico explicar ejes...porque de los resultados
-            # #presentar errores
+            #metricas (no decir es mejor... 2 puntos porcentuales del valor-outperform) en esa base de datos- grafico explicar ejes...porque de los resultados
+            #presentar errores
+
+            ################################################## REFINEMENT ################################################################
             # saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)            
             # if bbox_last is not None:
             #     bboxes_with_high_core = []
@@ -663,7 +704,7 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #         bboxes_with_high_core.sort(key=lambda x: x.score)
             #         saliency_bboxes = bboxes_with_high_core
             #     else:
-            #         print('FFFFail in close lastBBox and saliency bboxes...')
+            #         # print('FFFFail in close lastBBox and saliency bboxes...')
             #         saliency_bboxes = [bbox_last]
 
             # if len(saliency_bboxes) == 0:
@@ -677,21 +718,22 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             # anomalous_regions = []  # to plot
             # segmentBox = localization_utils.getSegmentBBox(real_bboxes)
             
-            # print('Real frames shot: ', len(real_frames))
+            # # print('Real frames shot: ', len(real_frames))
             # temporal_ious_regions = []
             # for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
-            #     print('Shot frame to process: ',idx)
+            #     # print('Shot frame to process: ',idx)
             #     persons_in_frame = []
             #     persons_filtered = []
             #     if type_person_detector == constants.YOLO:
             #         img_size = 416
             #         conf_thres = 0.8
             #         nms_thres = 0.4
-            #         persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres, nms_thres, classes, frame)
+            #         persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres,
+            #                                                                         nms_thres, classes, frame, plot=True)
             #     elif type_person_detector == constants.MASKRCNN:
             #         mask_rcnn_threshold = 0.4
             #         persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
-            #     print('--num Persons in frame: ', len(persons_in_frame))
+            #     # print('--num Persons in frame: ', len(persons_in_frame))
                 
             #     if len(persons_in_frame) > 0:
             #         persons_in_segment.append(persons_in_frame)
@@ -703,11 +745,11 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #             print('='*10, ' ONLINE ')
             #             dynamic_region = saliency_bboxes[0]
             #             persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
-            #             print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
+            #             # print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
             #             # persons_segment_filtered.append(persons_filtered)
             #             for person in persons_filtered:
             #                 iou = localization_utils.IOU(person, dynamic_region)
-            #                 print('----IOU (person and dynamic region): ', str(iou))
+            #                 # print('----IOU (person and dynamic region): ', str(iou))
             #                 if iou >= iou_threshold:
             #                     abnorm_bbox = localization_utils.joinBBoxes(person,dynamic_region)
             #                     abnorm_bbox.score = iou
@@ -722,7 +764,7 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #         else:
             #             print('='*10, ' FIRST SHOT ')
             #             persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
-            #             print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
+            #             # print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
             #             # persons_segment_filtered.append(persons_filtered)
                         
             #             for personBox in persons_filtered:
@@ -732,7 +774,7 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #                     tmp_rgion = personBox
             #                     tmp_rgion.score = iou
             #                     temporal_ious_regions.append(tmp_rgion)
-            #                     print('----IOU (person and dynamic region): ', str(iou))
+            #                     # print('----IOU (person and dynamic region): ', str(iou))
             #                     if iou >= iou_threshold:
             #                         abnormal_region = localization_utils.joinBBoxes(saliencyBox,personBox)
             #                         abnormal_region.score = iou
@@ -753,30 +795,49 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #         persons_in_segment.append(None) #only to plot
 
             # if len(anomalous_regions) == 0:
-            #     print('Tracking Algorithm FAIL!!!!. Using last localization...')
+            #     # print('Tracking Algorithm FAIL!!!!. Using last localization...')
             #     anomalous_regions.append(bbox_last)   
             
 
-            # iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
-            # row = [video_name[0]+'---segment No: '+str(num_segment), iou]
-            # data_rows.append(row)
-            # data_rows_video.append(row)
-            if idx_next_segment > idx_next_block:
-                block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block)
-                # dynamic_img = torch.unsqueeze(dis_images, dim=0)
-                # print('block_dinamyc_images: ', block_dinamyc_images.size())
-                prediction, score = class_tester.predict(block_dinamyc_images)
-                tp, fp, y_block_pred = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score)
-                p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
-                num_pos_frame += p
-                num_neg_frame += n
-                total_fp += fp
-                total_tp += tp
-                y_truth.extend(y_block_truth)
-                y_pred.extend(y_block_pred)
-
-            dis_images, segment_info, idx_next_segment = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
-            # bbox_last = anomalous_regions[0]        
+            # # iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
+            # # row = [video_name[0]+'---segment No: '+str(num_segment), iou]
+            # # data_rows.append(row)
+            # # data_rows_video.append(row)
+            # #################### BLOCK ####################
+            # # if idx_next_segment > idx_next_block:
+            # #     block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block, skip=1)
+            # #     # dynamic_img = torch.unsqueeze(dis_images, dim=0)
+            # #     # print('block_dinamyc_images: ', block_dinamyc_images.size())
+            # #     prediction, score = class_tester.predict(block_dinamyc_images)
+            # #     tp, fp, y_block_pre, y_score_based = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score, threshold=0)
+            # #     p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
+            # #     num_pos_frame += p
+            # #     num_neg_frame += n
+            # #     total_fp += fp
+            # #     total_tp += tp
+            # #     y_truth.extend(y_block_truth)
+            # #     y_pred.extend(y_block_pred)
+            # start_time = time.time() 
+            dis_images, segment_info, idx_next_segment, spend_time_dyImg = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
+            # fpsMeter.update(spend_time)
+            
+            if dis_images is not None:
+                # dis_images = dis_images.to(device)
+                print('dis_images: ', type(dis_images))
+                start_time = time.time()
+                prediction, score = class_tester.predict(torch.unsqueeze(dis_images, dim=0), num_iter)
+                torch.cuda.synchronize()
+                end_time = time.time()
+                inference_time = end_time-start_time
+                fpsMeter.update(spend_time_dyImg + inference_time)
+                # fpsMeter.update(time.time()-start_time)
+                # torch.cuda.synchronize()
+                # end_time = time.time()
+                # spend_time = end_time - start_time
+                # print('Score: ', prediction, score, type(prediction), type(score))
+                # di_spend_times.append(s_time)
+                # print('spend_time: ', 1/s_time)
+            # # bbox_last = anomalous_regions[0]        
             # if plot:
             #     dynamic_image = ttttt
             #     # preprocess = preprocesing_outs[3]
@@ -794,9 +855,14 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #     BORDER = np.ones((h,20,3))
                 
             #     preprocess = np.concatenate((BORDER, mascara,BORDER, preprocesing_outs[0], BORDER, preprocesing_outs[1], BORDER, preprocesing_outs[2], BORDER, preprocesing_outs[3],BORDER), axis=1)
+            #     prediction = 0
             #     plotOpencv(prediction, real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 300, delay)
-                ######################################
-                
+            #     ######################################
+            ################################################## REFINEMENT ################################################################
+            
+        # average_time = np.mean(di_spend_times)
+        # print('Average time: ', str(average_time), len(di_spend_times)) 
+        # print('Frames per Second: ', str(1/average_time))      
         # with open("videos_scores.txt", "w") as txt_file:
         #     for line in videos_scores:
         #         txt_file.write(" ".join(line) + "\n")
@@ -843,17 +909,16 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
         #     info_frame = [frame, flac, xmin, ymin, xmax, ymax]
         #     segment_info.append(info_frame)
         # return segment_inf
-    fpr, tpr, _ = roc_curve(y_truth, y_pred)
-    lr_auc = roc_auc_score(y_truth, y_pred)
-    plt.plot(fpr, tpr, marker='.', label='test')
-        # axis labels
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-        # show the legend
-        # pyplot.legend()
-        # show the plot
-    plt.show()
-    print('AUC: ', str(lr_auc))
+    fpsMeter.print_statistics()
+    ################### ROC - AUC ############################
+    # fpr, tpr, _ = roc_curve(y_truth, y_pred)
+    # lr_auc = roc_auc_score(y_truth, y_pred)
+    # plt.plot(fpr, tpr, marker='.', label='test')
+
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.show()
+    # print('AUC: ', str(lr_auc))
 
 def __main__():
     parser = argparse.ArgumentParser()
@@ -905,19 +970,26 @@ def __main__():
 #                     numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment
     # videoBlockLength = 30
     dataloader_test, test_names, test_labels, anomalyDataset = anomalyInitializeDataset.initialize_test_anomaly_dataset(path_dataset,
-                                                        test_videos_path, batch_size, num_workers, videoBlockLength, numDynamicImgsPerBlock, transforms_dataset['test'],
+                                                        test_videos_path, batch_size, num_workers, videoBlockLength, numDynamicImgsPerBlock,
+                                                        transforms_dataset['test'],
                                                         videoSegmentLength, shuffle, overlappingBlock, overlappingSegment)
-    # print(test_labels)
-
+    
     saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloader_test, test_names,
                                         input_size, saliency_model_config, 1, threshold)
+    ####Waqas
+    # videos_paths, labels, numFrames, tmp_gtruth = datasetUtils.waqas_dataset('/media/david/datos/Violence DATA/AnomalyCRIMEDATASET/waqas/test',
+    #                                                                 'waqas/Temporal_Anomaly_Annotation.txt', True)
+    # waqas_dataloader, waqas_dataset = anomalyInitializeDataset.waqas_anomaly_downloader(videos_paths,labels, numFrames, batch_size, num_workers, videoBlockLength,
+    #                 numDynamicImgsPerBlock, transforms_dataset['test'], videoSegmentLength, shuffle,overlappingBlock, overlappingSegment, tmp_gtruth)
+    # # limit = 55
+    # # print(videos_paths[0:limit])
+    # # print(numFrames[0:limit])
+    # # print(labels[0:limit])
+    # # print(tmp_gtruth[0:limit])
+    # saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, waqas_dataloader, videos_paths,
+                                        # input_size, saliency_model_config, 1, threshold)
     
-    #classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth'
-    # classifierFile = '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection/ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin-FINAL.pth'
-    # classifier = torch.load(classifierFile)
-    # classifier.eval()
-    # classifier.inferenceMode()
-    print(torch.__version__)
+    # print(torch.__version__)
     h = 240
     w = 320
     # # offline(dataloaders_dict['test'], saliency_tester, typePersonDetector, h, w, plot)
@@ -934,16 +1006,16 @@ def __main__():
     classifier.inferenceMode(numDynamicImgsPerBlock)
     
     tester = Tester(classifier, None, device, None, None)
-    # online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay, device)
     # temporalTest(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    # temporalTest(waqas_dataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay, 'waqas')
     
-    import ANOMALYCRIME.datasetUtils as datasetUtils
-    import util
+   
+    # print('Len: ', len(videos_paths), len(labels), len(numFrames))
+    # limit = 100
 
-    # datasetUtils.waqas_dataset('/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/AnomalyCRIMEDATASET/Temporal_Anomaly_Annotation.txt')
-    waqas_path = '/Volumes/TOSHIBA EXT/AnomalyCRIME'
-    util.waqasVideos2Frames(os.path.join(waqas_path,'Anomaly-Videos-All'),os.path.join(waqas_path,'UCF_Crimes-Train-Test-Split/Anomaly_Detection_splits/Anomaly_Test.txt'),
-                            'AnomalyCRIMEDATASET/waqas/test')
+    
+    
    
     # import csv
     # df = pd.read_csv('metrics_yolo.csv',quoting=csv.QUOTE_NONE, error_bad_lines=False)
