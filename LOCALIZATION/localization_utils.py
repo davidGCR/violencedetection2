@@ -502,16 +502,13 @@ def personDetectionInSegment(frames_list, yolo_model, img_size, conf_thres, nms_
     return bbox_persons_in_segment
 
 
-def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, ioImage, plot = False):
+def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, ioImage, device):
     # print('='*20+' YOLOv3 - ', frame_path)
     img = yolo_inference.preProcessImage(ioImage, img_size)
+    img = img.to(device)
     detections = yolo_inference.inference(model, img, conf_thres, nms_thres)
     ioImage = np.array(ioImage)
-    # image = np.array(Image.open(frame_path))
-    # print('image type: ', type(image), image.dtype, image.shape)
-    if plot:
-        fig, ax = plt.subplots()
-        ax.imshow(ioImage)
+    
     bbox_persons = []
     if detections is not None:
         # print('detectios rescale: ', type(detections), detections.size())
@@ -523,12 +520,6 @@ def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, 
                 pmax = Point(x2,y2)
                 bbox_persons.append(BoundingBox(pmin,pmax))
             # print("\t+ Label: %s, Conf: %.5f" % (classes[int(cls_pred)], cls_conf.item()))
-            if plot:
-                box_w = x2 - x1
-                box_h = y2 - y1
-                bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=2, edgecolor='g', facecolor="none")
-                ax.add_patch(bbox)
-                plt.text( x1, y1, s=classes[int(cls_pred)], color="white", verticalalignment="top", bbox={"color": 'r', "pad": 0}, )
     return bbox_persons
 
 def distance(point1, point2):

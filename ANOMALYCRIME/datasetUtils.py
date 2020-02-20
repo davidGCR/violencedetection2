@@ -168,7 +168,7 @@ def waqas_dataset(path_videos_test, gt_tmp_file, only_abnormal = False):
 
     return videos_paths, labels, numFrames, tmp_gts
 
-def test_videos(test_file, g_path):
+def test_videos(test_file, g_path, only_abnormal):
     """ load train-test split from original dataset """
     test_names = []
     test_labels = []
@@ -178,16 +178,22 @@ def test_videos(test_file, g_path):
     with open(test_file, 'r') as file:
         for row in file:
             label = row[:-4]
-            # if label != 'Normal_Videos':
-            file = row[:-1] + '.txt'
-            file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-            if label != 'Normal_Videos':
+            if only_abnormal and label != 'Normal_Videos':
+                file = row[:-1] + '.txt'
+                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
                 test_bbox_files.append(file)
+                test_names.append(os.path.join(g_path,row[:-1]))
+                test_labels.append(label)
             else:
-                test_bbox_files.append(None)
+                file = row[:-1] + '.txt'
+                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                if label != 'Normal_Videos':
+                    test_bbox_files.append(file)
+                else:
+                    test_bbox_files.append(None)
             # print('--> file: ',file)
-            test_names.append(os.path.join(g_path,row[:-1]))
-            test_labels.append(label)     
+                test_names.append(os.path.join(g_path,row[:-1]))
+                test_labels.append(label)     
     test_labels = [classes[label] for label in test_labels]
     NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
     return test_names, test_labels, NumFrames_test, test_bbox_files

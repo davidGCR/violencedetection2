@@ -5,7 +5,7 @@ python3 LOCALIZATION/localization_main.py \
 --batchSize 1 \
 --numWorkers 4 \
 --shuffle false \
---videoSegmentLength 30 \
+--videoSegmentLength 10 \
 --videoBlockLength 0 \
 --numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
@@ -13,7 +13,7 @@ python3 LOCALIZATION/localization_main.py \
 --overlappingBlock 0 \
 --overlappingSegment 0 \
 --plot true \
---videoName Arrest028 \
+--videoName Burglary078 \
 # --delay 10
 
 # python3 LOCALIZATION/dense_sampling.py \

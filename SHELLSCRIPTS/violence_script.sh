@@ -1,12 +1,13 @@
 
-python3  main.py \
+python3  main_violence.py \
 --dataset hockey \
---modelType resnet18 \
+--modelType resnet50 \
 --numEpochs 30 \
 --numWorkers 4 \
 --batchSize 8 \
---featureExtract true \
+--featureExtract false \
 --joinType maxTempPool \
 --videoSegmentLength 30 \
 --numDynamicImagesPerVideo 3 \
---typeTrain final
+--typeTrain train \
+--positionSegment ninguna

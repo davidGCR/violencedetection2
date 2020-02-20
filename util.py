@@ -5,6 +5,18 @@ import cv2
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw
+
+def createGifFromFrames(path):
+  frames = os.listdir(path)
+  frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+  images = []
+  for frame in frames:
+    img = Image.open(os.path.join(path,frame))
+    images.append(img)
+  head, tail = os.path.split(path)
+  images[0].save(os.path.join(path,tail+'.gif'),
+               save_all=True, append_images=images[1:], optimize=False, duration=60, loop=0)
 
 def print_balance(train_y,name):
     tx = np.array(train_y)

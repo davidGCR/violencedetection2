@@ -24,11 +24,11 @@ class FPSMeter():
         self.frame_per_second = self.frame_count / (self.milliseconds / 1000.0)
         self.f_in_milliseconds = self.milliseconds / self.frame_count
 
-    @property
+    # @property
     def mspf(self):
         return self.f_in_milliseconds
 
-    @property
+    # @property
     def fps(self):
         return self.frame_per_second
 

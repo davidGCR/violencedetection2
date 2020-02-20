@@ -100,8 +100,8 @@ def initialize_final_only_test_online_anomaly_dataset(path_dataset, test_videos_
      return dataloader, test_names, dataset
 
 def initialize_test_anomaly_dataset(path_dataset, test_videos_path, batch_size, num_workers, videoBlockLength,
-                    numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment):
-     test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.test_videos(test_videos_path, path_dataset)
+                    numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment, only_anomalous):
+     test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.test_videos(test_videos_path, path_dataset, only_anomalous)
      test_labels = datasetUtils.labels_2_binary(test_labels)
      util.print_balance(test_labels, 'test')
 
