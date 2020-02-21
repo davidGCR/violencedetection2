@@ -3,7 +3,11 @@ from include import *
 # root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/'
 PATH_DATA_AUMENTATION_OUTPUT = root+'AnomalyCRIMEDATASET/UCFCrime2Local/dataAumentation'
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'HockeyFights/frames/violence'
-PATH_HOCKEY_FRAMES_NON_VIOLENCE = root+'HockeyFights/frames/nonviolence'
+PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + 'HockeyFights/frames/nonviolence'
+
+PATH_HOCKEY_AUMENTED_VIOLENCE = root + 'HockeyFights/dataAumentation/violence'
+PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + 'HockeyFights/dataAumentation/nonviolence'
+
 PATH_VIOLENTFLOWS_FRAMES = root+'violentflows/movies Frames'
 PATH_VIOLENCE_CHECKPOINTS = 'VIOLENCE_RESULTS/checkpoints'
 # PATH_CHECKPOINTS_MASK = 'checkpoints/masked'
@@ -19,8 +23,8 @@ PATH_UCFCRIME2LOCAL_README = root+'AnomalyCRIMEDATASET/UCFCrime2Local/readme'
 PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS = root+'AnomalyCRIMEDATASET/UCFCrime2Local/readme/Txt annotations'
 PATH_UCFCRIME2LOCAL_FRAMES_REDUCED = root+'AnomalyCRIMEDATASET/UCFCrime2Local/frames_reduced'
 
-ANOMALY_PATH_CHECKPOINTS = 'AnomalyCRIMEDATASET/checkpoints'
-ANOMALY_PATH_LEARNING_CURVES = 'AnomalyCRIMEDATASET/learning_curves'
+ANOMALY_PATH_CHECKPOINTS = 'ANOMALYCRIME/checkpoints'
+ANOMALY_PATH_LEARNING_CURVES = 'ANOMALYCRIME/learning_curves'
 ANOMALY_PATH_TRAIN_SPLIT = os.path.join(PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
 ANOMALY_PATH_TEST_SPLIT = os.path.join(PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
 ANOMALY_PATH_SALIENCY_MODELS = 'SALIENCY/Models/anomaly'
@@ -30,6 +34,7 @@ OPERATION_TRAINING = 'train'
 OPERATION_TRAINING_FINAL = 'trainfinal'
 OPERATION_TESTING = 'testing'
 OPERATION_TRAINING_AUMENTED = 'aumented'
+OPERATION_TRAINING_TRANSFER = 'transfer'
 
 TEMP_MAX_POOL = 'maxTempPool'
 TEMP_AVG_POOL = 'avgTempPool'

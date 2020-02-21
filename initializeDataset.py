@@ -2,7 +2,7 @@
 import torch
 import os
 import glob
-from violenceDataset import ViolenceDataset
+from violenceDataset import ViolenceDataset, ViolenceDatasetAumented
 from violenceDatasetOnline import ViolenceOnlineDataset
 from MaskDataset import MaskDataset
 # import Saliency.saliencyModel as saliencyModel
@@ -80,6 +80,33 @@ def print_balance(train_y, test_y):
     unique, counts = np.unique(ty, return_counts=True)
     print('test_balance: ', dict(zip(unique, counts)))
 
+def createAumentedDataset(path_violence, path_noviolence, suffle):
+    """ Create Violence dataset with paths and labels """
+    imagesF = []
+
+    imagesF = os.listdir(path_violence)
+    imagesF.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+
+    for i in range(len(imagesF)):
+        imagesF[i] = os.path.join(path_violence, imagesF[i])
+
+    imagesNoF = os.listdir(path_noviolence)
+    imagesNoF.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+    for i in range(len(imagesNoF)):
+        imagesNoF[i] = os.path.join(path_noviolence, imagesNoF[i])
+
+    Dataset = imagesF + imagesNoF
+    Labels = list([1] * len(imagesF)) + list([0] * len(imagesNoF))
+    # NumFrames = [len(glob.glob1(Dataset[i], "*.png")) for i in range(len(Dataset))]
+    #Shuffle data
+    if suffle:
+        combined = list(zip(Dataset, Labels))
+        random.shuffle(combined)
+        Dataset[:], Labels[:]= zip(*combined)
+
+    print('Dataset, Labels: ', len(Dataset), len(Labels))
+    return Dataset, Labels
+
 def createDataset(path_violence, path_noviolence, suffle):
     """ Create Violence dataset with paths and labels """
     imagesF = []
@@ -139,6 +166,22 @@ def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFr
          videoSegmentLength= videoSegmentLength, positionSegment = positionSegment ),
         "val": ViolenceDataset(dataset=test_x, labels=test_y, numFrames=test_numFrames , spatial_transform=data_transforms["val"], numDynamicImagesPerVideo=numDiPerVideos,
         videoSegmentLength= videoSegmentLength, positionSegment = positionSegment )
+    }
+    
+
+    dataloaders_dict = {
+        "train": torch.utils.data.DataLoader( image_datasets["train"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
+        "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
+    }
+    return dataloaders_dict
+
+def getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers):
+    """ Get train - test dataloaders for violence dataset or masked dataset """
+    image_datasets = None
+    image_datasets = {
+        #dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo, videoSegmentLength, positionSegment
+        "train": ViolenceDatasetAumented(images=train_x, labels=train_y, spatial_transform=data_transforms["train"]),
+        "val": ViolenceDatasetAumented(images=test_x, labels=test_y, spatial_transform=data_transforms["val"])
     }
     
 

@@ -91,15 +91,14 @@ def trainFinal(dataset, hockey_path_violence, hockey_path_noviolence, path_learn
         # test_acc.append(epoch_acc_test)
 
 
-def train(dataset, hockey_path_violence, hockey_path_noviolence, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
-    batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment):
+def train(datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
+    batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment, dataAumentation):
     
     # for numDiPerVideos in ndis: #for experiments
     train_lost = []
     train_acc = []
     test_lost = []
     test_acc = []
-    datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(hockey_path_violence, hockey_path_noviolence,True)  #shuffle
     
         
     # df = pd.DataFrame(list(zip(datasetAll, labelsAll, numFramesAll)), columns=['video', 'label', 'numFrames'])
@@ -111,35 +110,76 @@ def train(dataset, hockey_path_violence, hockey_path_noviolence, path_learning_c
     # elif dataset == 'violentflows':
 
     print("CONFIGURATION: ", "modelType:", modelType, ", numDiPerVideos:", numDiPerVideos, ", batch_size:", batch_size, ", num_epochs:",
-            num_epochs, ", feature_extract:", feature_extract, ", joinType:", joinType, ", scheduler_type: ", scheduler_type, )
+            num_epochs, ", feature_extract:", feature_extract, ", joinType:", joinType, ", scheduler_type: ", scheduler_type, ', dataAumentation:',
+            str(dataAumentation))
 
     
     fold = 0
-    for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
+    for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=1000):
     # for dataset_train, dataset_train_labels,dataset_test,dataset_test_labels   in k_folds_from_folders(vif_path, 5):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         train_x, train_y, test_x, test_y = None, None, None, None
         # print('fold: ',len(train_idx),len(test_idx))
-        train_x = list(itemgetter(*train_idx)(datasetAll))
-        train_y = list(itemgetter(*train_idx)(labelsAll))
-        train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-        test_x = list(itemgetter(*test_idx)(datasetAll))
-        test_y = list(itemgetter(*test_idx)(labelsAll))
-        test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-        initializeDataset.print_balance(train_y, test_y)
+        
             
         # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegmen
-        dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
+        if not dataAumentation:
+            train_x = list(itemgetter(*train_idx)(datasetAll))
+            train_y = list(itemgetter(*train_idx)(labelsAll))
+            train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+            test_x = list(itemgetter(*test_idx)(datasetAll))
+            test_y = list(itemgetter(*test_idx)(labelsAll))
+            test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+            initializeDataset.print_balance(train_y, test_y)
+            dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
                                                 data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength,
                                                 positionSegment)
+        else:
+            train_x = []
+            train_y = []
+            test_x = []
+            test_y = []
+            # # datasetAll, labelsAll = initializeDataset.createAumentedDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
+            for idx in test_idx:
+                dyImgs = os.listdir(datasetAll[idx])
+                dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+                test_example = datasetAll.pop(idx)
+                test_example = os.path.join(test_example,dyImgs[0])
+                test_x.append(test_example)
+
+                test_example_label = labelsAll.pop(idx)
+                # test_example_label = os.path.join(test_example_label,dyImgs[0])
+                test_y.append(test_example_label)
+
+            for i in range(len(datasetAll)):
+                dyImgs = os.listdir(datasetAll[i])
+                dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+                for j,img in enumerate(dyImgs):
+                    dyImgs[j]=os.path.join(datasetAll[i],img)
+                    train_y.append(labelsAll[i])
+                train_x.extend(dyImgs)
+            
+            combined = list(zip(train_x, train_y))
+            random.shuffle(combined)
+            train_x[:], train_y[:] = zip(*combined)
+
+            combined = list(zip(test_x, test_y))
+            random.shuffle(combined)
+            test_x[:], test_y[:] = zip(*combined)
+            # df = pd.DataFrame(list(zip(*[test_x, test_y]))).add_prefix('Col')
+            # df.to_csv('testAumented.csv', index=False)
+            # df = pd.DataFrame(list(zip(*[train_x, train_y]))).add_prefix('Col')
+            # df.to_csv('trainAumented.csv', index=False)
+            
+            dataloaders_dict = initializeDataset.getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers)
         # data_rows = []
         # for inputs, labels, video_names, bbox_segments in dataloaders_dict["train"]:
         #     print('videos names: ', video_names, labels)
 
             # row = [video_name[0]+'---segment No: '+str(num_segment), iou]
             # data_rows.append(row)
-        MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)
+        # MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)
         model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
         model.to(device)
         #only print parameters to train
@@ -153,7 +193,8 @@ def train(dataset, hockey_path_violence, hockey_path_noviolence, path_learning_c
             exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
         ### trainer
         # MODEL_NAME = 'probando'
-        MODEL_NAME = str(modelType) + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+str(joinType) +'_num_epochs-' +str(num_epochs)
+        # MODEL_NAME = str(modelType) + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+str(joinType) +'_num_epochs-' +str(num_epochs)
+        MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)
         # if folds_number == 1:
         #     MODEL_NAME = MODEL_NAME+constants.LABEL_PRODUCTION_MODEL
         # print('model_name: ', MODEL_NAME)
@@ -200,12 +241,6 @@ def __main__():
 
     # python3 main.py --dataset hockey --numEpochs 12 --ndis 1 --foldsNumber 1 --featureExtract true --checkpointPath BlackBoxModels
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset",type=str)
-    parser.add_argument("--vifPath",type=str,default=constants.PATH_VIOLENTFLOWS_FRAMES,help="Directory for Violent Flows dataset")
-    parser.add_argument("--pathViolence",type=str,default=constants.PATH_HOCKEY_FRAMES_VIOLENCE,help="Directory containing violence videos")
-    parser.add_argument("--pathNonviolence",type=str,default=constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE,help="Directory containing non violence videos")
-    parser.add_argument("--pathLearningCurves", type=str, default=constants.PATH_VIOLENCE_LEARNING_CURVES, help="Directory containing results")
-    parser.add_argument("--checkpointPath", type=str, default=constants.PATH_VIOLENCE_CHECKPOINTS)
     parser.add_argument("--modelType",type=str,default="alexnet",help="model")
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -218,14 +253,14 @@ def __main__():
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--typeTrain", type=str)
+    parser.add_argument("--dataAumentation",type=lambda x: (str(x).lower() == 'true'), default=False)
 
     args = parser.parse_args()
     typeTrain = args.typeTrain
-    dataset = args.dataset
-    vif_path = args.vifPath
-    path_learning_curves = args.pathLearningCurves
-    path_violence = args.pathViolence
-    path_noviolence = args.pathNonviolence
+    
+    path_learning_curves = constants.PATH_VIOLENCE_LEARNING_CURVES
+    path_checkpoints = constants.PATH_VIOLENCE_CHECKPOINTS
+
     modelType = args.modelType
     batch_size = args.batchSize
     num_epochs = args.numEpochs
@@ -233,12 +268,13 @@ def __main__():
     joinType = args.joinType
     scheduler_type = args.schedulerType
     numDynamicImagesPerVideo = args.numDynamicImagesPerVideo
-    path_checkpoints = args.checkpointPath
+    
     folds_number = args.foldsNumber
     num_workers = args.numWorkers
     input_size = 224
     videoSegmentLength = args.videoSegmentLength
     positionSegment = args.positionSegment
+    dataAumentation = args.dataAumentation
 
     transforms = createTransforms(input_size)
     # Detect if we have a GPU available
@@ -248,12 +284,20 @@ def __main__():
     # path_models = '/media/david/datos/Violence DATA/violentflows/Models/'
     # path_results = '/media/david/datos/Violence DATA/violentflows/Results/'+dataset_source
     # gpath = '/media/david/datos/Violence DATA/violentflows/movies Frames'
+    shuffle = True
     if typeTrain == 'final':
-        trainFinal(dataset, path_violence, path_noviolence, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
+        trainFinal(dataset, constants.PATH_HOCKEY_FRAMES_VIOLENCE, constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
             batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment)
     elif typeTrain == 'train':
-        train(dataset, path_violence, path_noviolence, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment)
+        if not dataAumentation:
+            datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(constants.PATH_HOCKEY_FRAMES_VIOLENCE, constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE, shuffle)  #shuffle
+        else:
+            shuffle = True
+            datasetAll, labelsAll, _ = initializeDataset.createDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
+            # print(datasetAll[:5])
+            # print(labelsAll[:5])
+        train(datasetAll, labelsAll, None, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
+            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment, dataAumentation)
     # num_classes = 2
     # saliency_model_file = 'd'
     # input_size = (224,224)
