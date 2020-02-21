@@ -936,13 +936,9 @@ def __main__():
     # online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
     # temporalTest(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
     
-    import ANOMALYCRIME.datasetUtils as datasetUtils
-    import util
-
+    
     # datasetUtils.waqas_dataset('/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/AnomalyCRIMEDATASET/Temporal_Anomaly_Annotation.txt')
-    waqas_path = '/Volumes/TOSHIBA EXT/AnomalyCRIME'
-    util.waqasVideos2Frames(os.path.join(waqas_path,'Anomaly-Videos-All'),os.path.join(waqas_path,'UCF_Crimes-Train-Test-Split/Anomaly_Detection_splits/Anomaly_Test.txt'),
-                            'AnomalyCRIMEDATASET/waqas/test')
+   
    
     # import csv
     # df = pd.read_csv('metrics_yolo.csv',quoting=csv.QUOTE_NONE, error_bad_lines=False)
