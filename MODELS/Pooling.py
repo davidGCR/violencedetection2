@@ -16,7 +16,8 @@ def concatenate(x, numDiPerVideos, fn_encoder, fn_adapt):
     x = torch.cat(lista, dim=1)
     return x
     
-def maxTemporalPool(x, numDiPerVideos, fn_encoder):
+def maxTemporalPool(x, fn_encoder):
+    numDiPerVideos = x.size()[0]
     # loss #torch.Size([8, 2, 3, 224, 224])
     # print('tempPool input: ', x.size())
     lista = []

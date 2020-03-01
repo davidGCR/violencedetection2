@@ -3,9 +3,10 @@ import copy
 import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
+import numpy as np
 
 class Tester:
-    def __init__(self, model, dataloader, device, numDiPerVideos, plot_samples=False):
+    def __init__(self, model, dataloader, loss, device, numDiPerVideos, plot_samples=False):
         self.model = model  
         self.dataloader = dataloader
         # self.optimizer = optimizer
@@ -13,36 +14,42 @@ class Tester:
         self.numDiPerVideos = numDiPerVideos
         # self.tb = TensorBoardColab()
         self.device = device
-        self.model  = self.model.to(device)
+        self.loss = loss
+        # self.model  = self.model.to(device)
 
     def test_model(self):
         self.model.eval()
         gt_labels = []
         predictions = []  #indeicea
         scores = []
+        test_error = 0.0
         # Iterate over data.
         for inputs, labels, video_names, bbox_segments in tqdm(self.dataloader):
             if self.numDiPerVideos > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
+            # gt_labels.extend(labels.numpy())
             gt_labels.extend(labels.numpy())
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             # self.optimizer.zero_grad()
             with torch.set_grad_enabled(False):
                 outputs = self.model(inputs)
+                err = self.loss(outputs, labels)
+                # print('err: ',err.item())
+                test_error += err.item()*inputs.size(0)
                 p = torch.nn.functional.softmax(outputs, dim=1)
-               
-                # print('-- outputs size: ', outputs.size())
-                # print('-- labels size: ',labels.size())
-                # loss = self.criterion(outputs, labels)
-                values, indices = torch.max(outputs, 1)
+                values, indices_preds = torch.max(outputs, 1)
                 scores.extend(p.cpu().numpy())
-                predictions.extend(indices.cpu().numpy())
-                # print('predictions: ',preds)
-                # p2 = p[:,indices.cpu().numpy()]
-                # print(indices,p,p2)
+                # predictions.extend(indices_preds.cpu().numpy())
+                predictions.extend(indices_preds.cpu().numpy())
 
-        return gt_labels, predictions, scores
+        test_error = test_error/len(self.dataloader.dataset)
+        predictions = np.array(predictions)
+        gt_labels = np.array(gt_labels)
+        # test_errors = np.array(test_errors)
+        
+        return predictions, gt_labels, test_error
+        # return gt_labels, predictions, scores
     
     def predict(self, dynamic_img, num_iter):
         self.model.eval()
