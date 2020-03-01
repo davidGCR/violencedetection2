@@ -1,20 +1,20 @@
-cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
-# cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
+# cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
+cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 python3 LOCALIZATION/localization_main.py \
 --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 --batchSize 1 \
 --numWorkers 4 \
 --shuffle false \
---videoSegmentLength 0 \
---videoBlockLength 90 \
---numDynamicImgsPerBlock 3 \
+--videoSegmentLength 10 \
+--videoBlockLength 0 \
+--numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
 --positionSegment online \
 --overlappingBlock 0 \
---overlappingSegment 0.5 \
---plot true \
+--overlappingSegment 0 \
+--plot false \
 --videoName Arrest003 \
---delay 1
+# --delay 10
 
 # python3 LOCALIZATION/dense_sampling.py \
 # --classifierFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-2_fusionType-tempMaxPool_num_epochs-20_videoSegmentLength-30_positionSegment-random-FINAL.pth \

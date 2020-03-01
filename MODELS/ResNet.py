@@ -21,11 +21,15 @@ class ViolenceModelResNet(nn.Module):
             self.model_ft = models.resnet18(pretrained=True)
         elif model_name == 'resnet34':
             self.model_ft = models.resnet34(pretrained=True)
+        elif model_name == 'resnet50':
+            self.model_ft = models.resnet50(pretrained=True)
         
         self.num_ftrs = self.model_ft.fc.in_features
         self.model_ft.fc = Identity()
-        self.bn = nn.BatchNorm2d(512)
-        # self.cat_linear = nn.Linear(512, )
+        if model_name == 'resnet18' or model_name == 'resnet34':
+            self.bn = nn.BatchNorm2d(512)
+        elif model_name == 'resnet50':
+            self.bn = nn.BatchNorm2d(2048)
         
         self.convLayers = nn.Sequential(*list(self.model_ft.children())[:-2])  # to tempooling
         model_ft = None
@@ -36,7 +40,10 @@ class ViolenceModelResNet(nn.Module):
         if self.joinType == constants.JOIN_CONCATENATE:
             self.linear = nn.Linear(self.num_ftrs*self.numDiPerVideos,self.num_classes)
         elif self.joinType == constants.TEMP_MAX_POOL or self.joinType == constants.MULT_TEMP_POOL or self.joinType == constants.TEMP_AVG_POOL or self.joinType == constants.TEMP_STD_POOL:
-            self.linear = nn.Linear(512, self.num_classes)
+            if model_name == 'resnet18' or model_name == 'resnet34':
+                self.linear = nn.Linear(512, self.num_classes)
+            elif model_name == 'resnet50':
+                self.linear = nn.Linear(2048, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
     
     def inferenceMode(self, numDiPerVideos):

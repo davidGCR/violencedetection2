@@ -100,8 +100,8 @@ def initialize_final_only_test_online_anomaly_dataset(path_dataset, test_videos_
      return dataloader, test_names, dataset
 
 def initialize_test_anomaly_dataset(path_dataset, test_videos_path, batch_size, num_workers, videoBlockLength,
-                    numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment):
-     test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.test_videos(test_videos_path, path_dataset)
+                    numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment, only_anomalous):
+     test_names, test_labels, test_num_frames, test_bbox_files = datasetUtils.test_videos(test_videos_path, path_dataset, only_anomalous)
      test_labels = datasetUtils.labels_2_binary(test_labels)
      util.print_balance(test_labels, 'test')
 
@@ -114,6 +114,17 @@ def initialize_test_anomaly_dataset(path_dataset, test_videos_path, batch_size, 
      dataloader =  torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
      
      return dataloader, test_names, test_labels, dataset
+
+def waqas_anomaly_downloader(videos,labels, numFrames, batch_size, num_workers, videoBlockLength,
+                    numDynamicImgsPerBlock, transform, videoSegmentLength, shuffle,overlappingBlock, overlappingSegment, tmp_gtruth):
+    
+     dataset = anomalyOnlineDataset.AnomalyOnlineDataset(dataset=videos, labels=labels, numFrames=numFrames, bbox_files=[],
+                         spatial_transform=transform, videoBlockLength = videoBlockLength, numDynamicImgsPerBlock=numDynamicImgsPerBlock, videoSegmentLength=videoSegmentLength,
+                         overlappingBlock=overlappingBlock, overlappingSegment=overlappingSegment,temporal_gts=tmp_gtruth)
+
+     dataloader =  torch.utils.data.DataLoader( dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+     
+     return dataloader, dataset
 
 def initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path, batch_size, num_workers, numDiPerVideos,
                                         transforms_t, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle):

@@ -129,7 +129,8 @@ def getTrainDataLoader(train_x, train_y, train_numFrames, data_transforms, numDi
         
     return dataloader
 
-def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegment):
+def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size,
+                    num_workers, videoSegmentLength, positionSegment):
     """ Get train - test dataloaders for violence dataset or masked dataset """
     image_datasets = None
     image_datasets = {

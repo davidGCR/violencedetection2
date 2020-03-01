@@ -43,6 +43,7 @@ def plotVideo(video_path, bdx_file_path, delay):
         cv2.destroyAllWindows()
 
 def plotVideoTest(video_path, delay):
+
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     # print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps), video_path)
@@ -82,11 +83,10 @@ def waqasVideos2Frames(videos_folder, path_txt_videos, output_path):
     with open(path_txt_videos, 'r') as file:
           for row in file:
               rows.append(row)
-    
     for row in rows:
         splits = row.split('/')
         video_name = splits[1]
-        video_name = video_name[:-10]
+        # video_name = video_name[:-10]##eeeeeeeeeeehhhhhhhhhhhh
         folderName = splits[0]
         # print(video_name)
         video_path = os.path.join(videos_folder,folderName,video_name+'_x264.mp4')
@@ -97,6 +97,16 @@ def waqasVideos2Frames(videos_folder, path_txt_videos, output_path):
         # plotVideoTest(video_path, 1)
         video2Images2(video_path,video_out_path)
         
+def gt_annotations_process(tmp_annotations_file):
+    rows = []
+    with open(tmp_annotations_file, 'r') as file:
+        for row in file:
+            data_r = row.split()
+            video_name = data_r[0][:-9]
+            print(len(data_r), data_r, video_name)
+            rows.append(data_r)
+
+
 
 def __main__():
     parser = argparse.ArgumentParser()
@@ -108,11 +118,14 @@ def __main__():
     # plotVideo(os.path.join(constants.PATH_UCFCRIME2LOCAL_VIDEOS, video_name + '_x264.mp4'), os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, video_name + '.txt'),delay)
     # video_name = '/media/david/datos/Violence DATA/AnomalyCRIMEDATASET/Anomaly-Videos-All/Vandalism/' + video_name
     # plotVideoTest(video_name, delay)
-    waqas_path = '/Volumes/TOSHIBA EXT/AnomalyCRIME'
-    waqasVideos2Frames(waqas_path+'/Anomaly-Videos-All', 'Anomaly_Test.txt',
-                        os.path.join('AnomalyCRIMEDATASET', 'waqas/test'))
+    waqas_path = '/media/david/datos/Violence DATA/AnomalyCRIMEDATASET'
+    # video_name = os.path.join('/media/david/datos/Violence DATA/AnomalyCRIMEDATASET/Anomaly-Videos-All',video_name)
+    # plotVideoTest(video_name, delay)
+    # waqas_path = '/Volumes/TOSHIBA EXT/AnomalyCRIME'
+    # waqasVideos2Frames(waqas_path+'/Anomaly-Videos-All', 'waqas/Anomaly_Test.txt',
+    #                     os.path.join(waqas_path, 'waqas/test'))
     # video_name = os.path.join(waqas_path,'Anomaly-Videos-All',video_name)
     # for i in range(5):
     # plotVideoTest(video_name, delay)
-
+    gt_annotations_process('waqas/Temporal_Anomaly_Annotation.txt')
 __main__()

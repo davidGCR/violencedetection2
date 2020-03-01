@@ -3,10 +3,11 @@
 # --modelName resnet18_Finetuned-True-_di-3_fusionType-maxTempPool_num_epochs-23_videoSegmentLength-30_positionSegment-begin \
 # --numFolds 1 \
 # --lastEpoch 26
-
+# --modelName resnet18_Finetuned-True-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data-30 \
 
  python3 plot.py \
 --learningCurvesFolder VIOLENCE_RESULTS/learningCurves \
---modelName resnet18-3-maxTempPool-segmentLength:30-positionSegment:begin-numEpochs:30 \
---numFolds 1 \
+--modelName resnet50_Finetuned-True-_di-3_fusionType-maxTempPool_num_epochs-30 \
+--numFolds 5 \
+--onlyTrain False \
 --lastEpoch 30

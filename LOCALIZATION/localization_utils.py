@@ -386,6 +386,14 @@ def countTruePositiveFalsePositive(l_infos, prediction, score, threshold):
         y_pred.append(score)
     return tp, fp, y_pred, y_score_based
 
+def countTemporalGroundTruth(l_infos):
+    p = 0
+    n = 0
+    y_truth = []
+    for gt in l_infos:
+        y_truth.append(gt)
+    return p, n, y_truth
+
 def countPositiveFramesNegativeFrames(l_infos):
     p = 0
     n = 0
@@ -398,6 +406,8 @@ def countPositiveFramesNegativeFrames(l_infos):
             n+=1
             y_truth.append(0)
     return p, n, y_truth
+
+# def falseAlarmRadio():
 
 def getFramesFromBlock(video_name, frames_block):
     """
@@ -443,7 +453,7 @@ def getFramesFromSegment(video_name, frames_segment, num_frames):
             frames.append(image)
             bbox = BoundingBox(Point(frame_info[constants.IDX_XMIN].float(), frame_info[constants.IDX_YMIN].float()),
                                 Point(frame_info[constants.IDX_XMAX].float(), frame_info[constants.IDX_YMAX].float()), occluded=occluded)
-            print('frame_name000000000000: ', frame_name, 'occluded: ', occluded, bbox)
+            # print('frame_name000000000000: ', frame_name, 'occluded: ', occluded, bbox)
             bboxes.append(bbox)
     elif num_frames == 'first':
         frame_info = frames_segment[0]
@@ -492,16 +502,13 @@ def personDetectionInSegment(frames_list, yolo_model, img_size, conf_thres, nms_
     return bbox_persons_in_segment
 
 
-def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, ioImage, plot = False):
+def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, ioImage, device):
     # print('='*20+' YOLOv3 - ', frame_path)
     img = yolo_inference.preProcessImage(ioImage, img_size)
+    img = img.to(device)
     detections = yolo_inference.inference(model, img, conf_thres, nms_thres)
     ioImage = np.array(ioImage)
-    # image = np.array(Image.open(frame_path))
-    # print('image type: ', type(image), image.dtype, image.shape)
-    if plot:
-        fig, ax = plt.subplots()
-        ax.imshow(ioImage)
+    
     bbox_persons = []
     if detections is not None:
         # print('detectios rescale: ', type(detections), detections.size())
@@ -513,12 +520,6 @@ def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, 
                 pmax = Point(x2,y2)
                 bbox_persons.append(BoundingBox(pmin,pmax))
             # print("\t+ Label: %s, Conf: %.5f" % (classes[int(cls_pred)], cls_conf.item()))
-            if plot:
-                box_w = x2 - x1
-                box_h = y2 - y1
-                bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=2, edgecolor='g', facecolor="none")
-                ax.add_patch(bbox)
-                plt.text( x1, y1, s=classes[int(cls_pred)], color="white", verticalalignment="top", bbox={"color": 'r', "pad": 0}, )
     return bbox_persons
 
 def distance(point1, point2):

@@ -49,17 +49,17 @@ class Trainer:
         for inputs, labels, video_names, bbox_segments in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
             # print('inputs, labels: ',type(inputs),inputs.size(), type(labels), labels.size())
             # print('inputs trainer: ', inputs.size())
-            print(video_names, labels)
+            # print(video_names, labels)
             if self.plot_samples:
-                print(video_names)
+                # print(video_names)
                 plt.figure(figsize=(10,12))
                 images = torchvision.utils.make_grid(inputs.cpu().data, padding=padding)
-                imshow(images, video_names)
+                # imshow(images, video_names)
                 dyImg = dynamicImage.computeDynamicImages(str(video_names[0]), self.numDynamicImages,16)
                 dis = torchvision.utils.make_grid(dyImg.cpu().data, padding=padding)
                 # print(video_names[0])
-                plt.figure(figsize=(10,12))
-                imshow(dis, 'RAW - '+str(video_names[0]))
+                # plt.figure(figsize=(10,12))
+                # imshow(dis, 'RAW - '+str(video_names[0]))
             if self.numDynamicImages > 1:
                 # print('==== dataloader size: ',inputs.size()) #[batch, ndi, ch, h, w]
                 inputs = inputs.permute(1, 0, 2, 3, 4)

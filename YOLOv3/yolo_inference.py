@@ -25,9 +25,11 @@ from matplotlib.ticker import NullLocator
 import numpy as np
 
 
-def initializeYoloV3(img_size, class_path, model_def, weights_path):
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def initializeYoloV3(img_size, class_path, model_def, weights_path, device):
+    """
+    Initialize yolov3 in device in evaluation mode
+    """
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Set up model
     model = Darknet(model_def, img_size=img_size).to(device)
 
@@ -130,11 +132,11 @@ def plotDetection(image_path, x1, y1, x2, y2, conf, cls_conf, cls_pred, unique_l
 
 def inference(model, input_imgs, conf_thres, nms_thres): #input_imgs:  <class 'torch.Tensor'> torch.Size([1, 3, 416, 416])
     # print('input_imgs: ', type(input_imgs),input_imgs.size())
-    Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+    # Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
     # Configure input
-    input_imgs = Variable(input_imgs.type(Tensor))
-    # print('input_imgs: ', input_imgs.size())
-    # Get detections
+    # input_imgs = Variable(input_imgs.type(Tensor))
+    # input_imgs = input_imgs.to(device)
+   
     with torch.no_grad():
         detections = model(input_imgs) #  torch.Size([1, 10647, 85])
         detections = non_max_suppression(detections, conf_thres, nms_thres)#list len = 1
