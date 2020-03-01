@@ -37,6 +37,9 @@ class Trainer:
         self.plot_samples = plot_samples
         self.train_best_acc = 0
 
+    def getModel(self):
+        return self.model
+
     def train_epoch(self, epoch):
         # self.scheduler.step(epoch)
         self.model.train()  # Set model to training mode
@@ -79,6 +82,7 @@ class Trainer:
                 self.optimizer.step()
                 # self.scheduler.step(epoch)
             # statistics
+            # print('train error: ', loss.item(), inputs.size(0), loss.item() * inputs.size(0))
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 

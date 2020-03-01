@@ -1,13 +1,15 @@
 
 python3  main_violence.py \
---dataset hockey \
 --modelType resnet50 \
 --numEpochs 30 \
 --numWorkers 4 \
 --batchSize 8 \
+--foldsNumber 5 \
 --featureExtract false \
+--dataAumentation false \
 --joinType maxTempPool \
 --videoSegmentLength 30 \
---numDynamicImagesPerVideo 3 \
+--numDynamicImagesPerVideo 2 \
 --typeTrain train \
---positionSegment ninguna
+--positionSegment begin \
+--overlaping 0.68

@@ -5,6 +5,7 @@ from parameters import set_parameter_requires_grad
 from tempPooling import *
 from Identity import *
 import torch
+import constants
 
 
 class ViolenceModelAlexNet(nn.Module): ##ViolenceModel2
@@ -16,26 +17,27 @@ class ViolenceModelAlexNet(nn.Module): ##ViolenceModel2
       self.model = models.alexnet(pretrained=True)
       set_parameter_requires_grad(self.model, feature_extract)
       
-      if self.joinType == 'cat':
-        self.num_ftrs = self.model.classifier[6].in_features
-        self.model.classifier = self.model.classifier[:-1]
-        self.linear = nn.Linear(self.num_ftrs*numDiPerVideos,self.num_classes)
-      elif self.joinType == 'tempMaxPool':
+      # if self.joinType == 'cat':
+      #   self.num_ftrs = self.model.classifier[6].in_features
+      #   self.model.classifier = self.model.classifier[:-1]
+      #   self.linear = nn.Linear(self.num_ftrs*numDiPerVideos,self.num_classes)
+      self.linear = None
+      if self.joinType == constants.TEMP_MAX_POOL:
         self.model = nn.Sequential(*list(self.model.children())[:-2]) # to tempooling
         # self.linear = nn.Linear(4096,2)
         self.linear = nn.Linear(256*6*6,self.num_classes)
       
   
   def forward(self, x):
-    shape = x.size()
-    if len(shape) == 4:
+    # shape = x.size()
+    if self.numDiPerVideos == 1:
       x = self.model(x)
       x = torch.flatten(x, 1)
       # print('x: ',x.size())
     else:
       if self.joinType == 'cat':
         x = self.getFeatureVectorCat(x)
-      elif self.joinType == 'tempMaxPool':
+      elif self.joinType == constants.TEMP_MAX_POOL:
         x = self.getFeatureVectorTempPool(x)
     
     x = self.linear(x)

@@ -106,14 +106,14 @@ def training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, 
             val_acc.append(epoch_acc_val)
     
     print("saving loss and acc history...")
-    if operation == constants.OPERATION_TRAINING_FINAL:
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-    elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_AUMENTED:
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_acc.txt"),val_acc)
+    # if operation == constants.OPERATION_TRAINING_FINAL:
+    #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
+    #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
+    # elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_AUMENTED:
+    #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
+    #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
+    #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
+    #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_acc.txt"),val_acc)
 
 def transferLearning(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves, 
                 scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples, operation):
