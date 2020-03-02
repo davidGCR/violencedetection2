@@ -64,9 +64,12 @@ class DynamicImage():
           img1 = Image.open(img_dir).convert("RGB")
           img = np.array(img1)
           frames.append(img)
+      start_time = time.time()
       imgPIL, img = self.getDynamicImage(frames)
+      end_time = time.time()
+      spend_time  = end_time-start_time
       dinamycImages.append(img)
-    return vid_name, label, dinamycImages
+    return vid_name, label, dinamycImages, spend_time
 
   def computeDynamicImage(self,frames):
       # print('compute DY: ', type(frames[0]), frames.size()) #torch.Size([30, 240, 320, 3])
@@ -145,10 +148,10 @@ def __main__():
 
   for i, v in enumerate(datasetAll):
     
-    start_time = time.time()
-    vid_name, label, dinamycImages = dynamicImage.summarizeVideo(i)
-    end_time = time.time()
-    ttime = end_time - start_time
+    # start_time = time.time()
+    vid_name, label, dinamycImages, ttime = dynamicImage.summarizeVideo(i)
+    # end_time = time.time()
+    # ttime = end_time - start_time
     fpsMeter.update(ttime)
     print(vid_name)
     if plot:
