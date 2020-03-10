@@ -14,7 +14,7 @@ from torch.utils.data._utils.collate import default_collate
 
 class AnomalyDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, nDynamicImages,
-                    videoSegmentLength, maxNumFramesOnVideo, positionSegment):
+                    videoSegmentLength, positionSegment, overlaping):
         self.spatial_transform = spatial_transform
         self.images = dataset
         self.labels = labels
@@ -24,11 +24,11 @@ class AnomalyDataset(Dataset):
         self.numDynamicImagesPerVideo = nDynamicImages  #number of segments from the video/ -1 means all the segments from the video
         self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
         
-        self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
+        # self.maxNumFramesOnVideo = maxNumFramesOnVideo # to use only some frames
         self.positionSegment = positionSegment  #could be at begin, central or random
         self.skipPercentage = 35
         # self.getRawFrames = getRawFrames
-        # self.overlapping = overlapping
+        self.overlaping = overlaping
 
     def __len__(self):
         return len(self.images)
@@ -107,23 +107,26 @@ class AnomalyDataset(Dataset):
             seqLen = self.videoSegmentLength
         num_frames_on_video = self.numFrames[idx]
         # print('range: ', 'vid name: ', vid_name,seqLen,'numFrames: ', self.numFrames[idx], 'segmentLenght: ', self.videoSegmentLength)
-        video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
+        # if self.overlaping == 0:
+        #     video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
 
-        if len(video_splits_by_no_Di) > 1:
-            last_idx = len(video_splits_by_no_Di)-1
-            split = video_splits_by_no_Di[last_idx]
-            if len(split) < 10:
-                del video_splits_by_no_Di[last_idx]
-                
-        if len(video_splits_by_no_Di) < self.numDynamicImagesPerVideo:
-            diff = self.numDynamicImagesPerVideo - len(video_splits_by_no_Di)
-            last_idx = len(video_splits_by_no_Di) - 1
-            for i in range(diff):
-                video_splits_by_no_Di.append(video_splits_by_no_Di[last_idx])
+        #     if len(video_splits_by_no_Di) > 1:
+        #         last_idx = len(video_splits_by_no_Di)-1
+        #         split = video_splits_by_no_Di[last_idx]
+        #         if len(split) < 10:
+        #             del video_splits_by_no_Di[last_idx]
+                    
+        #     if len(video_splits_by_no_Di) < self.numDynamicImagesPerVideo:
+        #         diff = self.numDynamicImagesPerVideo - len(video_splits_by_no_Di)
+        #         last_idx = len(video_splits_by_no_Di) - 1
+        #         for i in range(diff):
+        #             video_splits_by_no_Di.append(video_splits_by_no_Di[last_idx])
+        # else:
 
         
 
         if self.numDynamicImagesPerVideo == 1:
+            video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
             if self.positionSegment == 'random':
                 segment = self.getRandomSegment(video_splits_by_no_Di, idx)
             elif self.positionSegment == 'central':
@@ -133,25 +136,47 @@ class AnomalyDataset(Dataset):
                 segment = self.getBeginSegment(frames_list, self.skipPercentage)
             video_segments = []
             video_segments.append(segment)
+        
         elif self.numDynamicImagesPerVideo > 1:
-            # print('hereeeeeeeeeeee> ', self.numDynamicImagesPerVideo)
-            for i in range(len(video_splits_by_no_Di)):
-                if i < self.numDynamicImagesPerVideo:
-                    video_segments.append(video_splits_by_no_Di[i])
-                else:
-                    break
+            if self.overlaping == 0:
+                video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, num_frames_on_video, seqLen)]
+                for i in range(len(video_splits_by_no_Di)):
+                    if i < self.numDynamicImagesPerVideo:
+                        video_segments.append(video_splits_by_no_Di[i])
+                    else:
+                        break
+            else:
+                # seqLen = self.videoSegmentLength
+                num_frames_overlapped = int(self.overlaping * seqLen)
+                # print('num_frames_overlapped: ', num_frames_overlapped, len(frames_list), self.numFrames[idx])
+                video_segments.append(frames_list[0:seqLen])
+                i = seqLen
+                end = 0
+                while i < len(frames_list):
+                    if len(video_segments) == self.numDynamicImagesPerVideo:
+                        break
+                    else:
+                        start = i - num_frames_overlapped #10 20 
+                        end = start + seqLen  #29 39
+                        i = end #29 39
+                        video_segments.append(frames_list[start:end])
                 
-        bbox_segments =  self.get_bbox_segmet(video_segments, bbox_file, idx)
-        return video_segments, seqLen, bbox_segments
+        # bbox_segments =  self.get_bbox_segmet(video_segments, bbox_file, idx)
+        if len(video_segments) < self.numDynamicImagesPerVideo:
+            padd = video_segments[len(video_segments)-1]
+            while len(video_segments) < self.numDynamicImagesPerVideo:
+                video_segments.append(padd)
+
+        return video_segments, seqLen
 
     def __getitem__(self, idx):
         vid_name = self.images[idx]
         # print(vid_name)
         label = self.labels[idx]
         dinamycImages = []
-        sequences, seqLen, bbox_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        sequences, seqLen = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         # print('SEGmentos lenght: ', len(sequences), vid_name)
-        video_raw_frames = []
+        # video_raw_frames = []
         # for seq in sequences:
         #     frames = []
         #     for frame in seq:
@@ -169,8 +194,10 @@ class AnomalyDataset(Dataset):
             
         #     imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
         #     dinamycImages.append(imgPIL)
-
+        # print(len(sequences))
         for seq in sequences:
+            # print(len(seq))
+            # print(seq)
             frames = []
             # r_frames = []
             for frame in seq:
@@ -187,7 +214,7 @@ class AnomalyDataset(Dataset):
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         if self.numDynamicImagesPerVideo == 1:
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
-        return dinamycImages, label, vid_name, bbox_segments
+        return dinamycImages, label, vid_name
 
     
 

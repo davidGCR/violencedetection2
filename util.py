@@ -168,3 +168,15 @@ def videos2ImagesFromKfols(path_videos, path_frames):
         os.makedirs(frames_path_out)
         
       video2Images2(os.path.join(nonviolence_videos_path,video), frames_path_out)
+
+
+def dataset_statistisc(path):
+  l = os.listdir(path)
+  n_frames = []
+  for video_folder in l:
+    frames_list = os.listdir(os.path.join(path,video_folder))
+    num_frames = len(frames_list)
+    n_frames.append(num_frames)
+
+  avg = np.average(np.array(n_frames))
+  return avg

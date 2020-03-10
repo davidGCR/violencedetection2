@@ -369,8 +369,6 @@ def joinBBoxes(bbox1, bbox2, saliency_regions = None):
     return bbox
 
 def countTruePositiveFalsePositive(l_infos, prediction, score, threshold):
-    tp = 0
-    fp = 0
     y_pred = []
     y_score_based = []
     for info in l_infos:
@@ -384,7 +382,7 @@ def countTruePositiveFalsePositive(l_infos, prediction, score, threshold):
         # if score >= 0.4:
 
         y_pred.append(score)
-    return tp, fp, y_pred, y_score_based
+    return y_pred, y_score_based
 
 def countTemporalGroundTruth(l_infos):
     p = 0

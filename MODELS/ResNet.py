@@ -63,7 +63,7 @@ class ViolenceModelResNet(nn.Module):
                 x = torch.unsqueeze(x, dim=1)
                 # x = x.repeat(1, self.numDiPerVideos, 1, 1, 1) ###no se porque puse esto..
                 # x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
-                print('x forward: ', x.size())
+                # print('x forward: ', x.size())
             
 
         if self.numDiPerVideos == 1:

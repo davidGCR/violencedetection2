@@ -59,7 +59,7 @@ def train_test_videos_aumented(g_path):
                 train_labels.append(1)
     return train_names, train_labels
 
-def train_test_videos(train_file, test_file, g_path):
+def train_test_videos(train_file, test_file, g_path, only_violence):
     """ load train-test split from original dataset """
     train_names = []
     train_labels = []
@@ -67,32 +67,47 @@ def train_test_videos(train_file, test_file, g_path):
     test_labels = []
     train_bbox_files = []
     test_bbox_files = []
-    classes = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
+    normal_category = 'Normal_Videos'
+    if only_violence:
+        categories = {'Normal_Videos':0, 'Arrest': 1, 'Assault': 2, 'Robbery': 4, 'Stealing': 5}    
+    else:
+        categories = {'Normal_Videos':0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
     with open(train_file, 'r') as file:
         for row in file:
-            train_names.append(os.path.join(g_path,row[:-1]))
-            train_labels.append(row[:-4])
             label = row[:-4]
-            if label != 'Normal_Videos':
+            if label in categories:
+                train_names.append(os.path.join(g_path,row[:-1]))
+                train_labels.append(label)
+            
+            if label != normal_category:
+                # if label in categories:
                 file = row[:-1] + '.txt'
                 file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
                 train_bbox_files.append(file)
+                # else:
+                #     continue
             else:
                 train_bbox_files.append(None)
 
     with open(test_file, 'r') as file:
         for row in file:
-            test_names.append(os.path.join(g_path,row[:-1]))
-            test_labels.append(row[:-4])
             label = row[:-4]
-            if label != 'Normal_Videos':
+            if label in categories:
+                test_names.append(os.path.join(g_path,row[:-1]))
+                test_labels.append(row[:-4])
+            
+            if label != normal_category:
+                # if label in categories:
                 file = row[:-1] + '.txt'
                 file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
                 test_bbox_files.append(file)
+                # else:
+                #     continue
             else:
                 test_bbox_files.append(None)
-    train_labels = [classes[label] for label in train_labels]
-    test_labels = [classes[label] for label in test_labels]
+    
+    train_labels = [categories[label] for label in train_labels]
+    test_labels = [categories[label] for label in test_labels]
     # for i in range(len(train_names)):
     #      print(train_names[i])
     NumFrames_train = [len(glob.glob1(train_names[i], "*.jpg")) for i in range(len(train_names))]
@@ -168,34 +183,43 @@ def waqas_dataset(path_videos_test, gt_tmp_file, only_abnormal = False):
 
     return videos_paths, labels, numFrames, tmp_gts
 
-def test_videos(test_file, g_path, only_abnormal):
+def test_videos(test_file, g_path, only_abnormal, only_violence):
     """ load train-test split from original dataset """
     test_names = []
     test_labels = []
     test_bbox_files = []
-    classes = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
-
+    # classes = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
+    if only_violence:
+        categories = {'Normal_Videos':0, 'Arrest': 1, 'Assault': 2, 'Robbery': 4, 'Stealing': 5}    
+    else:
+        categories = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
+        
     with open(test_file, 'r') as file:
         for row in file:
-            label = row[:-4]
-            if only_abnormal and label != 'Normal_Videos':
-                file = row[:-1] + '.txt'
-                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-                test_bbox_files.append(file)
-                test_names.append(os.path.join(g_path,row[:-1]))
-                test_labels.append(label)
-            else:
-                file = row[:-1] + '.txt'
-                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-                if label != 'Normal_Videos':
-                    test_bbox_files.append(file)
+            label = str(row[:-4])
+            if label in categories:
+                # print(label)
+                if only_abnormal:
+                    if label != 'Normal_Videos':
+                        file = row[:-1] + '.txt'
+                        file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                        test_bbox_files.append(file)
+                        test_names.append(os.path.join(g_path,row[:-1]))
+                        test_labels.append(label)
                 else:
-                    test_bbox_files.append(None)
-            # print('--> file: ',file)
-                test_names.append(os.path.join(g_path,row[:-1]))
-                test_labels.append(label)     
-    test_labels = [classes[label] for label in test_labels]
+                    file = row[:-1] + '.txt'
+                    file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                    if label != 'Normal_Videos':
+                        test_bbox_files.append(file)
+                    else:
+                        test_bbox_files.append(None)
+                # print('--> file: ',file)
+                    test_names.append(os.path.join(g_path,row[:-1]))
+                    test_labels.append(label)     
+    # test_labels = [categories[label] for label in test_labels]
     NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
+    # print(len(test_names), len(test_labels), len(NumFrames_test), len(test_bbox_files))
+    # print(test_labels)
     return test_names, test_labels, NumFrames_test, test_bbox_files
 
 

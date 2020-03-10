@@ -11,7 +11,8 @@ import constants
 
 
 class Trainer:
-    def __init__(self, model, dataloaders, criterion, optimizer, scheduler, device, num_epochs, checkpoint_path, numDynamicImage, plot_samples, train_type):
+    def __init__(self, model, dataloaders, criterion, optimizer, scheduler, device, num_epochs, checkpoint_path,
+                    numDynamicImage, plot_samples, train_type, save_model):
         self.model = model
         # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
         # self.model_name = "alexnet"
@@ -23,22 +24,53 @@ class Trainer:
         self.feature_extract = True
 
         self.input_size = 224
-        self.dataloaders = dataloaders
+        self._dataloaders = dataloaders
         self.optimizer = optimizer
         self.criterion = criterion
         # self.tb = TensorBoardColab()
         self.device = device
         self.num_epochs = num_epochs
         self.scheduler = scheduler
-        self.checkpoint_path = checkpoint_path
+        self._checkpoint_path = checkpoint_path
         self.best_model_wts = copy.deepcopy(model.state_dict())
         self.best_acc = 0.0
         self.numDynamicImages = numDynamicImage
         self.plot_samples = plot_samples
         self.train_best_acc = 0
+        self._save_model = save_model 
+
+    @property
+    def save_model(self):
+        return self._save_model
+    @save_model.setter
+    def save_model(self, value):
+        self._save_model = value
+    
+    @property
+    def checkpoint_path(self):
+        return self._checkpoint_path
+    @checkpoint_path.setter
+    def checkpoint_path(self, value):
+        self._checkpoint_path = value
+    
+    @property
+    def dataloaders(self):
+        return self._dataloaders
+    @dataloaders.setter
+    def dataloaders(self, value):
+        self._dataloaders = value
 
     def getModel(self):
         return self.model
+    
+    # def setDataloaders(self, dataloaders):
+    #     self.dataloaders = dataloaders
+    
+    # def setSaveModel(self, save_model):
+    #     self.save_model = save_model
+    
+    # def setCheckpointPath(self, checkpoint_path):
+    #     self.checkpoint_path = checkpoint_path
 
     def train_epoch(self, epoch):
         # self.scheduler.step(epoch)
@@ -49,7 +81,7 @@ class Trainer:
         padding = 5
         
         # Iterate over data.
-        for inputs, labels, video_names, bbox_segments in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
+        for inputs, labels, video_names in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
             # print('inputs, labels: ',type(inputs),inputs.size(), type(labels), labels.size())
             # print('inputs trainer: ', inputs.size())
             # print(video_names, labels)
@@ -90,11 +122,12 @@ class Trainer:
         epoch_acc = running_corrects.double() / len(self.dataloaders["train"].dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format('train', epoch_loss, epoch_acc))
-        if self.train_type == constants.OPERATION_TRAINING_FINAL:
+        # if self.train_type == constants.OPERATION_TRAINING_FINAL:
+        if self.save_model:
             if epoch_acc > self.train_best_acc:
                 self.train_best_acc = epoch_acc.item()
                 checkpoint_name = self.checkpoint_path+'.pth'
-                print('Saving FINAL model...',checkpoint_name)
+                print('Saving model...',checkpoint_name)
                 torch.save(self.model, checkpoint_name)
         # self.tb.save_value("trainLoss", "train_loss", epoch, epoch_loss)
         # self.tb.save_value("trainAcc", "train_acc", epoch, epoch_acc)
@@ -106,7 +139,7 @@ class Trainer:
         self.model.eval()
         
         # Iterate over data.
-        for inputs, labels, video_names, bbox_segments in self.dataloaders["val"]:
+        for inputs, labels, video_names in self.dataloaders["val"]:
             if self.numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             inputs = inputs.to(self.device)
@@ -131,11 +164,11 @@ class Trainer:
         epoch_acc = running_corrects.double() / len(self.dataloaders["val"].dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format("val", epoch_loss, epoch_acc))
-        if self.checkpoint_path != None and epoch_acc > self.best_acc:
-            self.best_acc = epoch_acc
-            checkpoint_name = self.checkpoint_path+'.pth'
-            print('Saving entire model...',checkpoint_name)
-            torch.save(self.model, checkpoint_name)
+        # if self.checkpoint_path != None and epoch_acc > self.best_acc:
+        #     self.best_acc = epoch_acc
+        #     checkpoint_name = self.checkpoint_path+'.pth'
+        #     print('Saving entire model...',checkpoint_name)
+        #     torch.save(self.model, checkpoint_name)
             # torch.save(self.model.state_dict(),self.checkpoint_path)
             # save_checkpoint(self.model, self.checkpoint_path)
         # self.tb.save_value("testLoss", "test_loss", epoch, epoch_loss)

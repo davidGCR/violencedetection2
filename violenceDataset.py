@@ -63,23 +63,23 @@ class ViolenceDataset(Dataset):
         seqLen = self.videoSegmentLength
         num_frames_overlapped = int(self.overlaping * seqLen)
         # print('num_frames_overlapped: ', num_frames_overlapped, len(frames_list), self.numFrames[idx])
-        video_segments.append(frames_list[0:seqLen-1])
-        i = seqLen -1#20
+        video_segments.append(frames_list[0:seqLen])
+        i = seqLen
         end = 0
-        while i<len(frames_list):
-            start = i - num_frames_overlapped + 1 #10 20 
-            end = start + seqLen-1  #29 39
-            i = end #29 39
-            if end < len(frames_list):
-                video_segments.append(frames_list[start:end])
-            elif len(video_segments) == self.numDynamicImagesPerVideo:
+        while i < len(frames_list):
+            if len(video_segments) == self.numDynamicImagesPerVideo:
                 break
-            elif len(frames_list) - start > 3:
-                end = len(frames_list)-1
+            else:
+                start = i - num_frames_overlapped #10 20 
+                end = start + seqLen  #29 39
+                i = end #29 39
                 video_segments.append(frames_list[start:end])
-                break
-            # if len(video_segments) == self.numDynamicImagesPerVideo:
-            #     break 
+                
+                # elif len(frames_list) - start > 3:
+                #     end = len(frames_list)-1
+                #     video_segments.append(frames_list[start:end])
+                #     break
+            
         return video_segments
         
     def getVideoSegments(self, vid_name, idx):
@@ -140,11 +140,13 @@ class ViolenceDataset(Dataset):
         if self.overlaping > 0:
             
             sequences = self.getVideoSegmentsOverlapped(vid_name, idx)
-            #print(len(sequences), self.numDynamicImagesPerVideo)
+            # print(len(sequences), self.numDynamicImagesPerVideo)
+            # print(sequences)
         else:
             # print('fdsgfjsdhgkjshgksdgs')
             sequences, seqLen = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         for seq in sequences:
+            # print(len(seq))
             frames = []
             # r_frames = []
             for frame in seq:

@@ -156,8 +156,9 @@ def getTrainDataLoader(train_x, train_y, train_numFrames, data_transforms, numDi
         
     return dataloader
 
-def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size,
-                    num_workers, videoSegmentLength, positionSegment, overlaping):
+def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos,
+                    train_batch_size, test_batch_size, train_num_workers,
+                   test_num_workers, videoSegmentLength, positionSegment, overlaping):
     """ Get train - test dataloaders for violence dataset or masked dataset """
     image_datasets = None
     image_datasets = {
@@ -170,8 +171,8 @@ def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFr
     
 
     dataloaders_dict = {
-        "train": torch.utils.data.DataLoader( image_datasets["train"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
-        "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True),
+        "train": torch.utils.data.DataLoader( image_datasets["train"], batch_size=train_batch_size, shuffle=True, num_workers=train_num_workers, pin_memory=True),
+        "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=test_batch_size, shuffle=True, num_workers=test_num_workers, pin_memory=True),
     }
     return dataloaders_dict
 

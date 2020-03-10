@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
 import numpy as np
+from FPS import FPSMeter
 
 class Tester:
     def __init__(self, model, dataloader, loss, device, numDiPerVideos, plot_samples=False):
@@ -15,6 +16,7 @@ class Tester:
         # self.tb = TensorBoardColab()
         self.device = device
         self.loss = loss
+        self.fpsMeter = FPSMeter()
         # self.model  = self.model.to(device)
 
     def test_model(self):
@@ -32,6 +34,7 @@ class Tester:
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             # self.optimizer.zero_grad()
+            start_time = time.time()
             with torch.set_grad_enabled(False):
                 outputs = self.model(inputs)
                 err = self.loss(outputs, labels)
@@ -42,18 +45,24 @@ class Tester:
                 scores.extend(p.cpu().numpy())
                 # predictions.extend(indices_preds.cpu().numpy())
                 predictions.extend(indices_preds.cpu().numpy())
+                torch.cuda.synchronize()
+            end_time = time.time()
+            inf_time = end_time - start_time
+            self.fpsMeter.update(inf_time)
 
         test_error = test_error/len(self.dataloader.dataset)
         predictions = np.array(predictions)
         gt_labels = np.array(gt_labels)
         # test_errors = np.array(test_errors)
-        
-        return predictions, gt_labels, test_error
+        self.fpsMeter.print_statistics()
+        return predictions, scores, gt_labels, test_error, self.fpsMeter.fps()
         # return gt_labels, predictions, scores
     
-    def predict(self, dynamic_img, num_iter):
+    def predict(self, dynamic_img):
         self.model.eval()
         dynamic_img = dynamic_img.to(self.device)
+
+        # print('dynamic_img: ', type(dynamic_img), dynamic_img.is_cuda, self.device)
 
         with torch.set_grad_enabled(False):
             # torch.cuda.synchronize()

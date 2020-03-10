@@ -11,19 +11,19 @@ cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
 
 # TRAIN-MODEL
 python3 ANOMALYCRIME/anomaly_main.py \
---checkpointPath ANOMALYCRIME/checkpoints \
---operation aumented \
---modelType resnet18 \
+--mode test \
+--modelType resnet50 \
 --joinType maxTempPool \
---featureExtract true \
---numEpochs 30 \
---ndis 1 \
---maxNumFramesOnVideo 0 \
---videoSegmentLength 0 \
+--featureExtract false \
+--numEpochs 20 \
+--learningRate 0.001 \
+--ndis 3 \
+--videoSegmentLength 40 \
 --positionSegment begin \
+--overlaping 0.5 \
 --batchSize 8 \
 --numWorkers 4 \
---shuffle true \
+--shuffle true
 # --typeTrain final \
 # --transferModel ninguno
 

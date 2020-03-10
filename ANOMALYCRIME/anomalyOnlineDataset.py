@@ -71,8 +71,12 @@ class AnomalyOnlineDataset(Dataset):
     
     def getOneBlock(self, frames_list, start, skip):
         segments_block = []
+        # start = start
+        # end = 0
         if start == 0: #first segment
             block = []
+            # if self.videoSegmentLength > 0:
+
             for i in range(start,start + self.videoBlockLength, skip):
                 # print('FFFRFRFRFRFR: ', frames_list[i])
                 block.append(frames_list[i])
@@ -92,12 +96,27 @@ class AnomalyOnlineDataset(Dataset):
         
         if self.numDynamicImgsPerBlock > 1:
             # print('Len block: ', len(block))
-            seqLen = int(len(block)/self.numDynamicImgsPerBlock)
-            segments_block = [block[x:x + seqLen] for x in range(0, len(block), seqLen)]
+            if self.overlappingSegment == 0:
+                seqLen = int(len(block)/self.numDynamicImgsPerBlock)
+                segments_block = [block[x:x + seqLen] for x in range(0, len(block), seqLen)]
+            else:
+                seqLen = self.videoSegmentLength
+                num_frames_overlapped = int(self.overlappingSegment * seqLen)
+                segments_block.append(block[0:seqLen])
+                i = seqLen
+                end = 0
+                while i < len(block):
+                    if len(segments_block) == self.numDynamicImgsPerBlock:
+                        break
+                    else:
+                        start = i - num_frames_overlapped #10 20 
+                        end = start + seqLen  #29 39
+                        i = end #29 39
+                        segments_block.append(block[start:end])
         else:
             segments_block.append(block)
         # print('block: ',block)
-        return block, idx_next_block, segments_block
+        return block, start, idx_next_block, segments_block
   
     def getTemporalGroundTruth(self, idx_video, segment):
         gt = self.temporal_gts[idx_video]
@@ -111,6 +130,54 @@ class AnomalyOnlineDataset(Dataset):
             else:
                 gt_segment.append(0)
         return gt_segment
+
+    def videoGroundTruth(self, idx_video):
+        bdx_file_path = self.bbox_files[idx_video]
+        video_gt = []
+        vid_name = self.videos[idx_video]
+        frames_list = os.listdir(vid_name)
+        frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        if bdx_file_path is not None:
+            data = [] 
+            with open(bdx_file_path, 'r') as file:
+                for row in file:
+                    data.append(row.split())
+            data = np.array(data)
+            
+            for frame in frames_list:
+                # frame = segment[i]
+                # print('frame: ', frame)
+                splits = re.split('(\d+)', frame)
+                num_frame = int(splits[1])
+                num_frame = num_frame - 1
+                
+                if num_frame != int(data[num_frame, 5]):
+                    sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
+                if num_frame < len(data):
+                    flac = int(data[num_frame,6]) # 1 if is lost: no plot the bbox
+                    xmin = int(data[num_frame, 1])
+                    ymin= int(data[num_frame, 2])
+                    xmax = int(data[num_frame, 3])
+                    ymax = int(data[num_frame, 4])
+                    # print(type(frame), type(flac), type(xmin), type(ymin))
+                    info_frame = [frame, flac, xmin, ymin, xmax, ymax, num_frame]
+                else:
+                    info_frame = [frame, -1, -1, -1, -1, -1, num_frame]
+                video_gt.append(info_frame)
+        else:
+            for frame in frames_list:
+                info_frame = [frame, -1, -1, -1, -1, -1, num_frame]
+                video_gt.append(info_frame)
+        return video_gt
+    
+    def getSegmentGt(self, video_gt, start, end):
+        
+        if start > 0:
+            start = start + int(self.videoBlockLength * self.overlappingBlock)
+        # print('----start:%d, end:%d'%(start,end))
+        gt = video_gt[start:end]
+        return gt
+
 
 
     def getSegmentInfo(self, segment, bdx_file_path):
@@ -128,10 +195,10 @@ class AnomalyOnlineDataset(Dataset):
                 num_frame = int(splits[1])
                 num_frame = num_frame - 1
                 
-                # if num_frame != int(data[num_frame, 5]):
-                #     sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
+                if num_frame != int(data[num_frame, 5]):
+                    sys.exit('Houston we have a problem: index frame does not equal to the bbox file!!!')
                 if num_frame < len(data):
-                    flac = int(data[num_frame,6]) # 1 if is occluded: no plot the bbox
+                    flac = int(data[num_frame,6]) # 1 if is lost: no plot the bbox
                     xmin = int(data[num_frame, 1])
                     ymin= int(data[num_frame, 2])
                     xmax = int(data[num_frame, 3])
@@ -150,56 +217,45 @@ class AnomalyOnlineDataset(Dataset):
         return segment_info
 
     
-    def computeIncrementalBlockDynamicImg(self, idx_video, start_current_block, increment, idx_next_block):
+    def computeIncrementalBlockDynamicImg(self, idx_video, start_current_block, num_frames_increment, max_block_len, idx_next_block, skip):
         vid_name = self.videos[idx_video]
         dinamycImages = []
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        bdx_file_path = self.bbox_files[idx_video]
         if idx_next_block < self.numFrames[idx_video]:
-            block, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block)
-            one_segment = []
-            for segment in segments_block:
-                one_segment.extend(segment)
-            
-            block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
-            # print('segments_block: ', segments_block, idx_next_block)
-            for segment in segments_block:
-                frames = []
-                for frame in segment:
-                    img_dir = str(vid_name) + "/" + frame
-                    img1 = Image.open(img_dir).convert("RGB")
-                    img = np.array(img1)
-                    frames.append(img)
-                imgPIL, img = getDynamicImage(frames)
-                imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-                dinamycImages.append(imgPIL)
-            dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-            # if self.numDynamicImgsPerBlock == 1:
-            #     dinamycImages = dinamycImages.squeeze(dim=0)
-            return dinamycImages, idx_next_block, block_boxes_info
-        else:
-            return None, None, None
+            block, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block, skip)
+            idx_next_block = idx_next_block + num_frames_increment
+            if len(block) < max_block_len and idx_next_block<len(frames_list):
+                block.append(frames_list[idx_next_block:idx_next_block+num_frames_increment])
+                # i = i + num_frames_increment  
 
     def computeBlockDynamicImg(self, idx_video, idx_next_block, skip):
         vid_name = self.videos[idx_video]
         dinamycImages = []
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        
+        video_gt = self.videoGroundTruth(idx_video)
+        # print('idx_next_block:', idx_next_block)
         if idx_next_block < self.numFrames[idx_video]:
-            block, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block,skip)
-            one_segment = []
-            for segment in segments_block:
-                one_segment.extend(segment)
+            # start = idx_next_block
+            block, start, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block,skip)
+            # print('start:%d, end:%d'%(start,idx_next_block))
             
-            if self.temporal_gts is not None:
-                block_boxes_info = self.getTemporalGroundTruth(idx_video,one_segment)
-            else:
-                bdx_file_path = self.bbox_files[idx_video]
-                block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
-            # print('segments_block: ', segments_block, idx_next_block)
+            block_gt = self.getSegmentGt(video_gt, start, idx_next_block)
+            # one_segment = [] #join segments
+            # for segment in segments_block:
+            #     one_segment.extend(segment)
+            # if self.temporal_gts is not None:
+            #     block_boxes_info = self.getTemporalGroundTruth(idx_video,one_segment)
+            # else:
+            #     bdx_file_path = self.bbox_files[idx_video]
+            #     block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
+
+            
+            # print(len(segments_block))
             for segment in segments_block:
+                # print(len(segment))
+                # print(segment)
                 frames = []
                 for i in range(len(segment)):
                     frame = segment[i]
@@ -217,7 +273,7 @@ class AnomalyOnlineDataset(Dataset):
             dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
             # if self.numDynamicImgsPerBlock == 1:
             #     dinamycImages = dinamycImages.squeeze(dim=0)
-            return dinamycImages, idx_next_block, block_boxes_info, spend_time
+            return dinamycImages, idx_next_block, block_gt, spend_time
         else:
             return None, None, None, 0
 

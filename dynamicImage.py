@@ -42,6 +42,7 @@ def getDynamicImage(frames):
 
     if seqLen < 2:
       print('No se puede crear DI con solo un frames ...', seqLen)
+      # return None, None
     
     frames = np.stack(frames, axis=0) #frames:  (30, 240, 320, 3)
     # print('frames: ', frames.shape)

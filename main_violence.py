@@ -49,42 +49,30 @@ import pandas as pd
 # import SALIENCY.saliencyTester as saliencyTester
             
 
-def trainFinal(dataset, hockey_path_violence, hockey_path_noviolence, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
-    batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment):
+def trainFinalModel(model_name, my_trainer, datasetAll, labelsAll, numFramesAll, numDiPerVideos, positionSegment,
+                overlaping,videoSegmentLength, ttransform, batch_size, num_epochs, num_workers):
     train_lost = []
     train_acc = []
-    test_lost = []
-    test_acc = []
-    datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(hockey_path_violence, hockey_path_noviolence, True)  #shuffle
-    train_idx = np.arange(len(datasetAll))
-    train_x = list(itemgetter(*train_idx)(datasetAll))
-    train_y = list(itemgetter(*train_idx)(labelsAll))
-    train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-    model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
-    model.to(device)
-    
-    #only print parameters to train
-    params_to_update = verifiParametersToTrain(model, feature_extract)
-    # Observe that all parameters are being optimized
-    optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-    # Decay LR by a factor of 0.1 every 7 epochs
-    if scheduler_type == "StepLR":
-        exp_lr_scheduler = lr_scheduler.StepLR( optimizer, step_size=7, gamma=0.1 )
-    elif scheduler_type == "OnPlateau":
-        exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, verbose=True)
+
+    datasett = ViolenceDataset(dataset=datasetAll, labels=labelsAll, numFrames=numFramesAll,
+            spatial_transform=ttransform, numDynamicImagesPerVideo=numDiPerVideos,
+         videoSegmentLength= videoSegmentLength, positionSegment = positionSegment, overlaping=overlaping )
         
-    dataloader = initializeDataset.getTrainDataLoader(train_x, train_y, train_numFrames, data_transforms,
-                                                 numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegment)
-    dataloaders_dic = {"train": dataloader}
-    tr = trainer.Trainer(model, dataloaders_dic, criterion, optimizer, exp_lr_scheduler, device, num_epochs, 'modelo_violencia_final',
-                            numDiPerVideos, False, 'trainfinal')
     
+
+    dataloader = torch.utils.data.DataLoader( datasett, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
+    dataloaders_dic = {'train': dataloader,
+                        'val': None}
+    my_trainer.dataloaders = dataloaders_dic
+    checkpointPath = checkpointPath = os.path.join(constants.PATH_VIOLENCE_CHECKPOINTS, model_name)
+    my_trainer.checkpoint_path = checkpointPath
+    my_trainer.save_model = True
    
 
     for epoch in range(1, num_epochs + 1):
         print("----- Epoch {}/{}".format(epoch, num_epochs))
         # Train and evaluate
-        epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
+        epoch_loss_train, epoch_acc_train = my_trainer.train_epoch(epoch)
         # epoch_loss_test, epoch_acc_test = tr.val_epoch(epoch)
         # exp_lr_scheduler.step(epoch_loss_test)
         train_lost.append(epoch_loss_train)
@@ -97,7 +85,7 @@ def cv_it_accuracy(predictions, gt_labels):
     acc = running_corrects / gt_labels.shape[0]
     return acc
 
-def train(datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
+def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
     batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
     dataAumentation, overlaping):
     
@@ -114,76 +102,129 @@ def train(datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkp
         # train_idx, test_idx = None, None
     # elif dataset == 'violentflows':
 
-    print("CONFIGURATION: ", "modelType:", modelType, ", numDiPerVideos:", numDiPerVideos, ", batch_size:", batch_size, ", num_epochs:",
+    print(trainMode, "--- CONFIGURATION: ", "modelType:", modelType, ", numDiPerVideos:", numDiPerVideos, ", batch_size:", batch_size, ", num_epochs:",
             num_epochs, ", feature_extract:", feature_extract, ", joinType:", joinType, ", scheduler_type: ", scheduler_type, ', dataAumentation:',
             str(dataAumentation), ', overlapping:', str(overlaping))
 
-    
-    fold = 0
-    test_cv_acc = []
-    for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
-    # for dataset_train, dataset_train_labels,dataset_test,dataset_test_labels   in k_folds_from_folders(vif_path, 5):
-        fold = fold + 1
-        print("**************** Fold:{}/{} ".format(fold, folds_number))
-        train_x, train_y, test_x, test_y = None, None, None, None
-        # print('fold: ',len(train_idx),len(test_idx))
+    if trainMode == 'validationMode':
+        fold = 0
+        test_cv_acc = []
+        test_fps = []
+        for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
+        # for dataset_train, dataset_train_labels,dataset_test,dataset_test_labels   in k_folds_from_folders(vif_path, 5):
+            fold = fold + 1
+            print("**************** Fold:{}/{} ".format(fold, folds_number))
+            train_x, train_y, test_x, test_y = None, None, None, None
+            # print('fold: ',len(train_idx),len(test_idx))
+            
+                
+            # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegmen
+            if not dataAumentation:
+                train_x = list(itemgetter(*train_idx)(datasetAll))
+                train_y = list(itemgetter(*train_idx)(labelsAll))
+                train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+                test_x = list(itemgetter(*test_idx)(datasetAll))
+                test_y = list(itemgetter(*test_idx)(labelsAll))
+                test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+                initializeDataset.print_balance(train_y, test_y)
+                dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
+                                                    data_transforms, numDiPerVideos, train_batch_size=batch_size, test_batch_size=1,
+                                                    train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment, overlaping=overlaping)
+            else:
+                train_x = []
+                train_y = []
+                test_x = []
+                test_y = []
+                # # datasetAll, labelsAll = initializeDataset.createAumentedDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
+                # datasetAll_cpy = copy.copy(datasetAll)
+                # labelsAll_cpy = copy.copy(labelsAll)
+                # print(test_idx)
+                # MODEL_NAME = 'Using-'
+                for idx in test_idx:
+                    # print(len(datasetAll), idx)
+                    dyImgs = os.listdir(datasetAll[idx])
+                    dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+                    test_example = datasetAll[idx]
+                    test_example = os.path.join(test_example,dyImgs[1])
+                    test_x.append(test_example)
+
+                    test_example_label = labelsAll[idx]
+                    # test_example_label = os.path.join(test_example_label,dyImgs[0])
+                    test_y.append(test_example_label)
+
+                for idx in train_idx:
+                    dyImgs = os.listdir(datasetAll[idx])
+                    dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+                    for j,img in enumerate(dyImgs):
+                        dyImgs[j]=os.path.join(datasetAll[idx],img)
+                        train_y.append(labelsAll[idx])
+                    train_x.extend(dyImgs)
+                
+                combined = list(zip(train_x, train_y))
+                random.shuffle(combined)
+                train_x[:], train_y[:] = zip(*combined)
+
+                combined = list(zip(test_x, test_y))
+                random.shuffle(combined)
+                test_x[:], test_y[:] = zip(*combined)
+                # df = pd.DataFrame(list(zip(*[test_x, test_y]))).add_prefix('Col')
+                # df.to_csv('testAumented.csv', index=False)
+                # df = pd.DataFrame(list(zip(*[train_x, train_y]))).add_prefix('Col')
+                # df.to_csv('trainAumented.csv', index=False)
+                
+                dataloaders_dict = initializeDataset.getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers)
+            model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
+            model.to(device)
+            params_to_update = verifiParametersToTrain(model, feature_extract)
+            # Observe that all parameters are being optimized
+            optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+            # Decay LR by a factor of 0.1 every 7 epochs
+            if scheduler_type == "StepLR":
+                exp_lr_scheduler = lr_scheduler.StepLR( optimizer, step_size=7, gamma=0.1 )
+            elif scheduler_type == "OnPlateau":
+                exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
+            MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)+'-overlaping:'+str(overlaping)
+            
+            checkpointPath = os.path.join(constants.PATH_VIOLENCE_CHECKPOINTS, MODEL_NAME)
+            tr = trainer.Trainer(model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device,
+                                num_epochs, checkpointPath, numDiPerVideos,False, 'train', save_model=False)
+
+            for epoch in range(1, num_epochs + 1):
+                print("----- Epoch {}/{}".format(epoch, num_epochs))
+                # Train and evaluate
+                epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
+                # epoch_loss_test, epoch_acc_test = tr.val_epoch(epoch)
+                exp_lr_scheduler.step(epoch_loss_train)
+                train_errors.append(epoch_loss_train)
+                train_acc.append(epoch_acc_train)
+                # test_lost.append(epoch_loss_test)
+                # test_acc.append(epoch_acc_test)
+            
+            tester = Tester(model=tr.getModel(), dataloader=dataloaders_dict['val'], loss=criterion, numDiPerVideos=numDiPerVideos, device=device)
+            predictions, gt_labels, test_error, fps = tester.test_model()
+            test_fps.append(fps)
+            acc = cv_it_accuracy(predictions,gt_labels)
+            # print('accuracy tests: ', acc)
+            test_cv_acc.append(acc)  
         
-            
-        # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegmen
-        if not dataAumentation:
-            train_x = list(itemgetter(*train_idx)(datasetAll))
-            train_y = list(itemgetter(*train_idx)(labelsAll))
-            train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-            test_x = list(itemgetter(*test_idx)(datasetAll))
-            test_y = list(itemgetter(*test_idx)(labelsAll))
-            test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-            initializeDataset.print_balance(train_y, test_y)
-            dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
-                                                data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength,
-                                                positionSegment, overlaping)
-        else:
-            train_x = []
-            train_y = []
-            test_x = []
-            test_y = []
-            # # datasetAll, labelsAll = initializeDataset.createAumentedDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
-            # datasetAll_cpy = copy.copy(datasetAll)
-            # labelsAll_cpy = copy.copy(labelsAll)
-            # print(test_idx)
-            # MODEL_NAME = 'Using-'
-            for idx in test_idx:
-                # print(len(datasetAll), idx)
-                dyImgs = os.listdir(datasetAll[idx])
-                dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-                test_example = datasetAll[idx]
-                test_example = os.path.join(test_example,dyImgs[1])
-                test_x.append(test_example)
-
-                test_example_label = labelsAll[idx]
-                # test_example_label = os.path.join(test_example_label,dyImgs[0])
-                test_y.append(test_example_label)
-
-            for idx in train_idx:
-                dyImgs = os.listdir(datasetAll[idx])
-                dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-                for j,img in enumerate(dyImgs):
-                    dyImgs[j]=os.path.join(datasetAll[idx],img)
-                    train_y.append(labelsAll[idx])
-                train_x.extend(dyImgs)
-            
-            combined = list(zip(train_x, train_y))
-            random.shuffle(combined)
-            train_x[:], train_y[:] = zip(*combined)
-
-            combined = list(zip(test_x, test_y))
-            random.shuffle(combined)
-            test_x[:], test_y[:] = zip(*combined)
-            # df = pd.DataFrame(list(zip(*[test_x, test_y]))).add_prefix('Col')
-            # df.to_csv('testAumented.csv', index=False)
-            # df = pd.DataFrame(list(zip(*[train_x, train_y]))).add_prefix('Col')
-            # df.to_csv('trainAumented.csv', index=False)
-            
-            dataloaders_dict = initializeDataset.getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers)
+        avg_acc = np.average(test_cv_acc)
+        print('Folds accuracies: ', test_cv_acc)
+        print('Avg accuracy: ', avg_acc)
+        print('Test error: ', test_error)
+        print('Folds test FPS: ', test_fps)
+        # print('Test error: ', test_error)
+        saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-gtruth.txt"), gt_labels)
+        saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-predictions.txt"), predictions)
+        saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_error.txt"), train_errors)
+        saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
+        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-test_error.txt"), test_errors)
+        # print("saving loss and acc history...")
+        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
+        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
+        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), test_lost)
+        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_acc.txt"),test_acc)
+    elif trainMode == 'finalMode':
         model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
         model.to(device)
         params_to_update = verifiParametersToTrain(model, feature_extract)
@@ -195,39 +236,17 @@ def train(datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkp
         elif scheduler_type == "OnPlateau":
             exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
         MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)+'-overlaping:'+str(overlaping)
-        tr = trainer.Trainer( model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device, num_epochs, None, numDiPerVideos,False, 'train')
-
-        for epoch in range(1, num_epochs + 1):
-            print("----- Epoch {}/{}".format(epoch, num_epochs))
-            # Train and evaluate
-            epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
-            # epoch_loss_test, epoch_acc_test = tr.val_epoch(epoch)
-            exp_lr_scheduler.step(epoch_loss_train)
-            train_errors.append(epoch_loss_train)
-            train_acc.append(epoch_acc_train)
-            # test_lost.append(epoch_loss_test)
-            # test_acc.append(epoch_acc_test)
         
-        tester = Tester(model=tr.getModel(), dataloader=dataloaders_dict['val'], loss=criterion, numDiPerVideos=numDiPerVideos, device=device)
-        predictions, gt_labels, test_error = tester.test_model()
-        acc = cv_it_accuracy(predictions,gt_labels)
-        # print('accuracy tests: ', acc)
-        test_cv_acc.append(acc)  
-       
-    avg_acc = np.average(test_cv_acc)
-    print('Folds accuracies: ', test_cv_acc)
-    print('Avg accuracy: ', avg_acc)
-    print('Test error: ', test_error)
-    saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-gtruth.txt"), gt_labels)
-    saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-predictions.txt"), predictions)
-    saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_error.txt"), train_errors)
-    saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-    # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-test_error.txt"), test_errors)
-    # print("saving loss and acc history...")
-    # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
-    # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-    # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), test_lost)
-    # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_acc.txt"),test_acc)
+        checkpointPath = os.path.join(constants.PATH_VIOLENCE_CHECKPOINTS, MODEL_NAME)
+        tr = trainer.Trainer(model, None, criterion, optimizer, exp_lr_scheduler, device,
+                            num_epochs, checkpointPath, numDiPerVideos, False, 'train', save_model=False)
+        
+        trainFinalModel(model_name=MODEL_NAME, my_trainer=tr, datasetAll=datasetAll, labelsAll=labelsAll, numFramesAll=numFramesAll,
+                        numDiPerVideos=numDiPerVideos, positionSegment=positionSegment, overlaping=overlaping,
+                        videoSegmentLength=videoSegmentLength, ttransform=data_transforms["train"], batch_size=batch_size,
+                        num_epochs=num_epochs, num_workers=num_workers)
+
+    
    
 def __main__():
 
@@ -244,12 +263,12 @@ def __main__():
     parser.add_argument("--numWorkers", type=int, default=4)
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
-    parser.add_argument("--typeTrain", type=str)
+    parser.add_argument("--trainMode", type=str)
     parser.add_argument("--overlaping", type=float)
     parser.add_argument("--dataAumentation",type=lambda x: (str(x).lower() == 'true'), default=False)
 
     args = parser.parse_args()
-    typeTrain = args.typeTrain
+    trainMode = args.trainMode
     
     path_learning_curves = constants.PATH_VIOLENCE_LEARNING_CURVES
     path_checkpoints = constants.PATH_VIOLENCE_CHECKPOINTS
@@ -264,7 +283,7 @@ def __main__():
     scheduler_type = args.schedulerType
     numDynamicImagesPerVideo = args.numDynamicImagesPerVideo
     overlaping = args.overlaping
-    print('overlaping: ', overlaping, type(overlaping))
+    # print('overlaping: ', overlaping, type(overlaping))
     
     folds_number = args.foldsNumber
     num_workers = args.numWorkers
@@ -283,22 +302,19 @@ def __main__():
     # path_results = '/media/david/datos/Violence DATA/violentflows/Results/'+dataset_source
     # gpath = '/media/david/datos/Violence DATA/violentflows/movies Frames'
     shuffle = True
-    if typeTrain == 'final':
-        trainFinal(dataset, constants.PATH_HOCKEY_FRAMES_VIOLENCE, constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment)
-    elif typeTrain == 'train':
-        if not dataAumentation:
-            datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(constants.PATH_HOCKEY_FRAMES_VIOLENCE, constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE, shuffle)  #shuffle
-            train(datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment, dataAumentation, overlaping)
-        else:
-            shuffle = True
-            datasetAll, labelsAll, _ = initializeDataset.createDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
-            # print(datasetAll[:5])
-            # print(labelsAll[:5])
-            train(datasetAll, labelsAll, None, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-                batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
-                dataAumentation, overlaping)
+    
+    if not dataAumentation:
+        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(constants.PATH_HOCKEY_FRAMES_VIOLENCE, constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE, shuffle)  #shuffle
+        train(trainMode,datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
+        batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment, dataAumentation, overlaping)
+    else:
+        shuffle = True
+        datasetAll, labelsAll, _ = initializeDataset.createDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
+        # print(datasetAll[:5])
+        # print(labelsAll[:5])
+        train(trainMode, datasetAll, labelsAll, None, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
+            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
+            dataAumentation, overlaping)
     # num_classes = 2
     # saliency_model_file = 'd'
     # input_size = (224,224)
