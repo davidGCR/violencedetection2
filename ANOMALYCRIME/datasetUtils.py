@@ -59,6 +59,17 @@ def train_test_videos_aumented(g_path):
                 train_labels.append(1)
     return train_names, train_labels
 
+def process_large_video(v_path, bdx_file_path):
+    data = [] 
+    with open(bdx_file_path, 'r') as file:
+        for row in file:
+            data.append(row.split())
+    data = np.array(data)
+    for i,row in enumerate(data):
+       num_frame = data[i, 5]
+       flac = int(data[i,6]) # 1 if is lost: no plot the bbox
+
+
 def train_test_videos(train_file, test_file, g_path, only_violence):
     """ load train-test split from original dataset """
     train_names = []
@@ -72,6 +83,7 @@ def train_test_videos(train_file, test_file, g_path, only_violence):
         categories = {'Normal_Videos':0, 'Arrest': 1, 'Assault': 2, 'Robbery': 4, 'Stealing': 5}    
     else:
         categories = {'Normal_Videos':0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
+    
     with open(train_file, 'r') as file:
         for row in file:
             label = row[:-4]
@@ -79,13 +91,12 @@ def train_test_videos(train_file, test_file, g_path, only_violence):
                 train_names.append(os.path.join(g_path,row[:-1]))
                 train_labels.append(label)
             
-            if label != normal_category:
-                # if label in categories:
-                file = row[:-1] + '.txt'
-                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-                train_bbox_files.append(file)
-                # else:
-                #     continue
+                if label != normal_category:
+                    # if label in categories:
+                    file = row[:-1] + '.txt'
+                    file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                    train_bbox_files.append(file)
+                
             else:
                 train_bbox_files.append(None)
 
