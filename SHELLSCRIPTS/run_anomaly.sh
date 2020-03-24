@@ -1,6 +1,6 @@
 # # TEST : ROC - AUC curve
-# cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
-cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection 
+cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
+# cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection 
 # python3 ANOMALYCRIME/anomaly_main.py \
 # --operation testing \
 # --ndis 3 \
@@ -11,7 +11,7 @@ cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
 
 # TRAIN-MODEL
 python3 ANOMALYCRIME/anomaly_main.py \
---mode test \
+--mode train \
 --modelType resnet50 \
 --joinType maxTempPool \
 --featureExtract false \
@@ -22,7 +22,7 @@ python3 ANOMALYCRIME/anomaly_main.py \
 --positionSegment begin \
 --overlaping 0.5 \
 --batchSize 8 \
---numWorkers 4 \
+--numWorkers 1 \
 --shuffle true
 # --typeTrain final \
 # --transferModel ninguno

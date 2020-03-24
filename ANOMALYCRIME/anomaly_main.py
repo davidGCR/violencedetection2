@@ -1,6 +1,6 @@
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 import anomalyDataset
 import os
 import re
@@ -243,7 +243,7 @@ def __main__():
     mode = args.mode
     # testModelFile = args.testModelFile
 
-    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
+    path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES
     path_learning_curves = constants.ANOMALY_PATH_LEARNING_CURVES
     path_checkpoints = constants.ANOMALY_PATH_CHECKPOINTS
     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')

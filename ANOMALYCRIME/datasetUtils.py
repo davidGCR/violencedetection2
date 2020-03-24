@@ -7,6 +7,7 @@ import pandas as pd
 import cv2
 import numpy as np
 import re
+import shutil
 
 def sorted_nicely( l ):
     """ Sorts the given iterable in the way that is expected.
@@ -65,9 +66,76 @@ def process_large_video(v_path, bdx_file_path):
         for row in file:
             data.append(row.split())
     data = np.array(data)
-    for i,row in enumerate(data):
-       num_frame = data[i, 5]
-       flac = int(data[i,6]) # 1 if is lost: no plot the bbox
+    
+    normal_intervals = []
+    start = -1
+    end = -1
+    itvl = False
+
+    frames = os.listdir(v_path)
+    frames.sort(key=lambda f: int(re.sub('\D', '', f)))
+    # frames.sort()
+    # print(frames)
+    num_frames = len(frames)
+
+    for i, row in enumerate(data):
+        num_frame = data[i, 5]
+        flac = int(data[i, 6])  # 1 if is lost: no plot the bbox
+        # print(flac, num_frame)
+        if flac == 1:
+            if not itvl:
+                start = i
+                itvl = True
+            else:
+                end = i
+        elif start>-1 and end >-1:
+            interval = [start, end]
+            normal_intervals.append(interval)
+            itvl = False
+            start = -1
+            end = -1
+        if i == int(len(data) - 1) and itvl:
+            end = num_frames-1
+            interval = [start, end]
+            normal_intervals.append(interval)
+            itvl = False
+            start = -1
+            end = -1
+    
+    violence_intervals = []
+    for idx, interval in enumerate(normal_intervals):
+        if idx + 1 < len(normal_intervals):
+            s = normal_intervals[idx][1]+1
+            # print(s)
+            e = normal_intervals[idx + 1][0]-1
+            inter = [s, e]
+            violence_intervals.append(inter)
+    
+    violence_paths = []
+    non_violence_paths = []
+    for idx,violence_interval in enumerate(violence_intervals):
+        path_violence_segment = v_path+'-Violence-'+str(idx)
+        if not os.path.exists(path_violence_segment):
+            os.makedirs(path_violence_segment)
+            i = violence_interval[0]
+            while i <= violence_interval[1]:
+                shutil.copy(os.path.join(v_path,frames[i]), path_violence_segment)
+                i += 1
+        violence_paths.append(path_violence_segment)
+        # train_labels.append(1)
+
+    for idx,normal_interval in enumerate(normal_intervals):
+        path_normal_segment = v_path+'-Normal-'+str(idx)
+        if not os.path.exists(path_normal_segment):
+            os.makedirs(path_normal_segment)
+            i = normal_interval[0]
+            while i <= normal_interval[1]:
+                shutil.copy(os.path.join(v_path,frames[i]), path_normal_segment)
+                i += 1
+        non_violence_paths.extend([path_normal_segment])
+        # train_labels.extend([0])
+
+    return violence_paths, non_violence_paths
 
 
 def train_test_videos(train_file, test_file, g_path, only_violence):
@@ -88,41 +156,51 @@ def train_test_videos(train_file, test_file, g_path, only_violence):
         for row in file:
             label = row[:-4]
             if label in categories:
-                train_names.append(os.path.join(g_path,row[:-1]))
-                train_labels.append(label)
-            
+                pth_video = os.path.join(g_path,row[:-1])
+                # train_names.append(pth_video)
+                # train_labels.append(label)
                 if label != normal_category:
                     # if label in categories:
-                    file = row[:-1] + '.txt'
-                    file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-                    train_bbox_files.append(file)
-                
-            else:
-                train_bbox_files.append(None)
+                    tmp_file = row[:-1] + '.txt'
+                    tmp_file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, tmp_file)
+                    
+                    violence_paths, non_violence_paths = process_large_video(pth_video, tmp_file)
+                    
+                    train_names.extend(violence_paths)
+                    train_labels.extend([1 for i in range(len(violence_paths))])
+                    train_bbox_files.extend([file for i in range(len(violence_paths))])
+
+                    train_names.extend(non_violence_paths)
+                    train_labels.extend([0 for i in range(len(non_violence_paths))])
+                    train_bbox_files.extend([None for i in range(len(non_violence_paths))])
+                else:
+                    train_names.append(pth_video)
+                    train_labels.append(0)
+                    train_bbox_files.append(None)
 
     with open(test_file, 'r') as file:
         for row in file:
             label = row[:-4]
             if label in categories:
                 test_names.append(os.path.join(g_path,row[:-1]))
-                test_labels.append(row[:-4])
+                # test_labels.append(row[:-4])
             
-            if label != normal_category:
-                # if label in categories:
-                file = row[:-1] + '.txt'
-                file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
-                test_bbox_files.append(file)
-                # else:
-                #     continue
-            else:
-                test_bbox_files.append(None)
+                if label != normal_category:
+                    # if label in categories:
+                    test_labels.append(1)
+                    file = row[:-1] + '.txt'
+                    file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                    test_bbox_files.append(file)
+                else:
+                    test_labels.append(0)
+                    test_bbox_files.append(None)
     
-    train_labels = [categories[label] for label in train_labels]
-    test_labels = [categories[label] for label in test_labels]
-    # for i in range(len(train_names)):
-    #      print(train_names[i])
+    # train_labels = [categories[label] for label in train_labels]
+    # test_labels = [categories[label] for label in test_labels]
+   
     NumFrames_train = [len(glob.glob1(train_names[i], "*.jpg")) for i in range(len(train_names))]
     NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
+    print(len(train_names), len(train_labels), len(NumFrames_train), len(train_bbox_files), len(test_names), len(test_labels), len(NumFrames_test), len(test_bbox_files))
     return train_names, train_labels, NumFrames_train, train_bbox_files, test_names, test_labels, NumFrames_test, test_bbox_files
 
 def only_anomaly_test_videos(test_file, g_path):
