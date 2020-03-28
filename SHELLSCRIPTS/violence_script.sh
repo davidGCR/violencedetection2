@@ -8,8 +8,8 @@ python3  main_violence.py \
 --featureExtract false \
 --dataAumentation false \
 --joinType maxTempPool \
---videoSegmentLength 20 \
---numDynamicImagesPerVideo 2 \
---trainMode finalMode \
+--videoSegmentLength 10 \
+--numDynamicImagesPerVideo 1 \
+--trainMode validationMode \
 --positionSegment begin \
 --overlaping 0.5

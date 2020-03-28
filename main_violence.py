@@ -302,9 +302,11 @@ def __main__():
     # path_results = '/media/david/datos/Violence DATA/violentflows/Results/'+dataset_source
     # gpath = '/media/david/datos/Violence DATA/violentflows/movies Frames'
     shuffle = True
+    path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
+    path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
     
     if not dataAumentation:
-        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(constants.PATH_HOCKEY_FRAMES_VIOLENCE, constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE, shuffle)  #shuffle
+        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
         train(trainMode,datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
         batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment, dataAumentation, overlaping)
     else:
