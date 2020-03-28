@@ -48,7 +48,9 @@ class Tester:
                 torch.cuda.synchronize()
             end_time = time.time()
             inf_time = end_time - start_time
-            print(preprocessing_time, type(preprocessing_time))
+            preprocessing_time = preprocessing_time.item()
+
+            # print(preprocessing_time, type(preprocessing_time))
             self.fpsMeter.update(inf_time+preprocessing_time)
 
         test_error = test_error/len(self.dataloader.dataset)

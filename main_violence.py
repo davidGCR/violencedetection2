@@ -202,7 +202,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 # test_acc.append(epoch_acc_test)
             
             tester = Tester(model=tr.getModel(), dataloader=dataloaders_dict['val'], loss=criterion, numDiPerVideos=numDiPerVideos, device=device)
-            predictions, gt_labels, test_error, fps = tester.test_model()
+            predictions, scores, gt_labels, test_error, fps = tester.test_model()
             test_fps.append(fps)
             acc = cv_it_accuracy(predictions,gt_labels)
             # print('accuracy tests: ', acc)
@@ -212,7 +212,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
         print('Folds accuracies: ', test_cv_acc)
         print('Avg accuracy: ', avg_acc)
         print('Test error: ', test_error)
-        print('Folds test FPS: ', test_fps)
+        print('Folds test FPS: ', test_fps, np.average(test_fps))
         # print('Test error: ', test_error)
         saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-gtruth.txt"), gt_labels)
         saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-predictions.txt"), predictions)
