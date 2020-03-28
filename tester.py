@@ -26,7 +26,7 @@ class Tester:
         scores = []
         test_error = 0.0
         # Iterate over data.
-        for inputs, labels, video_names, bbox_segments in tqdm(self.dataloader):
+        for inputs, labels, video_names, bbox_segments, preprocessing_time in tqdm(self.dataloader):
             if self.numDiPerVideos > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             # gt_labels.extend(labels.numpy())
@@ -48,7 +48,7 @@ class Tester:
                 torch.cuda.synchronize()
             end_time = time.time()
             inf_time = end_time - start_time
-            self.fpsMeter.update(inf_time)
+            self.fpsMeter.update(inf_time+preprocessing_time)
 
         test_error = test_error/len(self.dataloader.dataset)
         predictions = np.array(predictions)

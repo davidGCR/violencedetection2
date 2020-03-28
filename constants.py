@@ -2,11 +2,11 @@ import os
 from include import *
 # root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/'
 PATH_DATA_AUMENTATION_OUTPUT = root+'AnomalyCRIMEDATASET/UCFCrime2Local/dataAumentation'
-PATH_HOCKEY_FRAMES_VIOLENCE = root+'HockeyFights/frames/violence'
-PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + 'HockeyFights/frames/nonviolence'
+PATH_HOCKEY_FRAMES_VIOLENCE = root+'HockeyFightsDATASET/frames/violence'
+PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + 'HockeyFightsDATASET/frames/nonviolence'
 
-PATH_HOCKEY_AUMENTED_VIOLENCE = root + 'HockeyFights/dataAumentation/violence'
-PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + 'HockeyFights/dataAumentation/nonviolence'
+PATH_HOCKEY_AUMENTED_VIOLENCE = root + 'HockeyFightsDATASET/dataAumentation/violence'
+PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + 'HockeyFightsDATASET/dataAumentation/nonviolence'
 
 PATH_VIOLENTFLOWS_FRAMES = root+'violentflows/movies Frames'
 PATH_VIOLENCE_CHECKPOINTS = 'VIOLENCE_RESULTS/checkpoints'

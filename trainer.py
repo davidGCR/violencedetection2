@@ -81,7 +81,7 @@ class Trainer:
         padding = 5
         
         # Iterate over data.
-        for inputs, labels, video_names in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
+        for inputs, labels, video_names, _ in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
             # print('inputs, labels: ',type(inputs),inputs.size(), type(labels), labels.size())
             # print('inputs trainer: ', inputs.size())
             # print(video_names, labels)
@@ -139,7 +139,7 @@ class Trainer:
         self.model.eval()
         
         # Iterate over data.
-        for inputs, labels, video_names in self.dataloaders["val"]:
+        for inputs, labels, video_names, _ in self.dataloaders["val"]:
             if self.numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             inputs = inputs.to(self.device)

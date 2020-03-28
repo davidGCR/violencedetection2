@@ -145,6 +145,8 @@ class ViolenceDataset(Dataset):
         else:
             # print('fdsgfjsdhgkjshgksdgs')
             sequences, seqLen = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        
+        preprocessing_time = 0.0
         for seq in sequences:
             # print(len(seq))
             frames = []
@@ -154,8 +156,11 @@ class ViolenceDataset(Dataset):
                 img1 = Image.open(img_dir).convert("RGB")
                 img = np.array(img1)
                 frames.append(img)
+            start_time = time.time()
             imgPIL, img = getDynamicImage(frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            end_time = time.time()
+            preprocessing_time += (end_time - start_time)
             dinamycImages.append(imgPIL)
         # print('Len: ', len(dinamycImages), vid_name)
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
@@ -163,7 +168,7 @@ class ViolenceDataset(Dataset):
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
         
         
-        return dinamycImages, label, vid_name, 0 #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+        return dinamycImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
 
 class ViolenceDatasetAumented(Dataset):
