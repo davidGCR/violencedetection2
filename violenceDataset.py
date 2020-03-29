@@ -158,8 +158,9 @@ class ViolenceDataset(Dataset):
                 frames.append(img)
             start_time = time.time()
             imgPIL, img = getDynamicImage(frames)
-            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             end_time = time.time()
+            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            
             preprocessing_time += (end_time - start_time)
             dinamycImages.append(imgPIL)
         # print('Len: ', len(dinamycImages), vid_name)

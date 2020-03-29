@@ -1,7 +1,7 @@
 
 python3  main_violence.py \
 --modelType resnet50 \
---numEpochs 30 \
+--numEpochs 5 \
 --numWorkers 4 \
 --batchSize 8 \
 --foldsNumber 5 \
@@ -9,7 +9,7 @@ python3  main_violence.py \
 --dataAumentation false \
 --joinType maxTempPool \
 --videoSegmentLength 10 \
---numDynamicImagesPerVideo 1 \
+--numDynamicImagesPerVideo 6 \
 --trainMode validationMode \
 --positionSegment begin \
---overlaping 0.5
+--overlaping 0.4
