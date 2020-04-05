@@ -14,3 +14,4 @@ python3  main_violence.py \
 --positionSegment begin \
 --overlaping 0 \
 --frameSkip 1
+
