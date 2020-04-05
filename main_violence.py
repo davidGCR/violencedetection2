@@ -87,7 +87,7 @@ def cv_it_accuracy(predictions, gt_labels):
 
 def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
     batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
-    dataAumentation, overlaping):
+    dataAumentation, overlaping, frame_skip):
     
     # for numDiPerVideos in ndis: #for experiments
     train_errors = []
@@ -130,7 +130,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
                                                     data_transforms, numDiPerVideos, train_batch_size=batch_size, test_batch_size=1,
                                                     train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
-                                                    positionSegment=positionSegment, overlaping=overlaping)
+                                                    positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
             else:
                 train_x = []
                 train_y = []
@@ -246,7 +246,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                         videoSegmentLength=videoSegmentLength, ttransform=data_transforms["train"], batch_size=batch_size,
                         num_epochs=num_epochs, num_workers=num_workers)
 
-    
+
    
 def __main__():
 
@@ -265,6 +265,7 @@ def __main__():
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--trainMode", type=str)
     parser.add_argument("--overlaping", type=float)
+    parser.add_argument("--frameSkip", type=int, default=0)
     parser.add_argument("--dataAumentation",type=lambda x: (str(x).lower() == 'true'), default=False)
 
     args = parser.parse_args()
@@ -276,6 +277,7 @@ def __main__():
     modelType = args.modelType
     batch_size = args.batchSize
     num_epochs = args.numEpochs
+    frameSkip = args.frameSkip
 
     
     feature_extract = args.featureExtract
@@ -308,7 +310,8 @@ def __main__():
     if not dataAumentation:
         datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
         train(trainMode,datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-        batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number,videoSegmentLength, positionSegment, dataAumentation, overlaping)
+        batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment, dataAumentation,
+        overlaping, frameSkip)
     else:
         shuffle = True
         datasetAll, labelsAll, _ = initializeDataset.createDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
@@ -316,7 +319,7 @@ def __main__():
         # print(labelsAll[:5])
         train(trainMode, datasetAll, labelsAll, None, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
             batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
-            dataAumentation, overlaping)
+            dataAumentation, overlaping, frameSkip)
     # num_classes = 2
     # saliency_model_file = 'd'
     # input_size = (224,224)

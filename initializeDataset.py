@@ -158,15 +158,15 @@ def getTrainDataLoader(train_x, train_y, train_numFrames, data_transforms, numDi
 
 def getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos,
                     train_batch_size, test_batch_size, train_num_workers,
-                   test_num_workers, videoSegmentLength, positionSegment, overlaping):
+                   test_num_workers, videoSegmentLength, positionSegment, overlaping, frame_skip):
     """ Get train - test dataloaders for violence dataset or masked dataset """
     image_datasets = None
     image_datasets = {
         #dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo, videoSegmentLength, positionSegment
         "train": ViolenceDataset(dataset=train_x, labels=train_y, numFrames=train_numFrames, spatial_transform=data_transforms["train"], numDynamicImagesPerVideo=numDiPerVideos,
-         videoSegmentLength= videoSegmentLength, positionSegment = positionSegment, overlaping=overlaping ),
+         videoSegmentLength= videoSegmentLength, positionSegment = positionSegment, overlaping=overlaping, frame_skip=frame_skip),
         "val": ViolenceDataset(dataset=test_x, labels=test_y, numFrames=test_numFrames , spatial_transform=data_transforms["val"], numDynamicImagesPerVideo=numDiPerVideos,
-        videoSegmentLength= videoSegmentLength, positionSegment = positionSegment,overlaping=overlaping )
+        videoSegmentLength= videoSegmentLength, positionSegment = positionSegment,overlaping=overlaping, frame_skip=frame_skip)
     }
     
 

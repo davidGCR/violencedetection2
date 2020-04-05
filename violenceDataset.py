@@ -12,7 +12,7 @@ import random
 
 class ViolenceDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo,
-                                videoSegmentLength, positionSegment, overlaping):
+                                videoSegmentLength, positionSegment, overlaping, frame_skip):
         self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
@@ -21,6 +21,7 @@ class ViolenceDataset(Dataset):
         self.videoSegmentLength = videoSegmentLength
         self.positionSegment = positionSegment
         self.overlaping = overlaping
+        self.frame_skip = frame_skip
 
     def __len__(self):
         return len(self.videos)
@@ -61,43 +62,38 @@ class ViolenceDataset(Dataset):
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         video_segments = []
         seqLen = self.videoSegmentLength
-        num_frames_overlapped = int(self.overlaping * seqLen)
-        # print('num_frames_overlapped: ', num_frames_overlapped, len(frames_list), self.numFrames[idx])
-        video_segments.append(frames_list[0:seqLen])
-        i = seqLen
-        end = 0
-        while i < len(frames_list):
-            if len(video_segments) == self.numDynamicImagesPerVideo:
-                break
-            else:
-                start = i - num_frames_overlapped #10 20 
-                end = start + seqLen  #29 39
-                i = end #29 39
-                video_segments.append(frames_list[start:end])
-                
-                # elif len(frames_list) - start > 3:
-                #     end = len(frames_list)-1
-                #     video_segments.append(frames_list[start:end])
-                #     break
-            
+        o = int(self.overlaping * seqLen)
+        indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
+        indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen-o)]
+        
+        for indices_segment in indices_segments:
+            video_segments.append(frames_list[indices_segment])
+
+        # video_segments.append(indices[0:seqLen])
+        # i = seqLen
+        # end = 0
+        # while i < len(indices):
+        #     if len(video_segments) == self.numDynamicImagesPerVideo:
+        #         break
+        #     else:
+        #         start = i - num_frames_overlapped #10 20 
+        #         end = start + seqLen  #29 39
+        #         i = end #29 39
+        #         video_segments.append(indices[start:end])
+               
         return video_segments
         
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         video_segments = []
-        seqLen = 0 #number of frames for each segment
-        
-        # if self.numFrames[idx] <= self.videoSegmentLength:
-        #     seqLen = self.numFrames[idx]
-        #     # print('Short video: ', vid_name, self.numFrames[idx], 'seqLen:', seqLen)
-        # else:
-        #     seqLen = self.videoSegmentLength
-        # num_frames_on_video = self.numFrames[idx]
-        # print('range: ', 'vid name: ', vid_name,seqLen,'numFrames: ', self.numFrames[idx], 'segmentLenght: ', self.videoSegmentLength)
-        # seqLen = int(self.numFrames[idx]/self.numDynamicImagesPerVideo)
         seqLen = self.videoSegmentLength
-        video_splits_by_no_Di = [frames_list[x:x + seqLen] for x in range(0, self.numFrames[idx], seqLen)]
+        indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
+        
+        video_splits_by_no_Di = []
+        indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen)]
+        for indices_segment in indices_segments:
+            video_splits_by_no_Di.append(frames_list[indices_segment])
 
         if len(video_splits_by_no_Di) > 1:
             last_idx = len(video_splits_by_no_Di)-1
@@ -105,11 +101,6 @@ class ViolenceDataset(Dataset):
             if len(split) < 10:
                 del video_splits_by_no_Di[last_idx]
                 
-        # if len(video_splits_by_no_Di) < self.numDynamicImagesPerVideo:
-        #     diff = self.numDynamicImagesPerVideo - len(video_splits_by_no_Di)
-        #     last_idx = len(video_splits_by_no_Di) - 1
-        #     for i in range(diff):
-        #         video_splits_by_no_Di.append(video_splits_by_no_Di[last_idx])
 
         if self.numDynamicImagesPerVideo == 1:
             if self.positionSegment == 'random':
@@ -129,7 +120,7 @@ class ViolenceDataset(Dataset):
                 else:
                     break
                 
-        return video_segments, seqLen
+        return video_segments
 
     def __getitem__(self, idx):
         vid_name = self.videos[idx]
@@ -144,7 +135,7 @@ class ViolenceDataset(Dataset):
             # print(sequences)
         else:
             # print('fdsgfjsdhgkjshgksdgs')
-            sequences, seqLen = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+            sequences = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         
         preprocessing_time = 0.0
         for seq in sequences:
