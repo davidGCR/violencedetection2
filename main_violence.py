@@ -85,6 +85,16 @@ def cv_it_accuracy(predictions, gt_labels):
     acc = running_corrects / gt_labels.shape[0]
     return acc
 
+def modelSelection(datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
+    batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
+    dataAumentation, overlaping, frame_skip):
+    dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
+                                                    data_transforms, numDiPerVideos, train_batch_size=batch_size, test_batch_size=1,
+                                                    train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
+
+
+
 def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
     batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
     dataAumentation, overlaping, frame_skip):
