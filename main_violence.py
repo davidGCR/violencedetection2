@@ -114,7 +114,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
 
     print(trainMode, "--- CONFIGURATION: ", "modelType:", modelType, ", numDiPerVideos:", numDiPerVideos, ", batch_size:", batch_size, ", num_epochs:",
             num_epochs, ", feature_extract:", feature_extract, ", joinType:", joinType, ", scheduler_type: ", scheduler_type, ', dataAumentation:',
-            str(dataAumentation), ', overlapping:', str(overlaping))
+            str(dataAumentation), ', overlapping:', str(overlaping), 'frame_skip: ',str(frame_skip))
 
     if trainMode == 'validationMode':
         fold = 0
@@ -194,8 +194,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 exp_lr_scheduler = lr_scheduler.StepLR( optimizer, step_size=7, gamma=0.1 )
             elif scheduler_type == "OnPlateau":
                 exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
-            MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)+'-overlaping:'+str(overlaping)
-            
+            MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)+'-overlaping:'+str(overlaping)+'-skipFrame:'+str(frame_skip)
             checkpointPath = os.path.join(constants.PATH_VIOLENCE_CHECKPOINTS, MODEL_NAME)
             tr = trainer.Trainer(model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device,
                                 num_epochs, checkpointPath, numDiPerVideos,False, 'train', save_model=False)
