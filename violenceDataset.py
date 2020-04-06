@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import numpy as np
 import os
 import cv2
@@ -143,7 +144,7 @@ class ViolenceDataset(Dataset):
             # print('fdsgfjsdhgkjshgksdgs')
             video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         
-        # print(video_segments)
+        # print(len(video_segments), len(video_segments[0]), video_segments)
         
         preprocessing_time = 0.0
         for seq in video_segments:
