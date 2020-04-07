@@ -216,7 +216,9 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
             predictions, scores, gt_labels, test_error, preprocess_times, inference_times = tester.test_model()
             pairs = {'pp_time': preprocess_times, 'inf_time': inference_times}
             df = pd.DataFrame.from_dict(pairs)
-            if not os.path.exists(MODEL_NAME):
+            if not os.path.exists(constants.PATH_TIME_RESULTS):
+                os.makedirs(constants.PATH_TIME_RESULTS)
+            if not os.path.exists(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME)):
                 os.makedirs(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
             df.to_csv(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME, 'fold-'+str(fold)+'.csv'))
             
