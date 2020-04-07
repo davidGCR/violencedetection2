@@ -151,202 +151,6 @@ def getPersonDetectorModel(detector_type, device):
     return person_model, classes
 
 
-def offline(dataloader, saliency_tester, type_person_detector, h, w, plot):
-    person_model, classes = getPersonDetectorModel(type_person_detector)
-    data_rows = []
-    for i, data in enumerate(dataloader, 0):
-        print("-" * 150)
-        #di_images = [1,ndis,3,224,224]
-        dis_images, labels, video_name, bbox_segments = data
-        
-        # - dis_images:  <class 'torch.Tensor'> torch.Size([1, 3, 224, 224])
-        # - video_name:  <class 'tuple'>
-        # - labels:  <class 'torch.Tensor'> torch.Size([1])
-        # - bbox_segments:  <class 'list'> [[('frame645.jpg',), tensor([0]), tensor([72]), tensor([67]), tensor([133]), tensor([148])], ...,[]
-
-        bbox_segments = np.array(bbox_segments)
-        # dis_images = dis_images / 2 + 0.5 
-        ttttt = dis_images.numpy()[0].transpose(1, 2, 0)
-        plt.imshow(ttttt)
-        plt.title('Input for Classifier')
-        plt.show()
-        #bbox_segments:  1 30 [('frame765.jpg',) tensor([0]) tensor([69]) tensor([80]) tensor([142]) tensor([152])]
-
-        # print('bbox_segments: ', len(bbox_segments), len(bbox_segments[0]), bbox_segments[0][0])
-        #video_raw_frames = np.array(video_raw_frames)
-        #print('video_raw_frames: ', type(video_raw_frames[0][0]), len(video_raw_frames[0]), video_raw_frames[0][0].size())#[[[1, 240, 320, 3], [1, 240, 320, 3].[1, 240, 320, 3], ...]]
-        ######################## dynamic images
-        l_source_frames = []
-        l_di_images = [] # to plot
-        dis_images = dis_images.detach().cpu()  # torch.Size([1, 3, 224, 224])
-        
-        
-        # dis_images = torch.squeeze(dis_images, 0) ## to num dynamic images > 1 and minibatch == 1
-        for di_image in dis_images:
-            # di_image = di_image / 2 + 0.5 
-            # di_image = resize2raw_transform(di_image)
-            di_image = di_image.numpy().transpose(1, 2, 0)
-            l_di_images.append(di_image)
-            # print('di_image: ', di_image.shape)
-
-        ######################## mask
-        
-        masks = saliency_tester.compute_mask(dis_images, labels)  #[1, 1, 224, 224]
-        
-        mascara = masks.detach().cpu()#(1, 1, 224, 224)
-        mascara = torch.squeeze(mascara,0)#(1, 224, 224)
-        mascara = saliency_tester.min_max_normalize_tensor(mascara) #to 0-1
-        mascara = mascara.numpy().transpose(1, 2, 0)  
-        mascara = np.concatenate((mascara,) * 3, axis=-1)
-
-        ##resize 
-        mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
-        
-        plt.imshow(mascara)
-        plt.title('MASCARA')
-        plt.show()
-
-        mascara_dn = np.uint8(255*mascara)
-        mascara_dn = cv2.fastNlMeansDenoisingColored(mascara_dn, None, 10, 10, 7, 21)
-        # print('mascara :', mascara.shape)
-
-        plt.imshow(mascara_dn)
-        plt.title('MASCARA denoised')
-        plt.show()
-
-        
-        masks = torch.from_numpy(mascara_dn).float()  #torch.Size([224, 224, 3])
-        masks = masks.permute(2, 0, 1)  
-        masks = torch.unsqueeze(masks,dim=0) #masks : torch.Size([1, 3, 240, 320]
-        
-        # unsqueeze(0)
-        # masks = torch.squeeze(masks, 0)  #tensor [ndis,1,224,224]
-        # masks = masks.detach().cpu()
-        masks = saliency_tester.min_max_normalize_tensor(masks) #to 0-1
-        source_frames = masks
-
-        video_prepoc_saliencies = []
-        # video_prepoc_saliencies2 = []
-        # l_imgs_processing = []
-
-        #print('raw frames: ', video_raw_frames.size()) #torch.Size([1, 1, 30, 3, 240, 320])
-        for idx_dyn_img, source_frame in enumerate(source_frames):  #get score from dyanmic regions
-            # source_frame = resize2raw_transform(source_frame)
-            #source_frame = tensor2numpy(source_frame)
-            
-            source_frame = source_frame.numpy().transpose(1,2,0)
-            print('source frane: ', source_frame.shape)
-            saliency_bboxes, preprocesing_reults = localization_utils.computeBoundingBoxFromMask(source_frame)  #only one by segment
-            saliency_bboxes = localization_utils.removeInsideSmallAreas(saliency_bboxes)
-            # saliency_bboxes.append(localization_utils.randomBBox(240, 320))
-            # saliency_bboxes.append(localization_utils.randomBBox(240, 320))
-            # saliency_bboxes.append(localization_utils.randomBBox(240,320))
-            # scoring.getScoresFromRegions(video_name[0], bbox_segments, saliency_bboxes,classifier, transforms_dataset['test'])
-
-            # print('saliency_bboxes: ', type(saliency_bboxes),len(saliency_bboxes),saliency_bboxes[0])
-            video_prepoc_saliencies.append({
-                'saliency bboxes': saliency_bboxes,
-                'preprocesing': preprocesing_reults
-            })            
-        
-        segment_info = []
-        for bbox_segment in bbox_segments:
-            # print('bbox_segment: ',bbox_segment)
-            #read frames of segment
-            frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], bbox_segment, 'all')
-            segment_info.append({
-                'frames_names':frames_names,
-                'real_frames':real_frames,
-                'real_bboxes': real_bboxes})
-          
-            # img_test = tt(real_frames[0])
-            # img_test = torch.unsqueeze(img_test,dim=0)
-    
-        for index, segment_real_info in enumerate(segment_info): #di by di
-            #person detection
-            persons_in_segment = []
-            anomalous_regions = []  # to plot
-            persons_in_frame = []
-            persons_segment_filtered = []  #only to vizualice
-            print('Real frames shot: ', len(segment_real_info['real_frames']))
-            for idx, frame in enumerate(segment_real_info['real_frames']):
-                if type_person_detector == constants.YOLO:
-                    img_size = 416
-                    conf_thres = 0.8
-                    nms_thres = 0.4
-                    persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres, nms_thres, classes, frame)
-                    # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
-                elif type_person_detector == constants.MASKRCNN:
-                    mask_rcnn_threshold = 0.4
-                    persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
-                # print('num Persons in frame: ', len(persons_in_frame))
-                persons_in_segment.append(persons_in_frame)
-        
-            #refinement in segment
-            for i,persons_in_frame in enumerate(persons_in_segment):
-                persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, 20)
-                persons_segment_filtered.append(only_joined_regions)
-                # print('persons_in_frame filter: ', len(persons_filtered))
-                anomalous_regions_in_frame = localization_utils.findAnomalyRegionsOnFrame(persons_filtered, video_prepoc_saliencies[index]['saliency bboxes'], 0.3)
-                # anomalous_regions_in_frame = sorted(anomalous_regions_in_frame, key=lambda x: x.iou, reverse=True)
-                
-                anomalous_regions.extend(anomalous_regions_in_frame)
-                # print('--------------- anomalous_regions: ', len(anomalous_regions))
-                anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
-            ######################################              
-            segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
-            # l = [segmentBox]
-            # print('=========== Ground Truth Score =============')
-            # scoring.getScoresFromRegions(video_name[0], bbox_segments, l, classifier, transforms_dataset['test'])
-           
-            # for b in segment_real_info['real_bboxes']:
-            #     b.score = l[0].score
-            
-            ######################################
-            if len(anomalous_regions) == 0:
-                # print('No anomalous regions found...')
-                iou = localization_utils.IOU(segmentBox,None)
-            else:
-                # segmentBox = localization_utils.getSegmentBBox(segment_real_info['real_bboxes'])
-                iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
-            row = [frames_names[0], iou]
-            data_rows.append(row)
-        
-            if plot:
-                font_size = 9
-                subplot_r = 2
-                subplot_c = 5
-                img_source = source_frames[0].numpy().transpose(1, 2, 0)
-                # img_source = l_source_frames[index]
-
-                # di_image = dis_images.numpy()[0].transpose(1, 2, 0)
-                di_image = ttttt
-                # di_image = di_image / 2 + 0.5
-
-                # preprocesing_reults = video_prepoc_saliencies[index]['preprocesing']
-                preprocesing_reults = np.empty( (subplot_r,subplot_c), dtype=tuple)
-                preprocesing_reults[0,0] = (img_source,'image source')
-                preprocesing_reults[0,1]=(video_prepoc_saliencies[index]['preprocesing'][0], 'thresholding')
-                preprocesing_reults[0,2]=(video_prepoc_saliencies[index]['preprocesing'][1], 'morpho')
-                preprocesing_reults[0,3]=(video_prepoc_saliencies[index]['preprocesing'][2], 'contours')
-                preprocesing_reults[0,4]=(video_prepoc_saliencies[index]['preprocesing'][3], 'bboxes')
-
-                real_frames = segment_info[index]['real_frames']
-                real_bboxes = segment_info[index]['real_bboxes']
-                
-                saliency_bboxes = video_prepoc_saliencies[index]['saliency bboxes']
-                myplot(subplot_r, subplot_c, font_size, preprocesing_reults, di_image, real_frames, real_bboxes, saliency_bboxes, persons_in_segment, persons_segment_filtered, anomalous_regions)
-                
-    
-    # ############# MAP #################
-    ns_fpr, ns_tpr, _ = roc_curve(y_true, y_)
-    ns_auc = roc_auc_score(testy, ns_probs)
-    # lr_auc = roc_auc_score(testy, lr_probs)
-    # print('data rows: ', len(data_rows))
-    # df = pd.DataFrame(data_rows, columns=['path', 'iou'])
-    # df['tp/fp'] = df['iou'].apply(lambda x: 'TP' if x >= 0.5 else 'FP')
-    # localization_utils.mAP(df)
-
 def plotOpencv(video_name, no_segment, prediction, images,gt_bboxes, persons_in_segment, bbox_predictions, dynamic_image, mascara, preprocess, saliency_bboxes, sep, delay):
     red = (0, 0, 255)
     green = (0, 255, 0)
@@ -655,7 +459,7 @@ def temporalTest(anomalyDataset, model_name, config, class_tester, saliency_test
     # 
     # print('Frames processed: ', len(y_truth), len(y_pred))
     # 
-def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay, device):
+def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay, device):
     person_model, classes = getPersonDetectorModel(type_person_detector, device)
     # person_model = person_model.to(device)
     # print('model cuda: ', next(person_model.parameters()).is_cuda)
@@ -675,6 +479,8 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
     y_pred = []
     num_iter = 1
     fpsMeter = FPSMeter()
+    fpsMeterMask = FPSMeter()
+    fpsMeterRefinement = FPSMeter()
 
     for idx_video, data in enumerate(anomalyDataset):
         indx_flac = idx_video
@@ -700,8 +506,8 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
         video_name = [video_name]
         label = torch.tensor(label)
 
-        #################### BLOCK ####################
-        # block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
+        ################### BLOCK ####################
+        block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
        
         # prediction, score = class_tester.predict(block_dinamyc_images)
         # # print('Score: ', score)
@@ -713,18 +519,12 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
         # num_neg_frame += n
         # total_fp += fp
         # total_tp += tp
-        dis_images, segment_info, idx_next_segment, spend_time_dyImg = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
+        # dis_images, segment_info, idx_next_segment, spend_time_dyImg = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
         
         # tp, fp, y_block_pred, y_score_based = localization_utils.countTruePositiveFalsePositive(segment_info, prediction, score, threshold=0)
-        # fpsMeter.update(spend_time_dyImg)
-        inference_start_time = time.time()
-        prediction, score = class_tester.predict(torch.unsqueeze(dis_images, dim=0), num_iter)
-        # torch.cuda.synchronize()
-        inference_end_time = time.time()
-        # inference_time = inference_end_time - inference_start_time
-        # total_time = spend_time_dyImg + inference_time
-        # print('Time in seconds: ', total_time)
-        # fpsMeter.update(inference_time)
+        
+        prediction, score = class_tester.predict(torch.unsqueeze(block_dinamyc_images, dim=0), num_iter)
+        
         num_segment = 0
         while (dis_images is not None): #dis_images : torch.Size([3, 224, 224])
             num_segment += 1            
@@ -748,14 +548,14 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             
             ########################### LOCALIZATION ##################################################3
             ######################## mask
-            mask_start_time = time.time()
-            masks = saliency_tester.compute_mask(dis_images, label)  #[1, 1, 224, 224]
-            if device == 'cuda:0':
-                torch.cuda.synchronize()
-            mask_end_time = time.time()
-            mask_time = mask_end_time - mask_start_time
+            # mask_start_time = time.time()
+            masks, mask_time = saliency_tester.compute_mask(dis_images, label)  #[1, 1, 224, 224]
+            # if device == 'cuda:0':
+            #     torch.cuda.synchronize()
+            # mask_end_time = time.time()
+            # mask_time = mask_end_time - mask_start_time
 
-            fpsMeter.update(mask_time)
+            fpsMeterMask.update(mask_time)
             
             mascara = masks.detach().cpu()#(1, 1, 224, 224)
             mascara = torch.squeeze(mascara,0)#(1, 224, 224)
@@ -779,26 +579,25 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             #presentar errores
 
             ################################################## REFINEMENT ################################################################
-            track_start_time = time.time()         
-            if bbox_last is not None:
-                bboxes_with_high_core = []
-                for bbox in saliency_bboxes:
-                    pred_distance = localization_utils.distance(bbox.center, bbox_last.center)
-                    if pred_distance <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
-                        bbox.score = pred_distance
-                        bboxes_with_high_core.append(bbox)
-                if len(bboxes_with_high_core) > 0:
-                    bboxes_with_high_core.sort(key=lambda x: x.score)
-                    saliency_bboxes = bboxes_with_high_core
-                else:
-                    # print('FFFFail in close lastBBox and saliency bboxes...')
-                    saliency_bboxes = [bbox_last]
+            # track_start_time = time.time() # Tracking....
+            # if bbox_last is not None:
+            #     bboxes_with_high_core = []
+            #     for bbox in saliency_bboxes:
+            #         pred_distance = localization_utils.distance(bbox.center, bbox_last.center)
+            #         if pred_distance <= distance_th or bbox.percentajeArea(localization_utils.intersetionArea(bbox,bbox_last)) >= thres_intersec_lastbbox_current:
+            #             bbox.score = pred_distance
+            #             bboxes_with_high_core.append(bbox)
+            #     if len(bboxes_with_high_core) > 0:
+            #         bboxes_with_high_core.sort(key=lambda x: x.score)
+            #         saliency_bboxes = bboxes_with_high_core
+            #     else:
+            #         saliency_bboxes = [bbox_last]
 
-            if len(saliency_bboxes) == 0:
-                saliency_bboxes = [BoundingBox(Point(0,0),Point(w,h))]
+            # if len(saliency_bboxes) == 0:
+            #     saliency_bboxes = [BoundingBox(Point(0,0),Point(w,h))]
             
-            track_end_time = time.time()
-            track_time = track_end_time - track_start_time
+            # track_end_time = time.time()
+            # track_time = track_end_time - track_start_time
             
             frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
             persons_in_segment = []
@@ -906,7 +705,8 @@ def online(anomalyDataset, class_tester, saliency_tester, type_person_detector, 
             # #     # dynamic_img = torch.unsqueeze(dis_images, dim=0)
             # #     # print('block_dinamyc_images: ', block_dinamyc_images.size())
             # #     prediction, score = class_tester.predict(block_dinamyc_images)
-            # #     tp, fp, y_block_pre, y_score_based = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score, threshold=0)
+            # #     tp, fp, y_block_pre, y_score_based = localization_utils.c
+            # claeountTruePositiveFalsePositive(block_boxes_info, prediction, score, threshold=0)
             # #     p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
             # #     num_pos_frame += p
             # #     num_neg_frame += n

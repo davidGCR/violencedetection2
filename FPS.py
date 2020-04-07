@@ -18,7 +18,7 @@ class FPSMeter():
         self.frame_count = 0
 
     def update(self, seconds):
-        self.milliseconds += seconds * 1000
+        self.milliseconds += seconds * 1000 #convert seconds to milisecond
         self.frame_count += 1
 
         self.frame_per_second = self.frame_count / (self.milliseconds / 1000.0)

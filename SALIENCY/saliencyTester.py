@@ -17,6 +17,7 @@ import constants
 import torchvision.transforms as transforms
 import cv2
 import LOCALIZATION.tracker as tracker
+import time
 
 class SaliencyTester():
     def __init__(self,saliency_model_file, num_classes, dataloader, datasetAll, input_size, saliency_config, numDiPerVideos, threshold):
@@ -65,8 +66,12 @@ class SaliencyTester():
         labels = labels.to(self.device)
         di_images = di_images.to(self.device)
         di_images, labels = Variable(di_images), Variable(labels)
+        start_t = time.time()
         masks, _ = self.net(di_images, labels)
-        return masks
+        torch.cuda.synchronize()
+        end_t = time.time()
+        mask_time = end_t - start_t
+        return masks, mask_time
 
 
     def thresholding_cv2(self, x, rgb=True):
