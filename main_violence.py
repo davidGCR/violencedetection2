@@ -45,6 +45,8 @@ from transforms import *
 import initializeDataset
 import constants
 import pandas as pd
+
+from FPS import FPSMeter
 # import LOCALIZATION.localization_utils as localization_utils
 # import SALIENCY.saliencyTester as saliencyTester
             
@@ -119,7 +121,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
     if trainMode == 'validationMode':
         fold = 0
         test_cv_acc = []
-        test_fps = []
+        
         for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
         # for dataset_train, dataset_train_labels,dataset_test,dataset_test_labels   in k_folds_from_folders(vif_path, 5):
             fold = fold + 1
@@ -186,7 +188,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 dataloaders_dict = initializeDataset.getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers)
             model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
             model.to(device)
-            params_to_update = verifiParametersToTrain(model, feature_extract)
+            # params_to_update = verifiParametersToTrain(model, feature_extract)
             # Observe that all parameters are being optimized
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
             # Decay LR by a factor of 0.1 every 7 epochs
@@ -209,30 +211,34 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 train_acc.append(epoch_acc_train)
                 # test_lost.append(epoch_loss_test)
                 # test_acc.append(epoch_acc_test)
-            
+            ########## TESTING ##########
             tester = Tester(model=tr.getModel(), dataloader=dataloaders_dict['val'], loss=criterion, numDiPerVideos=numDiPerVideos, device=device)
-            predictions, scores, gt_labels, test_error, fps = tester.test_model()
-            test_fps.append(fps)
+            predictions, scores, gt_labels, test_error, preprocess_times, inference_times = tester.test_model()
+            pairs = {'pp_time': preprocess_times, 'inf_time': inference_times}
+            df = pd.DataFrame.from_dict(pairs)
+            if not os.path.exists(MODEL_NAME):
+                os.makedirs(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
+            df.to_csv(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME, 'fold-'+str(fold)+'.csv'))
+            
+
             acc = cv_it_accuracy(predictions,gt_labels)
             # print('accuracy tests: ', acc)
-            test_cv_acc.append(acc)  
+            test_cv_acc.append(acc)
+            timeCost(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
+            
         
         avg_acc = np.average(test_cv_acc)
-        print('Folds accuracies: ', test_cv_acc)
-        print('Avg accuracy: ', avg_acc)
-        print('Test error: ', test_error)
-        print('Folds test FPS: ', test_fps, np.average(test_fps))
+        print('K-Folds accuracies: ', test_cv_acc)
+        print('K-folds Avg accuracy: ', avg_acc)
         # print('Test error: ', test_error)
-        saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-gtruth.txt"), gt_labels)
-        saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-predictions.txt"), predictions)
-        saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_error.txt"), train_errors)
-        saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-test_error.txt"), test_errors)
-        # print("saving loss and acc history...")
-        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
-        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), test_lost)
-        # saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_acc.txt"),test_acc)
+        # print('Folds test FPS: ', test_fps, np.average(test_fps))
+        # print('Test error: ', test_error)
+
+        # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-gtruth.txt"), gt_labels)
+        # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-predictions.txt"), predictions)
+        # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_error.txt"), train_errors)
+        # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_acc.txt"), train_acc)
+        
     elif trainMode == 'finalMode':
         model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
         model.to(device)
@@ -255,6 +261,19 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                         videoSegmentLength=videoSegmentLength, ttransform=data_transforms["train"], batch_size=batch_size,
                         num_epochs=num_epochs, num_workers=num_workers)
 
+def timeCost(path):
+    folds_times = os.listdir(path)
+    folds_times.sort()
+    ppTimer = FPSMeter()
+    infTimer = FPSMeter()
+    for i, fold in enumerate(folds_times):
+        data = pd.read_csv(os.path.join(path, fold))
+        for index, row in data.iterrows():
+            ppTimer.update(row['pp_time'])
+            infTimer.update(row['inf_time'])
+        print('Fold: ',str(i+1))
+        ppTimer.print_statistics()
+        infTimer.print_statistics()
 
    
 def __main__():

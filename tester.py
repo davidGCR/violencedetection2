@@ -25,6 +25,8 @@ class Tester:
         predictions = []  #indeicea
         scores = []
         test_error = 0.0
+        preprocess_times = []
+        inference_times = []
         # Iterate over data.
         for inputs, labels, video_names, preprocessing_time in tqdm(self.dataloader):
             if self.numDiPerVideos > 1:
@@ -49,7 +51,8 @@ class Tester:
             end_time = time.time()
             inf_time = end_time - start_time
             preprocessing_time = preprocessing_time.item()
-
+            preprocess_times.append(preprocessing_time)
+            inference_times.append(inf_time)
             # print(preprocessing_time, type(preprocessing_time))
             self.fpsMeter.update(inf_time+preprocessing_time)
 
@@ -58,7 +61,7 @@ class Tester:
         gt_labels = np.array(gt_labels)
         # test_errors = np.array(test_errors)
         self.fpsMeter.print_statistics()
-        return predictions, scores, gt_labels, test_error, self.fpsMeter.fps()
+        return predictions, scores, gt_labels, test_error, preprocess_times, inference_times
         # return gt_labels, predictions, scores
     
     def predict(self, dynamic_img):
