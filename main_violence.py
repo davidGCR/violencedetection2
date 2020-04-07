@@ -230,12 +230,14 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
             acc = cv_it_accuracy(predictions,gt_labels)
             # print('accuracy tests: ', acc)
             test_cv_acc.append(acc)
-            timeCost(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
+            # timeCost(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
             
         
         avg_acc = np.average(test_cv_acc)
         print('K-Folds accuracies: ', test_cv_acc)
         print('K-folds Avg accuracy: ', avg_acc)
+
+        timeCost(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
         # print('Test error: ', test_error)
         # print('Folds test FPS: ', test_fps, np.average(test_fps))
         # print('Test error: ', test_error)
@@ -270,6 +272,8 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
 def timeCost(path):
     folds_times = os.listdir(path)
     folds_times.sort()
+    folds_pp_times = []
+    folds_inf_times = []
     
     for i, fold in enumerate(folds_times):
         ppTimer = FPSMeter()
@@ -278,10 +282,18 @@ def timeCost(path):
         for index, row in data.iterrows():
             ppTimer.update(row['pp_time'])
             infTimer.update(row['inf_time'])
+        folds_pp_times.append(ppTimer.mspf())
+        folds_inf_times.append(infTimer.mspf())
+        
         shape = data.shape
         print('Fold: %s, Number examples: %s'%(str(i+1), str(shape[0])))
         ppTimer.print_statistics()
         infTimer.print_statistics()
+    avg_mspf_pp = np.average(folds_pp_times)
+    avg_mspf_inf = np.average(folds_inf_times)
+    print('Average milisecods per frame in k-folds (preprocesing): ', avg_mspf_pp)
+    print('Average milisecods per frame in k-folds (inference): ', avg_mspf_inf)
+    
 
    
 def __main__():
