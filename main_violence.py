@@ -188,7 +188,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 dataloaders_dict = initializeDataset.getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers)
             model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
             model.to(device)
-            # params_to_update = verifiParametersToTrain(model, feature_extract)
+            params_to_update = verifiParametersToTrain(model, feature_extract)
             # Observe that all parameters are being optimized
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
             # Decay LR by a factor of 0.1 every 7 epochs
