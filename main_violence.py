@@ -220,6 +220,10 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
                 os.makedirs(constants.PATH_TIME_RESULTS)
             if not os.path.exists(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME)):
                 os.makedirs(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
+            elif fold==0:
+                files = glob.glob(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
+                for f in files:
+                    os.remove(f)
             df.to_csv(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME, 'fold-'+str(fold)+'.csv'))
             
 
