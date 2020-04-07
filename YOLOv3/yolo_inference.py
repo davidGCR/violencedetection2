@@ -24,12 +24,12 @@ import matplotlib.patches as patches
 from matplotlib.ticker import NullLocator
 import numpy as np
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def initializeYoloV3(img_size, class_path, model_def, weights_path, device):
     """
     Initialize yolov3 in device in evaluation mode
     """
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 
     # Set up model
     model = Darknet(model_def, img_size=img_size).to(device)
 
@@ -136,17 +136,21 @@ def inference(model, input_imgs, conf_thres, nms_thres): #input_imgs:  <class 't
     # Configure input
     # input_imgs = Variable(input_imgs.type(Tensor))
     # input_imgs = input_imgs.to(device)
-   
+    star_t = time.time()
     with torch.no_grad():
         detections = model(input_imgs) #  torch.Size([1, 10647, 85])
-        detections = non_max_suppression(detections, conf_thres, nms_thres)#list len = 1
+        detections = non_max_suppression(detections, conf_thres, nms_thres)  #list len = 1
+        if device == 'cuda:0':
+            torch.cuda.synchronize()
+        end_t = time.time()
+        detection_time = end_t - star_t
         # print('detction non_max_suppression: ', type(detections[0]),detections[0].size())# 0: <class 'torch.Tensor'> torch.Size([3, 7])
     # print('detectioins inference: ', detections)
     if detections[0] is not None:
         detections = torch.cat(detections)
     else:
         detections = None
-    return detections #inference torch.Size([4, 7])
+    return detections, detection_time #inference torch.Size([4, 7])
 
 def preProcessImage(npImage, img_size):
     # npImage = np.transpose(1,2,0)

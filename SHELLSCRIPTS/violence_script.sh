@@ -1,7 +1,7 @@
 
 python3  main_violence.py \
 --modelType resnet50 \
---numEpochs 30 \
+--numEpochs 2 \
 --numWorkers 4 \
 --batchSize 8 \
 --foldsNumber 5 \

@@ -13,6 +13,7 @@ import cv2
 import random
 from point import Point
 from bounding_box import BoundingBox
+import time
 
 # model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
 # model.eval()
@@ -34,14 +35,14 @@ def random_colour_masks(image):
   return coloured_mask
 
 def personDetectionInFrameMaskRCNN(model, ioImage, threshold):
-    masks, pred_boxes, pred_class = get_prediction(model, ioImage, threshold)
+    masks, pred_boxes, pred_class, detection_time = get_prediction(model, ioImage, threshold)
     persons = []
     if masks is not None:
       for idx, clase in enumerate(pred_class):
           if clase == 'person':
               bbox = BoundingBox(Point(pred_boxes[idx][0][0], pred_boxes[idx][0][1]),Point(pred_boxes[idx][1][0], pred_boxes[idx][1][1]))
               persons.append(bbox)
-    return persons
+    return persons, detection_time
     
 
 COCO_INSTANCE_CATEGORY_NAMES = [
@@ -74,7 +75,12 @@ def get_prediction(model, img, threshold):
     # img = Image.open(img_path)
     transform = T.Compose([T.ToTensor()])
     img = transform(img)
+    start_t = time.time()
     pred = model([img])
+    if device == 'cuda:0':
+      torch.cuda.synchronize()
+    end_t = time.time()
+    detection_time = end_t - start_t
     
     pred_score = list(pred[0]['scores'].detach().numpy())
     # print('pred_score: ',pred_score, len(pred_score))
@@ -92,9 +98,9 @@ def get_prediction(model, img, threshold):
       masks = masks[:pred_t+1]
       pred_boxes = pred_boxes[:pred_t+1]
       pred_class = pred_class[:pred_t+1]
-      return masks, pred_boxes, pred_class
+      return masks, pred_boxes, pred_class, detection_time
     else:
-      return None, None, None
+      return None, None, None, detection_time
 
 
 def instance_segmentation_api(img_path, threshold=0.5, rect_th=1, text_size=0.5, text_th=1):

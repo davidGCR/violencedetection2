@@ -504,7 +504,7 @@ def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, 
     # print('='*20+' YOLOv3 - ', frame_path)
     img = yolo_inference.preProcessImage(ioImage, img_size)
     img = img.to(device)
-    detections = yolo_inference.inference(model, img, conf_thres, nms_thres)
+    detections, detection_time = yolo_inference.inference(model, img, conf_thres, nms_thres)
     ioImage = np.array(ioImage)
     
     bbox_persons = []
@@ -518,7 +518,7 @@ def personDetectionInFrameYolo(model, img_size, conf_thres, nms_thres, classes, 
                 pmax = Point(x2,y2)
                 bbox_persons.append(BoundingBox(pmin,pmax))
             # print("\t+ Label: %s, Conf: %.5f" % (classes[int(cls_pred)], cls_conf.item()))
-    return bbox_persons
+    return bbox_persons, detection_time
 
 def distance(point1, point2):
     distance = math.sqrt(((point1.x - point2.x)** 2) + ((point1.y - point2.y)** 2))

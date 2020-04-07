@@ -1,8 +1,8 @@
 
 import sys
 # import include
-# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
 # from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
@@ -459,6 +459,35 @@ def temporalTest(anomalyDataset, model_name, config, class_tester, saliency_test
     # 
     # print('Frames processed: ', len(y_truth), len(y_pred))
     # 
+
+def localization(persons_in_frame, thresh_close_persons, saliency_bboxes, iou_threshold = 0.3):
+    persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
+    temporal_ious_regions = []
+    anomalous_regions = []
+    for personBox in persons_filtered:
+        for saliencyBox in saliency_bboxes:
+            iou = localization_utils.IOU(personBox, saliencyBox)
+            # tmp_rgion = localization_utils.joinBBoxes(saliencyBox,personBox) #Nooo si el saliente bbox es todo frame
+            tmp_rgion = personBox
+            tmp_rgion.score = iou
+            temporal_ious_regions.append(tmp_rgion)
+            # print('----IOU (person and dynamic region): ', str(iou))
+            if iou >= iou_threshold:
+                abnormal_region = localization_utils.joinBBoxes(saliencyBox,personBox)
+                abnormal_region.score = iou
+                anomalous_regions.append(abnormal_region)
+        
+    if len(anomalous_regions) > 1:
+        anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
+        anomalous_regions[0].score = -1
+        # bbox_last = anomalous_regions[0]
+    #     break
+    # else: # 
+    #     temporal_ious_regions.sort(key=lambda x: x.iou, reverse=True)
+    #     anomalous_regions.append(temporal_ious_regions[0])
+    #     break
+    return anomalous_regions
+
 def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay, device):
     person_model, classes = getPersonDetectorModel(type_person_detector, device)
     # person_model = person_model.to(device)
@@ -481,6 +510,8 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
     fpsMeter = FPSMeter()
     fpsMeterMask = FPSMeter()
     fpsMeterRefinement = FPSMeter()
+    pos_x = 20
+    sep = 400
 
     for idx_video, data in enumerate(anomalyDataset):
         indx_flac = idx_video
@@ -507,7 +538,8 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         label = torch.tensor(label)
 
         ################### BLOCK ####################
-        block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
+        # dinamycImages, idx_next_block, block_gt, spend_time
+        block_dinamyc_images, idx_next_block, block_gt, spend_time = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
        
         # prediction, score = class_tester.predict(block_dinamyc_images)
         # # print('Score: ', score)
@@ -523,13 +555,14 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         
         # tp, fp, y_block_pred, y_score_based = localization_utils.countTruePositiveFalsePositive(segment_info, prediction, score, threshold=0)
         
-        prediction, score = class_tester.predict(torch.unsqueeze(block_dinamyc_images, dim=0), num_iter)
         
-        num_segment = 0
-        while (dis_images is not None): #dis_images : torch.Size([3, 224, 224])
-            num_segment += 1            
-            print(video_name, '---segment No: ', str(num_segment),'-----', dis_images.size(), len(segment_info), dis_images.is_cuda)
+        
+        num_block = 0
+        while (block_dinamyc_images is not None): #dis_images : torch.Size([3, 224, 224])
+            num_block += 1            
+            print(video_name, '---segment No: ', str(num_block),'-----', block_dinamyc_images.size(), block_dinamyc_images.is_cuda)
             
+            prediction, score = class_tester.predict(block_dinamyc_images)
             # print('- dis_images: ', type(dis_images), dis_images.size())
             # print('- video_name: ', type(video_name), video_name)
             # print('- label: ', type(label))
@@ -538,23 +571,18 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             # - video_name:  <class 'str'>
             # - labels:  <class 'int'>
             # - bbox_segments:  <class 'list'>  [['frame645.jpg', 0, 72, 67, 133, 148],..., []
-            dis_images = torch.unsqueeze(dis_images, 0)
-            segment_info = default_collate([segment_info])
-            segment_info = np.array(segment_info)
-            dis_images = dis_images / 2 + 0.5 
-            ttttt = saliency_tester.min_max_normalize_tensor(dis_images) 
+            # block_dinamyc_images = torch.unsqueeze(block_dinamyc_images, 0)
+            # block_boxes_info = default_collate([block_boxes_info])
+            # block_boxes_info = np.array(block_boxes_info)
+
+            block_dinamyc_images = block_dinamyc_images / 2 + 0.5 
+            ttttt = saliency_tester.min_max_normalize_tensor(block_dinamyc_images) 
             ttttt = ttttt.numpy()[0].transpose(1, 2, 0)
             ttttt = cv2.resize(ttttt, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
             
             ########################### LOCALIZATION ##################################################3
             ######################## mask
-            # mask_start_time = time.time()
-            masks, mask_time = saliency_tester.compute_mask(dis_images, label)  #[1, 1, 224, 224]
-            # if device == 'cuda:0':
-            #     torch.cuda.synchronize()
-            # mask_end_time = time.time()
-            # mask_time = mask_end_time - mask_start_time
-
+            masks, mask_time = saliency_tester.compute_mask(block_dinamyc_images, label)  #[1, 1, 224, 224]
             fpsMeterMask.update(mask_time)
             
             mascara = masks.detach().cpu()#(1, 1, 224, 224)
@@ -599,13 +627,46 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             # track_end_time = time.time()
             # track_time = track_end_time - track_start_time
             
-            frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
+            # frames_names, real_frames, real_bboxes = localization_utils.getFramesFromSegment(video_name[0], segment_info, 'all')
+            real_frames = []
+            real_bboxes = []
+            for i, frame_gt in enumerate(block_gt):
+                frame_path = os.path.join(video_name[0],frame_gt[0])
+                frame = Image.open(frame_path)
+                frame = np.array(frame)
+                real_frames.append(frame)
+                occluded = int(frame_gt[1])
+                gt_bbox = BoundingBox(Point(float(frame_gt[constants.IDX_XMIN]), float(frame_gt[constants.IDX_YMIN])),
+                        Point(float(frame_gt[constants.IDX_XMAX]), float(frame_gt[constants.IDX_YMAX])), occluded=occluded)
+                real_bboxes.append(gt_bbox)
+                # font = cv2.FONT_HERSHEY_SIMPLEX
+                # cv2.putText(frame,str(score),(0,25), font, 0.6,constants.red,2,cv2.LINE_AA)
+                # cv2.putText(frame,str(frame_gt[constants.IDX_NUMFRAME]),(15,40), font, 0.6,constants.magenta,2,cv2.LINE_AA)
+                wn = frame.shape[0]
+                hn = frame.shape[1]
+                # if prediction == 1:
+                #     cv2.rectangle(frame, (10, 10), (hn-10, wn-10), constants.magenta, 4)
+                # if y_block_truth[i] == 1:
+                #     cv2.rectangle(frame, (0, 0), (hn, wn), constants.yellow, 4)
+
+                # gt_bbox = real_bboxes[i]
+                if gt_bbox.occluded == 0:
+                    cv2.rectangle(frame, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), constants.red, 2)
+                cv2.imshow('frame', frame)
+                dynamic_image_plot = ttttt
+                cv2.imshow('dynamic_image', dynamic_image_plot)
+                cv2.namedWindow("frame");#x,y
+                cv2.moveWindow("frame", pos_x, 100);
+                cv2.namedWindow("dynamic_image");
+                cv2.moveWindow("dynamic_image", pos_x+sep, 100);
+                if cv2.waitKey(delay) & 0xFF == ord('q'):
+                    break
+
             persons_in_segment = []
             persons_segment_filtered = []
             anomalous_regions = []  # to plot
-            segmentBox = localization_utils.getSegmentBBox(real_bboxes)
+            segment_gt_Box = localization_utils.getSegmentBBox(real_bboxes)
             
-            # print('Real frames shot: ', len(real_frames))
             temporal_ious_regions = []
             for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
                 # print('Shot frame to process: ',idx)
@@ -616,114 +677,32 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
                     img_size = 416
                     conf_thres = 0.8
                     nms_thres = 0.4
-                    detector_start_time = time.time()
-                    persons_in_frame = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres,
+                    persons_in_frame, detection_time = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres,
                                                                                     nms_thres, classes, frame, device)
-                    if device == 'cuda:0':
-                        torch.cuda.synchronize()
-                    detector_end_time = time.time()
-                    detector_time = detector_end_time-detector_start_time
-
                 elif type_person_detector == constants.MASKRCNN:
                     mask_rcnn_threshold = 0.4
-                    persons_in_frame = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
+                    persons_in_frame, detection_time = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
                 # print('--num Persons in frame: ', len(persons_in_frame))
-                refinement_start_time = time.time()
                 if len(persons_in_frame) > 0:
+                    ref_start_time = time.time()
                     persons_in_segment.append(persons_in_frame)
-                    iou_threshold = 0.3
                     thres_intersec_person_saliency = 0.5
                     thresh_close_persons = 20
-                
-                    if bbox_last is not None:
-                        print('='*10, ' ONLINE ')
-                        dynamic_region = saliency_bboxes[0]
-                        persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
-                        # print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
-                        # persons_segment_filtered.append(persons_filtered)
-                        for person in persons_filtered:
-                            iou = localization_utils.IOU(person, dynamic_region)
-                            # print('----IOU (person and dynamic region): ', str(iou))
-                            if iou >= iou_threshold:
-                                abnorm_bbox = localization_utils.joinBBoxes(person,dynamic_region)
-                                abnorm_bbox.score = iou
-                                anomalous_regions.append(abnorm_bbox)
-                        
-                        if len(anomalous_regions) > 0:
-                            anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
-                            anomalous_regions[0].score = -1
-                            # bbox_last = anomalous_regions[0]
-                            break
-
-                    else:
-                        print('='*10, ' FIRST SHOT ')
-                        persons_filtered, only_joined_regions = localization_utils.filterClosePersonsInFrame(persons_in_frame, thresh_close_persons)
-                        # print('---Persons after filter close: ', len(persons_filtered), len(only_joined_regions))
-                        # persons_segment_filtered.append(persons_filtered)
-                        
-                        for personBox in persons_filtered:
-                            for saliencyBox in saliency_bboxes:
-                                iou = localization_utils.IOU(personBox, saliencyBox)
-                                # tmp_rgion = localization_utils.joinBBoxes(saliencyBox,personBox) #Nooo si el saliente bbox es todo frame
-                                tmp_rgion = personBox
-                                tmp_rgion.score = iou
-                                temporal_ious_regions.append(tmp_rgion)
-                                # print('----IOU (person and dynamic region): ', str(iou))
-                                if iou >= iou_threshold:
-                                    abnormal_region = localization_utils.joinBBoxes(saliencyBox,personBox)
-                                    abnormal_region.score = iou
-                                    anomalous_regions.append(abnormal_region)
-                            
-                        if len(anomalous_regions) > 0:
-                            anomalous_regions.sort(key=lambda x: x.iou, reverse=True) #sort by iuo to get only one anomalous regions
-                            anomalous_regions[0].score = -1
-                            bbox_last = anomalous_regions[0]
-                            break
-                        else: # 
-                            temporal_ious_regions.sort(key=lambda x: x.iou, reverse=True)
-                            anomalous_regions.append(temporal_ious_regions[0])
-                            break
-                    if len(anomalous_regions) > 0 :
+                    anomalous_regions = localization(persons_in_frame, thresh_close_persons, saliency_bboxes, thres_intersec_person_saliency)
+                    ref_end_time = time.time()
+                    refinement_time = ref_end_time - ref_start_time
+                    fpsMeterRefinement.update(preproc_time+refinement_time)
+                    if len(anomalous_regions) > 0:
                         break
-                    
                 else:
                     persons_in_segment.append(None) #only to plot
-                refinement_end_time = time.time()
-                refinement_time = refinement_end_time - refinement_start_time
-                # fpsMeter.update(refinement_time+detector_time)
-            if len(anomalous_regions) == 0:
-                # print('Tracking Algorithm FAIL!!!!. Using last localization...')
-                anomalous_regions.append(bbox_last)   
-            # fpsMeter.update(mask_time+preproc_time+track_time)
-            
-            iou = localization_utils.IOU(segmentBox,anomalous_regions[0])
-            segment_iou = [video_name[0]+'-segment No: '+str(num_segment), iou]
-            ious.append(segment_iou)
-            # #################### BLOCK ####################
-            # # if idx_next_segment > idx_next_block:
-            # #     block_dinamyc_images, idx_next_block, block_boxes_info = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block, skip=1)
-            # #     # dynamic_img = torch.unsqueeze(dis_images, dim=0)
-            # #     # print('block_dinamyc_images: ', block_dinamyc_images.size())
-            # #     prediction, score = class_tester.predict(block_dinamyc_images)
-            # #     tp, fp, y_block_pre, y_score_based = localization_utils.c
-            # claeountTruePositiveFalsePositive(block_boxes_info, prediction, score, threshold=0)
-            # #     p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
-            # #     num_pos_frame += p
-            # #     num_neg_frame += n
-            # #     total_fp += fp
-            # #     total_tp += tp
-            # #     y_truth.extend(y_block_truth)
-            # #     y_pred.extend(y_block_pred)
-            dis_images, segment_info, idx_next_segment, spend_time_dyImg = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=idx_next_segment)
-            # fpsMeter.update(spend_time_dyImg)
-            if dis_images is not None:
-                inference_start_time = time.time()
-                prediction, score = class_tester.predict(torch.unsqueeze(dis_images, dim=0), num_iter)
-                if device == 'cuda:0':
-                    torch.cuda.synchronize()
-                inference_end_time = time.time()
-                inference_time = inference_end_time - inference_start_time
-                # fpsMeter.update(inference_time)
+
+            block_dinamyc_images, idx_next_block, block_boxes_info, spend_time = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block, skip=1)   
+        
+            # iou = localization_utils.IOU(segment_gt_Box,anomalous_regions[0])
+            # segment_iou = [video_name[0]+'-segment No: '+str(num_segment), iou]
+            # ious.append(segment_iou)s
+                
             if plot:
                 dynamic_image = ttttt
                 # preprocess = preprocesing_outs[3]
@@ -753,15 +732,12 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         times.append(row_time)
 
     #################### Localization Error #####################
-    df = pd.DataFrame(ious, columns=['path', 'iou'])
-    seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
-    numOfRows = len(seriesObj[seriesObj == True].index)
-    localization_error = numOfRows/len(ious)
-    print('Localization Error: ', str(localization_error))
+    # df = pd.DataFrame(ious, columns=['path', 'iou'])
+    # seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
+    # numOfRows = len(seriesObj[seriesObj == True].index)
+    # localization_error = numOfRows/len(ious)
+    # print('Localization Error: ', str(localization_error))
 
-    # df = pd.DataFrame(times, columns=["video", "fps", "mspf"])
-    # df.to_csv('fpsAnomaly.csv', index=False)
-    # fpsMeter.print_statistics()
     ################### ROC - AUC ############################
     # if mode == 'rocauc':
     #     fpr, tpr, _ = roc_curve(y_truth, y_pred)
@@ -849,10 +825,11 @@ def __main__():
     # classifier_file = 'ANOMALYCRIME/checkpoints/resnet50-3-Finetuned:True-maxTempPool-numEpochs:13.pth'
     # classifier_file = 'ANOMALYCRIME/checkpoints/testresnet50-3-Finetuned:True-maxTempPool-numEpochs:24-videoSegmentLength:20-overlaping:0.5-only_violence:True.pth'
     # classifier_file = 'ANOMALYCRIME/checkpoints/testresnet50-3-Finetuned:True-maxTempPool-numEpochs:13-videoSegmentLength:200-overlaping:0.5-only_violence:True.pth'
-    classifier_file = 'ANOMALYCRIME/checkpoints/testresnet50-6-Finetuned:True-maxTempPool-numEpochs:9-videoSegmentLength:20-overlaping:0.5-only_violence:True.pth'
+    # classifier_file = 'ANOMALYCRIME/checkpoints/testresnet50-6-Finetuned:True-maxTempPool-numEpochs:9-videoSegmentLength:20-overlaping:0.5-only_violence:True.pth'
    
     # classifier_file = 'ANOMALYCRIME/checkpoints/testresnet50-3-Finetuned:True-maxTempPool-numEpochs:20-videoSegmentLength:40-overlaping:0.5-only_violence:True.pth'
 
+    classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-23-aumented-data.pth'
     head, tail = os.path.split(classifier_file)
 
     # info = 'TemporalCongif:'+'videoBlockLength:'+str(videoBlockLength)+'-BlockOverlap:'+str(overlappingBlock)+'-videoSegmentLength:'+str(videoSegmentLength) +'-SegmentOverlap:'+str(overlappingSegment)+ '-numDynamImgsPerBlock:'+str(numDynamicImgsPerBlock)+'-MODEL:'+tail
@@ -882,8 +859,9 @@ def __main__():
     
     # tester = Tester(classifier, None, device, None, None)
     tester = Tester(model=classifier, dataloader=None, loss=None, device=device, numDiPerVideos=None, plot_samples=False)
-    # online(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay, device)
-    temporalTest(anomalyDataset, tail, config,tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    spatioTemporalDetection(anomalyDataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay, device)
+    # temporalTest(anomalyDataset, tail, config, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay)
+    
     # temporalTest(waqas_dataset, tester, saliency_tester, typePersonDetector, h, w, plot, video_name, delay, 'waqas')
        
 __main__()

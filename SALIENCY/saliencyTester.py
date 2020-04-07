@@ -68,7 +68,8 @@ class SaliencyTester():
         di_images, labels = Variable(di_images), Variable(labels)
         start_t = time.time()
         masks, _ = self.net(di_images, labels)
-        torch.cuda.synchronize()
+        if self.device == 'cuda:0':
+            torch.cuda.synchronize()
         end_t = time.time()
         mask_time = end_t - start_t
         return masks, mask_time

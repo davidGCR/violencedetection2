@@ -47,7 +47,8 @@ class Tester:
                 scores.extend(p.cpu().numpy())
                 # predictions.extend(indices_preds.cpu().numpy())
                 predictions.extend(indices_preds.cpu().numpy())
-                torch.cuda.synchronize()
+                if self.device == 'cuda:0':
+                    torch.cuda.synchronize()
             end_time = time.time()
             inf_time = end_time - start_time
             preprocessing_time = preprocessing_time.item()

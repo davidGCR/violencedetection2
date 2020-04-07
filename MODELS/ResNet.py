@@ -67,6 +67,7 @@ class ViolenceModelResNet(nn.Module):
             
 
         if self.numDiPerVideos == 1:
+            # print('ókokokokok', x.size())
             x = self.convLayers(x)  #torch.Size([8, 512, 7, 7])
             x = self.AdaptiveAvgPool2d(x) #  torch.Size([8, 512, 1, 1])
             # print('model_ft out: ',x.size())
