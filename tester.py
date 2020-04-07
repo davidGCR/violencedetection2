@@ -60,6 +60,7 @@ class Tester:
         predictions = np.array(predictions)
         gt_labels = np.array(gt_labels)
         # test_errors = np.array(test_errors)
+        print('METRICS IN TESTER (pp + inf)')
         self.fpsMeter.print_statistics()
         return predictions, scores, gt_labels, test_error, preprocess_times, inference_times
         # return gt_labels, predictions, scores
