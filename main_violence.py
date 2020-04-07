@@ -273,7 +273,8 @@ def timeCost(path):
         for index, row in data.iterrows():
             ppTimer.update(row['pp_time'])
             infTimer.update(row['inf_time'])
-        print('Fold: ',str(i+1))
+        shape = data.shape
+        print('Fold: %s, Number examples: %s'%(str(i+1), str(shape[0])))
         ppTimer.print_statistics()
         infTimer.print_statistics()
 
