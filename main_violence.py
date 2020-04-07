@@ -266,9 +266,10 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
 def timeCost(path):
     folds_times = os.listdir(path)
     folds_times.sort()
-    ppTimer = FPSMeter()
-    infTimer = FPSMeter()
+    
     for i, fold in enumerate(folds_times):
+        ppTimer = FPSMeter()
+        infTimer = FPSMeter()
         data = pd.read_csv(os.path.join(path, fold))
         for index, row in data.iterrows():
             ppTimer.update(row['pp_time'])
