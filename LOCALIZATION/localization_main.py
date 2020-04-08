@@ -507,13 +507,17 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
     y_truth = []
     y_pred = []
     num_iter = 1
-    fpsMeter = FPSMeter()
-    fpsMeterMask = FPSMeter()
-    fpsMeterRefinement = FPSMeter()
+    
+    # fpsMeterMask = FPSMeter()
+    # fpsMeterRefinement = FPSMeter()
     pos_x = 20
     sep = 400
 
     for idx_video, data in enumerate(anomalyDataset):
+
+        fpsMeterMask = FPSMeter()
+        fpsMeterRefinement = FPSMeter()
+
         indx_flac = idx_video
         if only_video_name is not None and indx_flac==0:
             if indx_flac==0:
@@ -726,10 +730,11 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             #     ######################################
             ################################################## REFINEMENT ################################################################
             
-    
-        row_time = [video_name[0], round(fpsMeter.fps(),2), round(fpsMeter.mspf(),2)]
+        fpsMeterMask.print_statistics()
+        fpsMeterRefinement.print_statistics()
+        # row_time = [video_name[0], round(fpsMeter.fps(),2), round(fpsMeter.mspf(),2)]
         # print(row)
-        times.append(row_time)
+        # times.append(row_time)
 
     #################### Localization Error #####################
     # df = pd.DataFrame(ious, columns=['path', 'iou'])
