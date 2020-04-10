@@ -10,10 +10,10 @@ python3 LOCALIZATION/localization_main.py \
 --numDynamicImgsPerBlock 1 \
 --personDetector yolov3 \
 --positionSegment online \
---overlappingBlock 0.3 \
+--overlappingBlock 0 \
 --overlappingSegment 0 \
 --plot false \
---videoName Assault012 \
+--videoName Arrest003 \
 --delay 5
 
 # python3 LOCALIZATION/dense_sampling.py \

@@ -151,7 +151,7 @@ def getPersonDetectorModel(detector_type, device):
     return person_model, classes
 
 
-def plotOpencv(video_name, no_segment, prediction, images,gt_bboxes, persons_in_segment, bbox_predictions, dynamic_image, mascara, preprocess, saliency_bboxes, sep, delay):
+def plotOpencv(video_name, no_segment, prediction, images, gt_bboxes, persons_in_segment, bbox_predictions, dynamic_image, mascara, preprocess, saliency_bboxes, sep, delay):
     red = (0, 0, 255)
     green = (0, 255, 0)
     blue = (255, 0, 0)
@@ -564,9 +564,10 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         num_block = 0
         while (block_dinamyc_images is not None): #dis_images : torch.Size([3, 224, 224])
             num_block += 1            
-            print(video_name, '---segment No: ', str(num_block),'-----', block_dinamyc_images.size(), block_dinamyc_images.is_cuda)
+            print(video_name, '---segment No: ', str(num_block),'-----', block_dinamyc_images.size())
             
             prediction, score = class_tester.predict(block_dinamyc_images)
+            print('Prediction: ',prediction)
             # print('- dis_images: ', type(dis_images), dis_images.size())
             # print('- video_name: ', type(video_name), video_name)
             # print('- label: ', type(label))
@@ -635,7 +636,9 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             real_frames = []
             real_bboxes = []
             for i, frame_gt in enumerate(block_gt):
+                
                 frame_path = os.path.join(video_name[0],frame_gt[0])
+                # print(frame_path)
                 frame = Image.open(frame_path)
                 frame = np.array(frame)
                 real_frames.append(frame)
@@ -646,62 +649,56 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
                 # font = cv2.FONT_HERSHEY_SIMPLEX
                 # cv2.putText(frame,str(score),(0,25), font, 0.6,constants.red,2,cv2.LINE_AA)
                 # cv2.putText(frame,str(frame_gt[constants.IDX_NUMFRAME]),(15,40), font, 0.6,constants.magenta,2,cv2.LINE_AA)
-                wn = frame.shape[0]
-                hn = frame.shape[1]
-                # if prediction == 1:
-                #     cv2.rectangle(frame, (10, 10), (hn-10, wn-10), constants.magenta, 4)
-                # if y_block_truth[i] == 1:
-                #     cv2.rectangle(frame, (0, 0), (hn, wn), constants.yellow, 4)
-
-                # gt_bbox = real_bboxes[i]
-                if gt_bbox.occluded == 0:
-                    cv2.rectangle(frame, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), constants.red, 2)
-                cv2.imshow('frame', frame)
-                dynamic_image_plot = ttttt
-                cv2.imshow('dynamic_image', dynamic_image_plot)
-                cv2.namedWindow("frame");#x,y
-                cv2.moveWindow("frame", pos_x, 100);
-                cv2.namedWindow("dynamic_image");
-                cv2.moveWindow("dynamic_image", pos_x+sep, 100);
-                if cv2.waitKey(delay) & 0xFF == ord('q'):
-                    break
+                # wn = frame.shape[0]
+                # hn = frame.shape[1]
+                # if gt_bbox.occluded == 0:
+                #     cv2.rectangle(frame, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), constants.red, 2)
+                # cv2.imshow('frame', frame)
+                # dynamic_image_plot = ttttt
+                # cv2.imshow('dynamic_image', dynamic_image_plot)
+                # cv2.namedWindow("frame");#x,y
+                # cv2.moveWindow("frame", pos_x, 100);
+                # cv2.namedWindow("dynamic_image");
+                # cv2.moveWindow("dynamic_image", pos_x+sep, 100);
+                # if cv2.waitKey(delay) & 0xFF == ord('q'):
+                #     break
 
             persons_in_segment = []
             persons_segment_filtered = []
             anomalous_regions = []  # to plot
             segment_gt_Box = localization_utils.getSegmentBBox(real_bboxes)
             
-            temporal_ious_regions = []
-            for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
-                # print('Shot frame to process: ',idx)
-                persons_in_frame = []
-                persons_filtered = []
-                # frame = frame.to(device)
-                if type_person_detector == constants.YOLO:
-                    img_size = 416
-                    conf_thres = 0.8
-                    nms_thres = 0.4
-                    persons_in_frame, detection_time = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres,
-                                                                                    nms_thres, classes, frame, device)
-                elif type_person_detector == constants.MASKRCNN:
-                    mask_rcnn_threshold = 0.4
-                    persons_in_frame, detection_time = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
-                # print('--num Persons in frame: ', len(persons_in_frame))
-                if len(persons_in_frame) > 0:
-                    ref_start_time = time.time()
-                    persons_in_segment.append(persons_in_frame)
-                    thres_intersec_person_saliency = 0.5
-                    thresh_close_persons = 20
-                    anomalous_regions = localization(persons_in_frame, thresh_close_persons, saliency_bboxes, thres_intersec_person_saliency)
-                    ref_end_time = time.time()
-                    refinement_time = ref_end_time - ref_start_time
-                    fpsMeterRefinement.update(preproc_time+refinement_time)
-                    if len(anomalous_regions) > 0:
-                        break
-                else:
-                    persons_in_segment.append(None) #only to plot
-
-            block_dinamyc_images, idx_next_block, block_boxes_info, spend_time = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block, skip=1)   
+            if True:
+                print('Refinemeny...')
+                for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
+                    # print('Shot frame to process: ',idx)
+                    persons_in_frame = []
+                    persons_filtered = []
+                    # frame = frame.to(device)
+                    if type_person_detector == constants.YOLO:
+                        img_size = 416
+                        conf_thres = 0.8
+                        nms_thres = 0.4
+                        persons_in_frame, person_detection_time = localization_utils.personDetectionInFrameYolo(person_model, img_size, conf_thres,
+                                                                                        nms_thres, classes, frame, device)
+                    elif type_person_detector == constants.MASKRCNN:
+                        mask_rcnn_threshold = 0.4
+                        persons_in_frame, person_detection_time = MaskRCNN.personDetectionInFrameMaskRCNN(person_model, frame, mask_rcnn_threshold)
+                    # print('--num Persons in frame: ', len(persons_in_frame))
+                    if len(persons_in_frame) > 0:
+                        ref_start_time = time.time()
+                        persons_in_segment.append(persons_in_frame)
+                        thres_intersec_person_saliency = 0.5
+                        thresh_close_persons = 20
+                        anomalous_regions = localization(persons_in_frame, thresh_close_persons, saliency_bboxes, thres_intersec_person_saliency)
+                        ref_end_time = time.time()
+                        refinement_time = ref_end_time - ref_start_time
+                        fpsMeterRefinement.update(preproc_time+refinement_time+person_detection_time)
+                        if len(anomalous_regions) > 0:
+                            break
+                    else:
+                        persons_in_segment.append(None) #only to plot
+            block_dinamyc_images, idx_next_block, block_gt, spend_time = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=idx_next_block, skip=1)
         
             # iou = localization_utils.IOU(segment_gt_Box,anomalous_regions[0])
             # segment_iou = [video_name[0]+'-segment No: '+str(num_segment), iou]
@@ -726,6 +723,7 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
                 preprocess = np.concatenate((BORDER, mascara,BORDER, preprocesing_outs[0], BORDER, preprocesing_outs[1], BORDER, preprocesing_outs[2], BORDER, preprocesing_outs[3],BORDER), axis=1)
                 prediction = 0
                 head, tail = os.path.split(video_name[0])
+                num_segment=-1
                 plotOpencv(tail, num_segment, prediction, real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 300, delay)
             #     ######################################
             ################################################## REFINEMENT ################################################################
