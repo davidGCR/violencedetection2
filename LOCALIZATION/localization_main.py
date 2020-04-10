@@ -1,8 +1,9 @@
 
 import sys
 # import include
-sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1,'/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.insert(1, '/content/violencedetection2')
 # from include import *
 import argparse
 import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
@@ -755,6 +756,7 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--saliencyModelFile", type=str)
+    parser.add_argument("--classifierModelFile", type=str)
     parser.add_argument("--batchSize", type=int, default=3)
     # parser.add_argument("--numEpochs", type=int, default=10)
     parser.add_argument("--numWorkers", type=int, default=1)
@@ -832,7 +834,8 @@ def __main__():
    
     # classifier_file = 'ANOMALYCRIME/checkpoints/testresnet50-3-Finetuned:True-maxTempPool-numEpochs:20-videoSegmentLength:40-overlaping:0.5-only_violence:True.pth'
 
-    classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-23-aumented-data.pth'
+    # classifier_file = 'ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-23-aumented-data.pth'
+    classifier_file = args.classifierModelFile
     head, tail = os.path.split(classifier_file)
 
     # info = 'TemporalCongif:'+'videoBlockLength:'+str(videoBlockLength)+'-BlockOverlap:'+str(overlappingBlock)+'-videoSegmentLength:'+str(videoSegmentLength) +'-SegmentOverlap:'+str(overlappingSegment)+ '-numDynamImgsPerBlock:'+str(numDynamicImgsPerBlock)+'-MODEL:'+tail

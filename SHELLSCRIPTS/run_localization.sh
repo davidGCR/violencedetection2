@@ -2,6 +2,7 @@
 # cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 python3 LOCALIZATION/localization_main.py \
 --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
+--classifierModelFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-23-aumented-data.pth \
 --batchSize 1 \
 --numWorkers 1 \
 --shuffle false \
