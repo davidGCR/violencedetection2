@@ -513,12 +513,9 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
     # fpsMeterRefinement = FPSMeter()
     pos_x = 20
     sep = 400
-
+    fpsMeterMask = FPSMeter()
+    fpsMeterRefinement = FPSMeter()
     for idx_video, data in enumerate(anomalyDataset):
-
-        fpsMeterMask = FPSMeter()
-        fpsMeterRefinement = FPSMeter()
-
         indx_flac = idx_video
         if only_video_name is not None and indx_flac==0:
             if indx_flac==0:
@@ -545,22 +542,6 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         ################### BLOCK ####################
         # dinamycImages, idx_next_block, block_gt, spend_time
         block_dinamyc_images, idx_next_block, block_gt, spend_time = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
-       
-        # prediction, score = class_tester.predict(block_dinamyc_images)
-        # # print('Score: ', score)
-        # tp, fp, y_block_pred, y_score_based = localization_utils.countTruePositiveFalsePositive(block_boxes_info, prediction, score, threshold=0)
-        # p, n, y_block_truth = localization_utils.countPositiveFramesNegativeFrames(block_boxes_info)
-        # y_truth.extend(y_block_truth)
-        # y_pred.extend(y_block_pred)
-        # num_pos_frame += p
-        # num_neg_frame += n
-        # total_fp += fp
-        # total_tp += tp
-        # dis_images, segment_info, idx_next_segment, spend_time_dyImg = anomalyDataset.computeSegmentDynamicImg(idx_video=idx_video, idx_next_segment=0)
-        
-        # tp, fp, y_block_pred, y_score_based = localization_utils.countTruePositiveFalsePositive(segment_info, prediction, score, threshold=0)
-        
-        
         
         num_block = 0
         while (block_dinamyc_images is not None): #dis_images : torch.Size([3, 224, 224])
@@ -670,7 +651,7 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             segment_gt_Box = localization_utils.getSegmentBBox(real_bboxes)
             
             if True:
-                print('Refinemeny...')
+                print('Refinement...')
                 for idx, frame in enumerate(real_frames): #Detect persons frame by frame 
                     # print('Shot frame to process: ',idx)
                     persons_in_frame = []
@@ -694,6 +675,7 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
                         anomalous_regions = localization(persons_in_frame, thresh_close_persons, saliency_bboxes, thres_intersec_person_saliency)
                         ref_end_time = time.time()
                         refinement_time = ref_end_time - ref_start_time
+                        
                         fpsMeterRefinement.update(preproc_time+refinement_time+person_detection_time)
                         if len(anomalous_regions) > 0:
                             break
@@ -728,13 +710,14 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
                 plotOpencv(tail, num_segment, prediction, real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 300, delay)
             #     ######################################
             ################################################## REFINEMENT ################################################################
-            
-        fpsMeterMask.print_statistics()
-        fpsMeterRefinement.print_statistics()
+        
         # row_time = [video_name[0], round(fpsMeter.fps(),2), round(fpsMeter.mspf(),2)]
         # print(row)
         # times.append(row_time)
-
+    print('Mask Cost')   
+    fpsMeterMask.print_statistics()
+    print('Refinement Cost')
+    fpsMeterRefinement.print_statistics()
     #################### Localization Error #####################
     # df = pd.DataFrame(ious, columns=['path', 'iou'])
     # seriesObj = df.apply(lambda x: True if x['iou'] <0.5 else False , axis=1)
