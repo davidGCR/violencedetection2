@@ -166,6 +166,9 @@ class AnomalyOnlineDataset(Dataset):
                 video_gt.append(info_frame)
         else:
             for frame in frames_list:
+                splits = re.split('(\d+)', frame)
+                num_frame = int(splits[1])
+                num_frame = num_frame - 1
                 info_frame = [frame, -1, -1, -1, -1, -1, num_frame]
                 video_gt.append(info_frame)
         return video_gt
