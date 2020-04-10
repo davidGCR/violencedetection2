@@ -139,9 +139,9 @@ def getPersonDetectorModel(detector_type, device):
     classes = None
     if detector_type == constants.YOLO:
         img_size = 416
-        weights_path = "YOLOv3/weights/yolov3.weights"
-        class_path = "YOLOv3/data/coco.names"
-        model_def = "YOLOv3/config/yolov3.cfg"
+        weights_path = "/content/violencedetection2/YOLOv3/weights/yolov3.weights"
+        class_path = "/content/violencedetection2/YOLOv3/data/coco.names"
+        model_def = "/content/violencedetection2/YOLOv3/config/yolov3.cfg"
         person_model, classes = yolo_inference.initializeYoloV3(img_size, class_path, model_def, weights_path, device)
         
         # print('persons_in_frame MaskRCNN: ', len(persons_in_frame))
