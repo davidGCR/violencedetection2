@@ -243,7 +243,7 @@ def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, 
             print('K-folds Avg test error: ', avg_test_error)
             rept_acc.append(avg_acc)
             rept_test_err.append(avg_test_error)
-            avg_mspf_pp, avg_mspf_inf = timeCost(all_folds_time_dfs)
+            avg_mspf_pp, avg_mspf_inf = timeCostKfolds(all_folds_time_dfs)
             print('Average milisecods per frame in k-folds (preprocesing): ', avg_mspf_pp)
             print('Average milisecods per frame in k-folds (inference): ', avg_mspf_inf)
             # avg_mspf_pp, avg_mspf_inf = timeCost(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
