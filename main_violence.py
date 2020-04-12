@@ -295,7 +295,7 @@ def timeCostKfolds(folds_df):
         folds_pp_times.append(ppTimer.mspf())
         folds_inf_times.append(infTimer.mspf())
         
-        shape = data.shape
+        # shape = fold_df.shape
         # print('Fold: %s, Number examples: %s'%(str(i+1), str(shape[0])))
         # ppTimer.print_statistics()
         # infTimer.print_statistics()
