@@ -98,9 +98,12 @@ class ViolenceDataset(Dataset):
         # video_splits_by_no_Di = []
         indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen)]
         print('indices_segments: ',indices_segments)
-        for indices_segment in indices_segments:
-            segment = np.asarray(frames_list)[indices_segment].tolist()
-            video_segments.append(segment)
+        for i, indices_segment in enumerate(indices_segments):
+            if i < self.numDynamicImagesPerVideo:
+                segment = np.asarray(frames_list)[indices_segment].tolist()
+                video_segments.append(segment)
+            else:
+                break
         
         # print(video_splits_by_no_Di)
 
