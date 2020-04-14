@@ -180,3 +180,15 @@ def dataset_statistisc(path):
 
   avg = np.average(np.array(n_frames))
   return avg
+
+def read_file(file):
+  names = []
+  with open(file, 'r') as file:
+      for row in file:
+          names.append(row[:-1])
+  return names
+
+def save_file(data, out_file):
+  with open(out_file, 'w') as output:
+      for row in data:
+          output.write(str(row) + '\n')

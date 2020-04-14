@@ -33,33 +33,6 @@ def labels_2_binary(multi_labels):
             binary_labels[idx]=1
     return binary_labels
 
-def train_test_videos_aumented(g_path):
-    """ load train-test split from original dataset """
-    train_names = []
-    train_labels = []
-    test_names = []
-    test_labels = []
-    train_bbox_files = []
-    test_bbox_files = []
-    classes = {'Normal_Videos': 0, 'Arrest': 1, 'Assault': 2, 'Burglary': 3, 'Robbery': 4, 'Stealing': 5, 'Vandalism': 6}
-    lista_videos = os.listdir(g_path)
-    lista_videos.sort()
-# find . -name ".DS_Store" -print -delete
-    for video in lista_videos:
-        label_str = video[:-3]
-        dynamic_frames =  os.listdir(os.path.join(g_path,video))
-        # results = list(map(int, results))
-        dynamic_frames = sorted_nicely(dynamic_frames)
-        for image in dynamic_frames:
-            sample_path = g_path+'/'+video+'/'+image
-            # print(sample_path)
-            train_names.append(str(sample_path))
-            if label_str == 'Normal_Videos':
-                train_labels.append(0)
-            else:
-                train_labels.append(1)
-    return train_names, train_labels
-
 def process_large_video(v_path, bdx_file_path):
     data = [] 
     with open(bdx_file_path, 'r') as file:
@@ -137,7 +110,6 @@ def process_large_video(v_path, bdx_file_path):
 
     return violence_paths, non_violence_paths
 
-
 def train_test_videos(train_file, test_file, g_path, only_violence):
     """ load train-test split from original dataset """
     train_names = []
@@ -157,8 +129,7 @@ def train_test_videos(train_file, test_file, g_path, only_violence):
             label = row[:-4]
             if label in categories:
                 pth_video = os.path.join(g_path,row[:-1])
-                # train_names.append(pth_video)
-                # train_labels.append(label)
+                
                 if label != normal_category:
                     # if label in categories:
                     tmp_file = row[:-1] + '.txt'
@@ -202,6 +173,10 @@ def train_test_videos(train_file, test_file, g_path, only_violence):
     NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
     print(len(train_names), len(train_labels), len(NumFrames_train), len(train_bbox_files), len(test_names), len(test_labels), len(NumFrames_test), len(test_bbox_files))
     return train_names, train_labels, NumFrames_train, train_bbox_files, test_names, test_labels, NumFrames_test, test_bbox_files
+
+
+
+
 
 def only_anomaly_test_videos(test_file, g_path):
     """ load train-test split from original dataset """
@@ -400,7 +375,7 @@ def createReducedDataset():
                     break
         # print('frames for videos: ', len(frames_numbers))
     
-def numFramesMean(path=constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED):
+def numFramesMean(path):
     lista_videos_folders = os.listdir(path)
     lista_videos_folders.sort()
     total_videos = len(lista_videos_folders)

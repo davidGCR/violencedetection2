@@ -27,37 +27,6 @@ class ViolenceDataset(Dataset):
     def __len__(self):
         return len(self.videos)
 
-    def skip_initial_segments(self, percentage, video_splits_by_no_Di):
-        cut = int((len(video_splits_by_no_Di)*percentage)/100) 
-        # print('Trimed sequence: ', len(sequences), cut)
-        video_splits_by_no_Di = video_splits_by_no_Di[cut:]
-        return video_splits_by_no_Di, cut
-
-    # def getBeginSegment(self, frames_list, skip_frames):
-    #     cut = int((len(frames_list)*skip_frames)/100) 
-    #     segment = frames_list[cut:cut + self.videoSegmentLength]
-    #     return segment
-
-    def getRandomSegment(self, video_splits_by_no_Di, idx): #only if numDiPerVideo == 1
-        random_segment = None
-        label = int(self.labels[idx])
-        random_segment_idx = random.randint(0, len(video_splits_by_no_Di) - 1)
-        random_segment = video_splits_by_no_Di[random_segment_idx]
-        if self.numFrames[idx] > self.videoSegmentLength:
-            if label == 0: #Normal videos
-                video_splits_by_no_Di, _ = self.skip_initial_segments(self.skipPercentage,video_splits_by_no_Di) #skip 35% of initial segments
-            while len(random_segment) != self.videoSegmentLength:
-                random_segment_idx = random.randint(0, len(video_splits_by_no_Di) - 1)
-                random_segment = video_splits_by_no_Di[random_segment_idx]
-        # print('random sequence:', random_segment_idx, len(random_segment))
-        return random_segment
-     
-    def getCentralSegment(self, video_splits_by_no_Di, idx): #only if numDiPerVideo == 1
-        segment = None
-        central_segment_idx = int(len(video_splits_by_no_Di)/2) 
-        segment = video_splits_by_no_Di[central_segment_idx]
-        return segment
-
     def getVideoSegmentsOverlapped(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
@@ -72,18 +41,6 @@ class ViolenceDataset(Dataset):
             segment = np.asarray(frames_list)[indices_segment].tolist()
             video_segments.append(segment)
             # video_segments.append(frames_list[indices_segment])
-
-        # video_segments.append(indices[0:seqLen])
-        # i = seqLen
-        # end = 0
-        # while i < len(indices):
-        #     if len(video_segments) == self.numDynamicImagesPerVideo:
-        #         break
-        #     else:
-        #         start = i - num_frames_overlapped #10 20 
-        #         end = start + seqLen  #29 39
-        #         i = end #29 39
-        #         video_segments.append(indices[start:end])
                
         return video_segments
         
@@ -113,17 +70,6 @@ class ViolenceDataset(Dataset):
             if len(split) < 10:
                 del video_segments[last_idx]
                 
-
-        # if self.numDynamicImagesPerVideo == 1:
-        #     if self.positionSegment == 'random':
-        #         segment = self.getRandomSegment(video_splits_by_no_Di, idx)
-        #     elif self.positionSegment == 'central':
-        #         segment = self.getCentralSegment(video_splits_by_no_Di, idx)
-        #     elif self.positionSegment == 'begin':
-        #         self.skipPercentage = 0
-        #         segment = self.getBeginSegment(frames_list, self.skipPercentage)
-        #     video_segments = []
-        #     video_segments.append(segment)
         if self.numDynamicImagesPerVideo > 1:
             for i in range(len(video_segments)):
                 if i < self.numDynamicImagesPerVideo:

@@ -15,15 +15,16 @@ python3 ANOMALYCRIME/anomaly_main.py \
 --modelType resnet50 \
 --joinType maxTempPool \
 --featureExtract false \
---numEpochs 20 \
+--numEpochs 30 \
 --learningRate 0.001 \
---ndis 3 \
---videoSegmentLength 40 \
+--ndis 1 \
+--videoSegmentLength 30 \
 --positionSegment begin \
---overlaping 0.5 \
---batchSize 8 \
---numWorkers 1 \
---shuffle true
+--overlaping 0 \
+--batchSize 16 \
+--numWorkers 4 \
+--shuffle true \
+--frame_skip 10
 # --typeTrain final \
 # --transferModel ninguno
 
