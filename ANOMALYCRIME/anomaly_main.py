@@ -363,7 +363,7 @@ def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str)
     parser.add_argument("--pathLearningCurves", type=str, default=constants.ANOMALY_PATH_LEARNING_CURVES)
-     parser.add_argument("--pathCheckpoints", type=str, default=constants.ANOMALY_PATH_CHECKPOINTS)
+    parser.add_argument("--pathCheckpoints", type=str, default=constants.ANOMALY_PATH_CHECKPOINTS)
     parser.add_argument("--modelType",type=str,default="alexnet",help="model")
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
