@@ -362,6 +362,8 @@ def initialize_train_val_anomaly_dataset(batch_size,
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str)
+    parser.add_argument("--pathLearningCurves", type=str, default=constants.ANOMALY_PATH_LEARNING_CURVES)
+     parser.add_argument("--pathCheckpoints", type=str, default=constants.ANOMALY_PATH_CHECKPOINTS)
     parser.add_argument("--modelType",type=str,default="alexnet",help="model")
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -382,8 +384,8 @@ def __main__():
     args = parser.parse_args()
     mode = args.mode
     # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES
-    path_learning_curves = constants.ANOMALY_PATH_LEARNING_CURVES
-    path_checkpoints = constants.ANOMALY_PATH_CHECKPOINTS
+    path_learning_curves = args.pathLearningCurves
+    path_checkpoints = args.pathCheckpoints
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
 
