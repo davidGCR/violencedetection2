@@ -139,7 +139,7 @@ class AnomalyDataset(Dataset):
         len_segments = [len(seg) for seg in indices_segments]
         for seq in sequences:
             
-            print('original num segments: {}, segment len {}, segment{}'.format(len(indices_segments), len(seq), seq))
+            # print('original num segments: {}, segment len {}, segment{}'.format(len(indices_segments), len(seq), seq))
             # print(seq)
             frames = []
             # r_frames = []
