@@ -47,6 +47,7 @@ import constants
 import pandas as pd
 
 from FPS import FPSMeter
+from torch.utils.tensorboard import SummaryWriter
 # import LOCALIZATION.localization_utils as localization_utils
 # import SALIENCY.saliencyTester as saliencyTester
             
@@ -96,189 +97,7 @@ def modelSelection(datasetAll, labelsAll, numFramesAll, path_learning_curves, pa
                                                     positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
 
 
-
-def train(trainMode, datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDiPerVideos, num_workers, data_transforms,
-    batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
-    dataAumentation, overlaping, frame_skip, repetitions):
-    
-    # for numDiPerVideos in ndis: #for experiments
-    train_errors = []
-    train_acc = []
-    
         
-    # df = pd.DataFrame(list(zip(datasetAll, labelsAll, numFramesAll)), columns=['video', 'label', 'numFrames'])
-    # export_csv = df.to_csv ('hockeyFigths.csv')
-        # combined = list(zip(datasetAll, labelsAll, numFramesAll))
-        # random.shuffle(combined)
-        # datasetAll[:], labelsAll[:], numFramesAll[:] = zip(*combined) 
-        # train_idx, test_idx = None, None
-    # elif dataset == 'violentflows':
-
-    print(trainMode, "--- CONFIGURATION: ", "modelType:", modelType, ", numDiPerVideos:", numDiPerVideos, ", batch_size:", batch_size, ", num_epochs:",
-            num_epochs, ", feature_extract:", feature_extract, ", joinType:", joinType, ", scheduler_type: ", scheduler_type, ', dataAumentation:',
-            str(dataAumentation), ', overlapping:', str(overlaping), 'frame_skip: ',str(frame_skip))
-
-    for rep in range(repetitions):
-        rept_acc = []
-        rept_test_err = []
-
-        if trainMode == 'validationMode':
-            fold = 0
-            test_all_folds_acc = []
-            test_all_folds_test_error = []
-            all_folds_time_dfs = []
-            
-            for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
-            # for dataset_train, dataset_train_labels,dataset_test,dataset_test_labels   in k_folds_from_folders(vif_path, 5):
-                fold = fold + 1
-                print("**************** Fold:{}/{} ".format(fold, folds_number))
-                train_x, train_y, test_x, test_y = None, None, None, None
-                # print('fold: ',len(train_idx),len(test_idx))
-                
-                    
-                # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, data_transforms, numDiPerVideos, batch_size, num_workers, videoSegmentLength, positionSegmen
-                if not dataAumentation:
-                    train_x = list(itemgetter(*train_idx)(datasetAll))
-                    train_y = list(itemgetter(*train_idx)(labelsAll))
-                    train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-                    test_x = list(itemgetter(*test_idx)(datasetAll))
-                    test_y = list(itemgetter(*test_idx)(labelsAll))
-                    test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-                    initializeDataset.print_balance(train_y, test_y)
-                    dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
-                                                        data_transforms, numDiPerVideos, train_batch_size=batch_size, test_batch_size=1,
-                                                        train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
-                                                        positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
-                else:
-                    train_x = []
-                    train_y = []
-                    test_x = []
-                    test_y = []
-                    for idx in test_idx:
-                        # print(len(datasetAll), idx)
-                        dyImgs = os.listdir(datasetAll[idx])
-                        dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-                        test_example = datasetAll[idx]
-                        test_example = os.path.join(test_example,dyImgs[1])
-                        test_x.append(test_example)
-
-                        test_example_label = labelsAll[idx]
-                        # test_example_label = os.path.join(test_example_label,dyImgs[0])
-                        test_y.append(test_example_label)
-
-                    for idx in train_idx:
-                        dyImgs = os.listdir(datasetAll[idx])
-                        dyImgs.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-                        for j,img in enumerate(dyImgs):
-                            dyImgs[j]=os.path.join(datasetAll[idx],img)
-                            train_y.append(labelsAll[idx])
-                        train_x.extend(dyImgs)
-                    
-                    combined = list(zip(train_x, train_y))
-                    random.shuffle(combined)
-                    train_x[:], train_y[:] = zip(*combined)
-
-                    combined = list(zip(test_x, test_y))
-                    random.shuffle(combined)
-                    test_x[:], test_y[:] = zip(*combined)
-                    # df = pd.DataFrame(list(zip(*[test_x, test_y]))).add_prefix('Col')
-                    # df.to_csv('testAumented.csv', index=False)
-                    # df = pd.DataFrame(list(zip(*[train_x, train_y]))).add_prefix('Col')
-                    # df.to_csv('trainAumented.csv', index=False)
-                    
-                    dataloaders_dict = initializeDataset.getDataLoadersAumented(train_x, train_y, test_x, test_y, data_transforms, batch_size, num_workers)
-                model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
-                model.to(device)
-                params_to_update = verifiParametersToTrain(model, feature_extract)
-                # Observe that all parameters are being optimized
-                optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-                # Decay LR by a factor of 0.1 every 7 epochs
-                if scheduler_type == "StepLR":
-                    exp_lr_scheduler = lr_scheduler.StepLR( optimizer, step_size=7, gamma=0.1 )
-                elif scheduler_type == "OnPlateau":
-                    exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
-                MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)+'-overlaping:'+str(overlaping)+'-skipFrame:'+str(frame_skip)
-                checkpointPath = os.path.join(constants.PATH_VIOLENCE_CHECKPOINTS, MODEL_NAME)
-                tr = trainer.Trainer(model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device,
-                                    num_epochs, checkpointPath, numDiPerVideos,False, 'train', save_model=False)
-
-                for epoch in range(1, num_epochs + 1):
-                    print("Fold {} ----- Epoch {}/{}".format(fold,epoch, num_epochs))
-                    # Train and evaluate
-                    epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
-                    # epoch_loss_test, epoch_acc_test = tr.val_epoch(epoch)
-                    exp_lr_scheduler.step(epoch_loss_train)
-                    train_errors.append(epoch_loss_train)
-                    train_acc.append(epoch_acc_train)
-                    # test_lost.append(epoch_loss_test)
-                    # test_acc.append(epoch_acc_test)
-                
-                ########## TESTING ##########
-                tester = Tester(model=tr.getModel(), dataloader=dataloaders_dict['val'], loss=criterion, numDiPerVideos=numDiPerVideos, device=device)
-                predictions, scores, gt_labels, test_error, preprocess_times, inference_times = tester.test_model()
-                pairs = {'pp_time': preprocess_times, 'inf_time': inference_times}
-                fold_times_dataframe = pd.DataFrame.from_dict(pairs)
-                all_folds_time_dfs.append(fold_times_dataframe)
-                # if not os.path.exists(constants.PATH_TIME_RESULTS):
-                #     os.makedirs(constants.PATH_TIME_RESULTS)
-                # if not os.path.exists(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME)):
-                #     os.makedirs(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
-                # elif fold==0:
-                #     files = glob.glob(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
-                #     for f in files:
-                #         os.remove(f)
-                # df.to_csv(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME, 'fold-'+str(fold)+'.csv'))
-                
-                i_fold_test_error = test_error
-                i_fold_acc = cv_it_accuracy(predictions,gt_labels)
-                test_all_folds_acc.append(i_fold_acc)
-                test_all_folds_test_error.append(i_fold_test_error)
-                
-            print("=============== K-FOLDS RESULTS Repetition No:{} ===============".format(rep))
-            avg_acc = np.average(test_all_folds_acc)
-            avg_test_error = np.average(test_all_folds_test_error)
-            print('K-Folds accuracies: ', test_all_folds_acc)
-            print('K-folds Avg accuracy: ', avg_acc)
-            print('K-Folds test errors: ', test_all_folds_test_error)
-            print('K-folds Avg test error: ', avg_test_error)
-            rept_acc.append(avg_acc)
-            rept_test_err.append(avg_test_error)
-            avg_mspf_pp, avg_mspf_inf = timeCostKfolds(all_folds_time_dfs)
-            print('Average milisecods per frame in k-folds (preprocesing): ', avg_mspf_pp)
-            print('Average milisecods per frame in k-folds (inference): ', avg_mspf_inf)
-            # avg_mspf_pp, avg_mspf_inf = timeCost(os.path.join(constants.PATH_TIME_RESULTS, MODEL_NAME))
-            # print('Test error: ', test_error)
-            # print('Folds test FPS: ', test_fps, np.average(test_fps))
-            # print('Test error: ', test_error)
-
-            # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-gtruth.txt"), gt_labels)
-            # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-predictions.txt"), predictions)
-            # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_error.txt"), train_errors)
-            # saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-train_acc.txt"), train_acc)
-        # print("=============== ALL REPETITIONS ({}) ===============".format(repetitions))
-        # print('Accuracies: ', ,' -->Avg: ',str(np.average(rept_acc)), ', std: 'np.)    
-        # elif trainMode == 'finalMode':
-        #     model, input_size = initialize_model( model_name=modelType, num_classes=2, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos, joinType=joinType, use_pretrained=True)
-        #     model.to(device)
-        #     params_to_update = verifiParametersToTrain(model, feature_extract)
-        #     # Observe that all parameters are being optimized
-        #     optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-        #     # Decay LR by a factor of 0.1 every 7 epochs
-        #     if scheduler_type == "StepLR":
-        #         exp_lr_scheduler = lr_scheduler.StepLR( optimizer, step_size=7, gamma=0.1 )
-        #     elif scheduler_type == "OnPlateau":
-        #         exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
-        #     MODEL_NAME = modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-segmentLength:'+str(videoSegmentLength)+'-positionSegment:'+positionSegment+'-numEpochs:'+str(num_epochs)+'-dataAumentation:'+str(dataAumentation)+'-overlaping:'+str(overlaping)
-            
-        #     checkpointPath = os.path.join(constants.PATH_VIOLENCE_CHECKPOINTS, MODEL_NAME)
-        #     tr = trainer.Trainer(model, None, criterion, optimizer, exp_lr_scheduler, device,
-        #                         num_epochs, checkpointPath, numDiPerVideos, False, 'train', save_model=False)
-            
-        #     trainFinalModel(model_name=MODEL_NAME, my_trainer=tr, datasetAll=datasetAll, labelsAll=labelsAll, numFramesAll=numFramesAll,
-        #                     numDiPerVideos=numDiPerVideos, positionSegment=positionSegment, overlaping=overlaping,
-        #                     videoSegmentLength=videoSegmentLength, ttransform=data_transforms["train"], batch_size=batch_size,
-        #                     num_epochs=num_epochs, num_workers=num_workers)
-
 def timeCostKfolds(folds_df):
     # folds_times = os.listdir(path)
     # folds_times.sort()
@@ -305,7 +124,6 @@ def timeCostKfolds(folds_df):
     return avg_mspf_pp, avg_mspf_inf
     
 
-   
 def __main__():
 
     # python3 main.py --dataset hockey --numEpochs 12 --ndis 1 --foldsNumber 1 --featureExtract true --checkpointPath BlackBoxModels
@@ -314,21 +132,18 @@ def __main__():
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
     parser.add_argument("--featureExtract",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
-    parser.add_argument("--schedulerType",type=str,default="OnPlateau",help="learning rate scheduler")
     parser.add_argument("--numDynamicImagesPerVideo", type=int)
     parser.add_argument("--joinType", type=str)
     parser.add_argument("--foldsNumber", type=int, default=5)
     parser.add_argument("--numWorkers", type=int, default=4)
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
-    parser.add_argument("--trainMode", type=str)
+    parser.add_argument("--split_type", type=str)
     parser.add_argument("--overlaping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
-    parser.add_argument("--repetitions", type=int, default=1)
-    parser.add_argument("--dataAumentation",type=lambda x: (str(x).lower() == 'true'), default=False)
 
     args = parser.parse_args()
-    trainMode = args.trainMode
+    split_type = args.split_type
     
     path_learning_curves = constants.PATH_VIOLENCE_LEARNING_CURVES
     path_checkpoints = constants.PATH_VIOLENCE_CHECKPOINTS
@@ -336,67 +151,87 @@ def __main__():
     modelType = args.modelType
     batch_size = args.batchSize
     num_epochs = args.numEpochs
-    frameSkip = args.frameSkip
-    repetitions = args.repetitions
-
-    
+    frame_skip = args.frameSkip
     feature_extract = args.featureExtract
     joinType = args.joinType
-    scheduler_type = args.schedulerType
     numDynamicImagesPerVideo = args.numDynamicImagesPerVideo
     overlaping = args.overlaping
-    # print('overlaping: ', overlaping, type(overlaping))
-    
-    folds_number = args.foldsNumber
     num_workers = args.numWorkers
     input_size = 224
     videoSegmentLength = args.videoSegmentLength
     positionSegment = args.positionSegment
-    dataAumentation = args.dataAumentation
-
-    transforms = createTransforms(input_size)
-    # Detect if we have a GPU available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print('device: ', device)
-    # Setup the loss fxn
-    criterion = nn.CrossEntropyLoss()
-    # path_models = '/media/david/datos/Violence DATA/violentflows/Models/'
-    # path_results = '/media/david/datos/Violence DATA/violentflows/Results/'+dataset_source
-    # gpath = '/media/david/datos/Violence DATA/violentflows/movies Frames'
     shuffle = True
     path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
     path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
+            
+    datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
+    transforms = createTransforms(input_size)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    folds_number = 5
+    fold = 0
+    for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
+        fold = fold + 1
+        print("**************** Fold:{}/{} ".format(fold, folds_number))
+        train_x, train_y, test_x, test_y = None, None, None, None
     
-    if not dataAumentation:
-        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
-        train(trainMode,datasetAll, labelsAll, numFramesAll, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-        batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment, dataAumentation,
-        overlaping, frameSkip, repetitions)
-    else:
-        shuffle = True
-        datasetAll, labelsAll, _ = initializeDataset.createDataset(constants.PATH_HOCKEY_AUMENTED_VIOLENCE, constants.PATH_HOCKEY_AUMENTED_NON_VIOLENCE, shuffle)  #shuffle
-        # print(datasetAll[:5])
-        # print(labelsAll[:5])
-        train(trainMode, datasetAll, labelsAll, None, path_learning_curves, path_checkpoints, modelType, numDynamicImagesPerVideo, num_workers, transforms,
-            batch_size, num_epochs, feature_extract, joinType, scheduler_type, device, criterion, folds_number, videoSegmentLength, positionSegment,
-            dataAumentation, overlaping, frameSkip)
-    # num_classes = 2
-    # saliency_model_file = 'd'
-    # input_size = (224,224)
-    # saliency_model_file = 'SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar'
-    # threshold = 0.5
-    # saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, None, test_names,
-    #                                     input_size, saliency_model_config, ndis, None)
-    # typePersonDetector = 'yolov3'
-    # only_video_name = None
-    # plot = True
-    # h = 288
-    # w = 360
-    # overlapping = 0.5
-    # datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_noviolence, suffle=False)
-    # dataloader, violenceDataset = getOnlineDataLoader(datasetAll, labelsAll, numFramesAll, transform, numDiPerVideos, batch_size, num_workers, overlapping)
+        train_x = list(itemgetter(*train_idx)(datasetAll))
+        train_y = list(itemgetter(*train_idx)(labelsAll))
+        train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+        test_x = list(itemgetter(*test_idx)(datasetAll))
+        test_y = list(itemgetter(*test_idx)(labelsAll))
+        test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+        initializeDataset.print_balance(train_y, test_y)
+        dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
+                                            transforms, numDynamicImagesPerVideo, train_batch_size=batch_size, test_batch_size=1,
+                                            train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
+                                            positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
+        
+        model, _ = initialize_model(model_name=modelType,
+                                num_classes=2,
+                                feature_extract=feature_extract,
+                                numDiPerVideos=numDynamicImagesPerVideo,
+                                joinType=joinType,
+                                use_pretrained=True)
+        model.to(device)
+        params_to_update = verifiParametersToTrain(model, feature_extract)
+        optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+        
+        criterion = nn.CrossEntropyLoss()
+        split_type = split_type+str(fold)
+        experimentConfig = 'HOCKEY-Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{}'.format(modelType,
+                                                                                                videoSegmentLength,
+                                                                                                numDynamicImagesPerVideo,
+                                                                                                frame_skip,
+                                                                                                num_epochs,
+                                                                                                split_type)
+        writer = SummaryWriter('runs/'+experimentConfig)
+        tr = trainer.Trainer(model=model,
+                            train_dataloader=dataloaders_dict['train'],
+                            val_dataloader=dataloaders_dict['val'],
+                            criterion=criterion,
+                            optimizer=optimizer,
+                            scheduler=exp_lr_scheduler,
+                            device=device,
+                            num_epochs=num_epochs,
+                            checkpoint_path=None,
+                            numDynamicImage=numDynamicImagesPerVideo,
+                            plot_samples=False,
+                            train_type='train',
+                            save_model=False)
 
-    # online(violenceDataset, saliency_tester, type_person_detector, h, w, plot, only_video_name)
+        for epoch in range(1, num_epochs + 1):
+            print("Fold {} ----- Epoch {}/{}".format(fold,epoch, num_epochs))
+            # Train and evaluate
+            epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
+            epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
+            exp_lr_scheduler.step()
+
+            writer.add_scalar('training loss', epoch_loss_train, epoch)
+            writer.add_scalar('validation loss', epoch_loss_val, epoch)
+            writer.add_scalar('training Acc', epoch_acc_train, epoch)
+            writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+    
 
 __main__()
 

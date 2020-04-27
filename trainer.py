@@ -9,9 +9,10 @@ import dynamicImage
 import matplotlib.pyplot as plt
 import constants
 
+from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
-    def __init__(self, model, dataloaders, criterion, optimizer, scheduler, device, num_epochs, checkpoint_path,
+    def __init__(self, model, train_dataloader, val_dataloader, criterion, optimizer, scheduler, device, num_epochs, checkpoint_path,
                     numDynamicImage, plot_samples, train_type, save_model):
         self.model = model
         # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
@@ -24,7 +25,8 @@ class Trainer:
         self.feature_extract = True
 
         self.input_size = 224
-        self._dataloaders = dataloaders
+        self.train_dataloader = train_dataloader
+        self.val_dataloader = val_dataloader
         self.optimizer = optimizer
         self.criterion = criterion
         # self.tb = TensorBoardColab()
@@ -37,7 +39,9 @@ class Trainer:
         self.numDynamicImages = numDynamicImage
         self.plot_samples = plot_samples
         self.train_best_acc = 0
-        self._save_model = save_model 
+        self._save_model = save_model
+        # self.writer = SummaryWriter('runs/anomaly')
+        # self.minibatch = 0
 
     @property
     def save_model(self):
@@ -53,24 +57,15 @@ class Trainer:
     def checkpoint_path(self, value):
         self._checkpoint_path = value
     
-    @property
-    def dataloaders(self):
-        return self._dataloaders
-    @dataloaders.setter
-    def dataloaders(self, value):
-        self._dataloaders = value
+    # @property
+    # def dataloaders(self):
+    #     return self._dataloaders
+    # @dataloaders.setter
+    # def dataloaders(self, value):
+    #     self._dataloaders = value
 
     def getModel(self):
         return self.model
-    
-    # def setDataloaders(self, dataloaders):
-    #     self.dataloaders = dataloaders
-    
-    # def setSaveModel(self, save_model):
-    #     self.save_model = save_model
-    
-    # def setCheckpointPath(self, checkpoint_path):
-    #     self.checkpoint_path = checkpoint_path
 
     def train_epoch(self, epoch):
         # self.scheduler.step(epoch)
@@ -81,22 +76,13 @@ class Trainer:
         padding = 5
         
         # Iterate over data.
-        for inputs, labels, video_names, _ in tqdm(self.dataloaders["train"]): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
+        # for i, data in enumerate(tqdm(self.dataloaders["train"])):
+        for i, data in enumerate(tqdm(self.train_dataloader)): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
             # print('inputs, labels: ',type(inputs),inputs.size(), type(labels), labels.size())
             # print('inputs trainer: ', inputs.size())
             # print(video_names, labels)
-            if self.plot_samples:
-                # print(video_names)
-                plt.figure(figsize=(10,12))
-                images = torchvision.utils.make_grid(inputs.cpu().data, padding=padding)
-                # imshow(images, video_names)
-                dyImg = dynamicImage.computeDynamicImages(str(video_names[0]), self.numDynamicImages,16)
-                dis = torchvision.utils.make_grid(dyImg.cpu().data, padding=padding)
-                # print(video_names[0])
-                # plt.figure(figsize=(10,12))
-                # imshow(dis, 'RAW - '+str(video_names[0]))
+            inputs, labels, _, _ = data
             if self.numDynamicImages > 1:
-                # print('==== dataloader size: ',inputs.size()) #[batch, ndi, ch, h, w]
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
@@ -105,21 +91,17 @@ class Trainer:
             # track history if only in train
             with torch.set_grad_enabled(True):    
                 outputs = self.model(inputs)
-                # print('-- outputs size: ', outputs.size(), outputs)
-                # print('-- labels size: ',labels.size(), labels)
                 loss = self.criterion(outputs, labels)
                 _, preds = torch.max(outputs, 1)
-                # backward + optimize only if in training phase
                 loss.backward()
                 self.optimizer.step()
-                # self.scheduler.step(epoch)
-            # statistics
-            # print('train error: ', loss.item(), inputs.size(0), loss.item() * inputs.size(0))
+
+            # print('Train Lost: ', outputs, labels, loss.item())
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 
-        epoch_loss = running_loss / len(self.dataloaders["train"].dataset)
-        epoch_acc = running_corrects.double() / len(self.dataloaders["train"].dataset)
+        epoch_loss = running_loss / len(self.train_dataloader.dataset)
+        epoch_acc = running_corrects.double() / len(self.train_dataloader.dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format('train', epoch_loss, epoch_acc))
         # if self.train_type == constants.OPERATION_TRAINING_FINAL:
@@ -131,6 +113,10 @@ class Trainer:
                 torch.save(self.model, checkpoint_name)
         # self.tb.save_value("trainLoss", "train_loss", epoch, epoch_loss)
         # self.tb.save_value("trainAcc", "train_acc", epoch, epoch_acc)
+
+        # running_loss += loss.item()
+        # i = 
+        
         return epoch_loss, epoch_acc
 
     def val_epoch(self, epoch):
@@ -139,39 +125,33 @@ class Trainer:
         self.model.eval()
         
         # Iterate over data.
-        for inputs, labels, video_names, _ in self.dataloaders["val"]:
+        for inputs, labels, video_names, _ in self.val_dataloader:
+        # for inputs, labels  in self.dataloaders["val"]:
             if self.numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             # zero the parameter gradients
-            self.optimizer.zero_grad()
+            # self.optimizer.zero_grad()
             # forward
             # track history if only in train
-            with torch.set_grad_enabled(False):
+            # with torch.set_grad_enabled(False):
+            with torch.no_grad():
                 outputs = self.model(inputs)
-                # print('-- outputs size: ', outputs.size())
-                # print('-- labels size: ',labels.size())
                 loss = self.criterion(outputs, labels)
+                # print('Validation Lost: ', outputs, labels, loss.item())
 
                 _, preds = torch.max(outputs, 1)
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
+                # running_loss += loss.item() 
                 running_corrects += torch.sum(preds == labels.data)
 
-        epoch_loss = running_loss / len(self.dataloaders["val"].dataset)
-        epoch_acc = running_corrects.double() / len(self.dataloaders["val"].dataset)
+        epoch_loss = running_loss / len(self.val_dataloader.dataset)
+        epoch_acc = running_corrects.double() / len(self.val_dataloader.dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format("val", epoch_loss, epoch_acc))
-        # if self.checkpoint_path != None and epoch_acc > self.best_acc:
-        #     self.best_acc = epoch_acc
-        #     checkpoint_name = self.checkpoint_path+'.pth'
-        #     print('Saving entire model...',checkpoint_name)
-        #     torch.save(self.model, checkpoint_name)
-            # torch.save(self.model.state_dict(),self.checkpoint_path)
-            # save_checkpoint(self.model, self.checkpoint_path)
-        # self.tb.save_value("testLoss", "test_loss", epoch, epoch_loss)
-        # self.tb.save_value("testAcc", "test_acc", epoch, epoch_acc)
+    
 
         return epoch_loss, epoch_acc

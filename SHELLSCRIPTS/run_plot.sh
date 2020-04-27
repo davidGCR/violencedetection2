@@ -6,7 +6,7 @@
 # --modelName resnet18_Finetuned-True-_di-1_fusionType-maxTempPool_num_epochs-30-aumented-data-30 \
 
  python3 plot.py \
---learningCurve  ANOMALY_RESULTS/learning_curves/trainresnet50-1-Finetuned:True-maxTempPool-numEpochs:10-videoSegmentLength:30-overlaping:0.0-only_violence:True-skipFrame:10 \
+--learningCurve  ANOMALY_RESULTS/learning_curves/trainresnet50-1-Finetuned:True-maxTempPool-numEpochs:30-videoSegmentLength:30-overlaping:0.0-only_violence:True-skipFrame:20 \
 --nFolds 1 \
---mode train \
+--mode val \
 --lastEpoch 4

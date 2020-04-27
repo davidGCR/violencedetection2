@@ -1,17 +1,15 @@
 
 python3  main_violence.py \
 --modelType resnet50 \
---numEpochs 2 \
+--numEpochs 30 \
 --numWorkers 4 \
 --batchSize 8 \
---foldsNumber 5 \
 --featureExtract false \
---dataAumentation false \
 --joinType maxTempPool \
 --videoSegmentLength 10 \
---numDynamicImagesPerVideo 2 \
---trainMode validationMode \
+--numDynamicImagesPerVideo 1 \
 --positionSegment begin \
 --overlaping 0 \
---frameSkip 1
+--frameSkip 1 \
+--split_type cross-val
 

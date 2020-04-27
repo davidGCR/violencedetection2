@@ -12,19 +12,22 @@ cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 # TRAIN-MODEL
 python3 ANOMALYCRIME/anomaly_main.py \
 --mode train \
---modelType resnet50 \
+--modelType resnet18 \
 --joinType maxTempPool \
 --featureExtract false \
---numEpochs 10 \
+--numEpochs 30 \
 --learningRate 0.001 \
---ndis 1 \
---videoSegmentLength 30 \
+--scheduler StepLR \
+--ndis 2 \
+--videoSegmentLength 20 \
 --positionSegment begin \
 --overlaping 0 \
 --batchSize 8 \
 --numWorkers 4 \
 --shuffle true \
---frame_skip 10
+--frame_skip 2 \
+--split_type cross-val
+# --boardFolder numDynImgs3-segmentLen30-skip2-onlyrawvideos-resnet18-Epochs30
 # --typeTrain final \
 # --transferModel ninguno
 

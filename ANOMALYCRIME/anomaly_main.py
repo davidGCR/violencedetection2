@@ -1,7 +1,7 @@
 import sys
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
-# sys.path.insert(1, '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
-sys.path.insert(1, '/content/violencedetection2')
+sys.path.insert(1, '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2')
+# sys.path.insert(1, '/content/violencedetection2')
 import anomalyDataset
 import os
 import re
@@ -27,6 +27,13 @@ import anomalyInitializeDataset
 from tester import Tester
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
+
+import torchvision
+from torch.utils.tensorboard import SummaryWriter
+from kfolds import *
+from operator import itemgetter
+import copy
 
 def testing(model, dataloaders, device, numDiPerVideos, plot_samples):
     tester = Tester(model, dataloaders, device, numDiPerVideos, plot_samples)
@@ -61,72 +68,153 @@ def testing(model, dataloaders, device, numDiPerVideos, plot_samples):
 
     return auc
 
-def training(modelType, transfer_model, num_classes, feature_extract, numDiPerVideos, joinType, device, path_learning_curves, 
-                scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, mode, config, learningRate):
-    
-    if transfer_model is None:
-        model, input_size = initialize_model(model_name=modelType, num_classes=num_classes, feature_extract=feature_extract,
-                                                numDiPerVideos=numDiPerVideos, 
-                                                joinType=joinType, use_pretrained=True)
-    else:
-        model = initializeTransferModel(model_name=modelType, num_classes=num_classes, feature_extract=feature_extract,
-                                                numDiPerVideos=numDiPerVideos, 
-                                                joinType=joinType,classifier_file=transfer_model)
-    model.to(device)
+# helper function to show an image
+# (used in the `plot_classes_preds` function below)
+def min_max_normalize_tensor(img):
+    # print("normalize:", img.size())
+    _min = torch.min(img)
+    _max = torch.max(img)
+    # print("min:", _min.item(), ", max:", _max.item())
+    return (img - _min) / (_max - _min)
 
-    # MODEL_NAME = util.get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType, num_epochs)
-    # MODEL_NAME += additional_info
-    # MODEL_NAME = MODEL_NAME+'-FINAL' if operation == constants.OPERATION_TRAINING_FINAL else MODEL_NAME
-    # print(MODEL_NAME)
-    MODEL_NAME = mode + modelType+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-numEpochs:'+str(num_epochs) + config
-    params_to_update = verifiParametersToTrain(model, feature_extract)
-    optimizer = optim.SGD(params_to_update, lr=learningRate, momentum=0.9)
-    # Decay LR by a factor of 0.1 every 7 epochs
-    if scheduler_type == "StepLR":
-        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    elif scheduler_type == "OnPlateau":
-        exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
-    criterion = nn.CrossEntropyLoss()
+def matplotlib_imshow(img, one_channel=False):
+    if one_channel:
+        img = img.mean(dim=0)
     
-    if mode == 'train':
-        trainer = Trainer(model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device, num_epochs,
-                        os.path.join(path_checkpoints,MODEL_NAME), numDiPerVideos, False, mode, save_model=False)
-        train_lost = []
-        train_acc = []
-        val_lost = []
-        val_acc = []
-        for epoch in range(1, num_epochs + 1):
-            print("----- Epoch {}/{}".format(epoch, num_epochs))
-        
-            epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
-            train_lost.append(epoch_loss_train)
-            train_acc.append(epoch_acc_train)
-            epoch_loss_val, epoch_acc_val = trainer.val_epoch(epoch)
-            exp_lr_scheduler.step(epoch_loss_val)
-            val_lost.append(epoch_loss_val)
-            val_acc.append(epoch_acc_val)
-        
-        print("saving loss and acc history...")
-        # if operation == constants.OPERATION_TRAINING_FINAL:
-        #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
-        #     util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-        # elif operation == constants.OPERATION_TRAINING or operation == constants.OPERATION_TRAINING_AUMENTED:
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_lost.txt"), train_lost)
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-train_acc.txt"), train_acc)
-        util.saveLearningCurve(os.path.join(path_learning_curves,MODEL_NAME+"-val_lost.txt"), val_lost)
-        util.saveLearningCurve(os.path.join(path_learning_curves, MODEL_NAME + "-val_acc.txt"), val_acc)
-    elif mode == 'test':
-        trainer = Trainer(model, dataloaders_dict, criterion, optimizer, exp_lr_scheduler, device, num_epochs,
-                        os.path.join(path_checkpoints, MODEL_NAME), numDiPerVideos, False, mode, save_model=True)
-        for epoch in range(1, num_epochs + 1):
-            print("----- Epoch {}/{}".format(epoch, num_epochs))
-        
-            epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
-            # train_lost.append(epoch_loss_train)
-            # train_acc.append(epoch_acc_train)
-        
-        # auc = testing(model, dataloaders, device, numDiPerVideos, plot_samples)
-             
+    # img = img / 2 + 0.5     # unnormalize
+    # for im in img[0]:
+    # min_max_normalize_tensor(img) 
+    npimg = img.numpy()
+    if one_channel:
+        plt.imshow(npimg, cmap="Greys")
+    else:
+        plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
+def computeNormalizationValues(dataloader):
+    pop_mean = []
+    pop_std0 = []
+    pop_std1 = []
+    for i,data in enumerate(dataloader, 0):
+        image, label, vid_name, _ = data # shape (batch_size, 3, height, width)
+        numpy_image = image.numpy()
+        batch_mean = np.mean(numpy_image, axis=(0,2,3))
+        batch_std0 = np.std(numpy_image, axis=(0,2,3))
+        batch_std1 = np.std(numpy_image, axis=(0,2,3), ddof=1)
+        pop_mean.append(batch_mean)
+        pop_std0.append(batch_std0)
+        pop_std1.append(batch_std1)
+    
+    pop_mean = np.array(pop_mean).mean(axis=0)
+    pop_std0 = np.array(pop_std0).mean(axis=0)
+    pop_std1 = np.array(pop_std1).mean(axis=0)
+    return pop_mean, pop_std0, pop_std1
+
+def meanStdDataset():
+    train_violence = constants.PATHS_SPLITS_DICT['train_violence']
+    test_violence = constants.PATHS_SPLITS_DICT['test_violence']
+    train_raw_nonviolence = constants.PATHS_SPLITS_DICT['train_raw_nonviolence']
+    train_new_nonviolence = constants.PATHS_SPLITS_DICT['train_new_nonviolence']
+    test_raw_nonviolence = constants.PATHS_SPLITS_DICT['test_raw_nonviolence']
+    test_new_nonviolence = constants.PATHS_SPLITS_DICT['test_new_nonviolence']
+
+    data = train_test_videos(path_train_violence=train_violence,
+                                path_test_violence=test_violence, 
+                                path_train_raw_nonviolence=train_raw_nonviolence,
+                                path_train_new_nonviolence=train_new_nonviolence,
+                                path_test_raw_nonviolence=test_raw_nonviolence,
+                                path_test_new_nonviolence=test_new_nonviolence,
+                                proportion_norm_videos=0.5,
+                                min_num_frames = 50)
+    
+    train_names = data['train_names']
+    train_labels = data['train_labels']
+    train_num_frames = data['NumFrames_train']
+    train_bbox_files = data['train_bbox_files'] 
+    test_names = data['test_names']
+    test_labels = data['test_labels']
+    test_num_frames = data['NumFrames_test']
+    test_bbox_files = data['test_bbox_files']
+
+    # combined = list(zip(train_names, train_num_frames, train_bbox_files))
+    # combined_train_names, combined_val_names, train_labels, val_labels = train_test_split(combined, train_labels, stratify=train_labels, test_size=0.30, shuffle=True)
+    # train_names, train_num_frames, train_bbox_files = zip(*combined_train_names)
+    # val_names, val_num_frames, val_bbox_files = zip(*combined_val_names)
+    
+    transform = transforms.Compose([
+        # transforms.ToPILImage(),
+        transforms.ToTensor()
+    ])
+    train_dataset = anomalyDataset.AnomalyDataset(dataset=train_names,
+                                                labels=train_labels,
+                                                numFrames=train_num_frames,
+                                                bbox_files=train_bbox_files,
+                                                spatial_transform=transform,
+                                                nDynamicImages=1,
+                                                videoSegmentLength=10,
+                                                positionSegment='begin',
+                                                overlaping=0,
+                                                frame_skip=10)
+    
+    # validation_dataset = anomalyDataset.AnomalyDataset(dataset=val_names,
+    #                                             labels=val_labels,
+    #                                             numFrames=val_num_frames,
+    #                                             bbox_files=val_bbox_files,
+    #                                             spatial_transform=transform,
+    #                                             nDynamicImages=1,
+    #                                             videoSegmentLength=10,
+    #                                             positionSegment='begin',
+    #                                             overlaping=0,
+    #                                             frame_skip=20)                                                
+    dataloader_train = torch.utils.data.DataLoader(train_dataset, batch_size=4096, shuffle=False, num_workers=4)
+    # dataloader_val = torch.utils.data.DataLoader(validation_dataset, batch_size=4096, shuffle=False, num_workers=4)
+
+    pop_mean, pop_std0, pop_std1 = computeNormalizationValues(dataloader_train)
+    print('Train Dataset: ', pop_mean, pop_std0, pop_std1)
+    # pop_mean, pop_std0, pop_std1 = computeNormalizationValues(dataloader_val)
+    # print('Validation Dataset: ', pop_mean, pop_std0, pop_std1)
+    
+
+
+def training(model, numDiPerVideos, criterion, optimizer, scheduler, device, num_epochs, dataloaders_dict, path_checkpoints, mode, board_folder, split_type):
+    if split_type == 'train-test':
+        train_dataloader = dataloaders_dict['train']
+        val_dataloader = dataloaders_dict['test']
+    elif split_type == 'train-val-test':
+        train_dataloader = dataloaders_dict['train']
+        val_dataloader = dataloaders_dict['val']
+   
+    writer = SummaryWriter('runs/'+board_folder)
+    trainer = Trainer(model=model,
+                        train_dataloader=train_dataloader,
+                        val_dataloader=val_dataloader,
+                        criterion=criterion,
+                        optimizer=optimizer,
+                        scheduler=scheduler,
+                        device=device,
+                        num_epochs=num_epochs,
+                        checkpoint_path=None,
+                        numDynamicImage=numDiPerVideos,
+                        plot_samples=False,
+                        train_type=mode,
+                        save_model=False)
+    train_lost = []
+    train_acc = []
+    val_lost = []
+    val_acc = []
+    for epoch in range(1, num_epochs + 1):
+        print("----- Epoch {}/{}".format(epoch, num_epochs))
+        epoch_loss_train, epoch_acc_train = trainer.train_epoch(epoch)
+        train_lost.append(epoch_loss_train)
+        train_acc.append(epoch_acc_train)
+        epoch_loss_val, epoch_acc_val = trainer.val_epoch(epoch)
+        scheduler.step()
+        val_lost.append(epoch_loss_val)
+        val_acc.append(epoch_acc_val)
+        writer.add_scalar('training loss', epoch_loss_train, epoch)
+        writer.add_scalar('validation loss', epoch_loss_val, epoch)
+        writer.add_scalar('training Acc', epoch_acc_train, epoch)
+        writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+               
         
 
 import ANOMALYCRIME.datasetUtils as datasetUtils
@@ -177,11 +265,10 @@ def train_test_videos(path_train_violence,
     test_names_new_nonviolence = remove_short_videos(constants.PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE, test_names_new_nonviolence, min_num_frames)
     test_names_raw_nonviolence = remove_short_videos(constants.PATH_UCFCRIME2LOCAL_FRAMES_RAW_NONVIOLENCE, test_names_raw_nonviolence, min_num_frames)
 
-
+    new_split = False
     ### Train
     # print('Train names: ', len(train_names_violence))
     for tr_name in train_names_violence:
-        
         train_names.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, tr_name))
         train_labels.append(1)
         video_name = re.findall(r'[\w\.-]+-', tr_name)[0][:-1]
@@ -191,9 +278,11 @@ def train_test_videos(path_train_violence,
     negative_samples=[]
     if not os.path.exists(constants.PATH_FINAL_RANDOM_NONVIOLENCE_TRAIN_SPLIT):
         print('Creating Random Normal Train examples file...')
-        num_samples = int(2*len(train_names_violence)*proportion_norm_videos)
-        train_names_new_nonviolence = random.choices(train_names_new_nonviolence, k=num_samples)
-        train_names_raw_nonviolence = random.choices(train_names_raw_nonviolence, k=num_samples)
+        num_new_samples = int(len(train_names)*proportion_norm_videos)
+        train_names_new_nonviolence = random.choices(train_names_new_nonviolence, k=num_new_samples)
+        train_names_raw_nonviolence = random.choices(train_names_raw_nonviolence, k=len(train_names) - num_new_samples)
+        if len(train_names_new_nonviolence) == 0:
+            print('Using only raw non violence videos...')
         for neagtive_name in train_names_new_nonviolence:
             negative_samples.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE, neagtive_name))
             # train_names.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE, neagtive_name))
@@ -203,6 +292,7 @@ def train_test_videos(path_train_violence,
         util.save_file(negative_samples, constants.PATH_FINAL_RANDOM_NONVIOLENCE_TRAIN_SPLIT)
             # train_names.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_RAW_NONVIOLENCE, neagtive_name))
             # train_bbox_files.append(None)
+        new_split = True
     else:
         negative_samples = util.read_file(constants.PATH_FINAL_RANDOM_NONVIOLENCE_TRAIN_SPLIT)
     
@@ -223,16 +313,16 @@ def train_test_videos(path_train_violence,
     negative_samples=[]
     if not os.path.exists(constants.PATH_FINAL_RANDOM_NONVIOLENCE_TEST_SPLIT):
         print('Creating Random Normal Test examples file...')
-        num_samples = int(2*len(test_names_violence)*proportion_norm_videos)
+        num_samples = int(len(test_names)*proportion_norm_videos)
         test_names_new_nonviolence = random.choices(test_names_new_nonviolence, k=num_samples)
-        test_names_raw_nonviolence = random.choices(test_names_raw_nonviolence, k=num_samples)
+        test_names_raw_nonviolence = random.choices(test_names_raw_nonviolence, k=len(test_names) - num_new_samples)
         for neagtive_name in test_names_new_nonviolence:
             negative_samples.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE, neagtive_name))
             
         for neagtive_name in test_names_raw_nonviolence:
             negative_samples.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_RAW_NONVIOLENCE, neagtive_name))
         util.save_file(negative_samples, constants.PATH_FINAL_RANDOM_NONVIOLENCE_TEST_SPLIT)
-           
+        new_split = True
     else:
         negative_samples = util.read_file(constants.PATH_FINAL_RANDOM_NONVIOLENCE_TEST_SPLIT)
     for sample in negative_samples:
@@ -243,7 +333,7 @@ def train_test_videos(path_train_violence,
     NumFrames_test = [len(glob.glob1(test_names[i], "*.jpg")) for i in range(len(test_names))]
 
 
-    print(len(train_names), len(train_labels), len(NumFrames_train), len(train_bbox_files), len(test_names), len(test_labels), len(NumFrames_test), len(test_bbox_files))
+    print('Train Split: ', len(train_names), len(train_labels), len(NumFrames_train), len(train_bbox_files), ', Test Split: ',len(test_names), len(test_labels), len(NumFrames_test), len(test_bbox_files))
     data = {'train_names':train_names,
             'train_labels':train_labels,
             'NumFrames_train':NumFrames_train,
@@ -252,7 +342,7 @@ def train_test_videos(path_train_violence,
             'test_labels':test_labels,
             'NumFrames_test':NumFrames_test,
             'test_bbox_files':test_bbox_files}
-    return data
+    return data, new_split
 
 def check_data(path_example, numFrames, label, tmpAnnotation):
     num_frames_real = os.listdir(path_example)
@@ -261,15 +351,18 @@ def check_data(path_example, numFrames, label, tmpAnnotation):
     if label == 0 and tmpAnnotation is not None:
         print('Error in temporal annotation:{}, label: {}, data: {}'.format(path_example, label, tmpAnnotation))
 
-def initialize_train_val_anomaly_dataset(batch_size,
-                                        num_workers,
-                                        numDiPerVideos,
-                                        transforms,
-                                        videoSegmentLength,
-                                        positionSegment,
-                                        shuffle,
-                                        overlaping,
-                                        frame_skip):
+
+def initialize_dataloaders(batch_size,
+                            num_workers,
+                            numDiPerVideos,
+                            transforms,
+                            videoSegmentLength,
+                            positionSegment,
+                            shuffle,
+                            overlaping,
+                            frame_skip,
+                            split_type,
+                            folds_number=1):
 
     train_violence = constants.PATHS_SPLITS_DICT['train_violence']
     test_violence = constants.PATHS_SPLITS_DICT['test_violence']
@@ -279,13 +372,13 @@ def initialize_train_val_anomaly_dataset(batch_size,
     test_new_nonviolence = constants.PATHS_SPLITS_DICT['test_new_nonviolence']
 
 
-    data = train_test_videos(path_train_violence=train_violence,
+    data, new_split = train_test_videos(path_train_violence=train_violence,
                                 path_test_violence=test_violence, 
                                 path_train_raw_nonviolence=train_raw_nonviolence,
                                 path_train_new_nonviolence=train_new_nonviolence,
                                 path_test_raw_nonviolence=test_raw_nonviolence,
                                 path_test_new_nonviolence=test_new_nonviolence,
-                                proportion_norm_videos=0.5,
+                                proportion_norm_videos=0,
                                 min_num_frames = 50)
     train_names = data['train_names']
     train_labels = data['train_labels']
@@ -296,68 +389,141 @@ def initialize_train_val_anomaly_dataset(batch_size,
     test_num_frames = data['NumFrames_test']
     test_bbox_files = data['test_bbox_files']
 
-    combined = list(zip(train_names, train_num_frames, train_bbox_files))
-    combined_train_names, combined_val_names, train_labels, val_labels = train_test_split(combined, train_labels, stratify=train_labels, test_size=0.30, shuffle=True)
-    train_names, train_num_frames, train_bbox_files = zip(*combined_train_names)
-    val_names, val_num_frames, val_bbox_files = zip(*combined_val_names)
-
-    # print('validation set:', len(val_names), len(val_labels), len(val_num_frames), len(val_bbox_files))
-    util.print_balance(train_labels, 'train')
-    util.print_balance(val_labels, 'val')
-    util.print_balance(test_labels, 'test')
-
-    # print('Train sanity check')
-    # for idx,dt in enumerate(train_names):
-    #     check_data(dt,train_num_frames[idx],train_labels[idx], train_bbox_files[idx])
-
-    # print('Train sanity check')
-    # for idx,dt in enumerate(test_names):
-    #     check_data(dt, test_num_frames[idx],test_labels[idx], test_bbox_files[idx])
-
-    # print('Train sanity check')
-    # for idx,dt in enumerate(val_names):
-    #     check_data(dt, val_num_frames[idx],val_labels[idx], val_bbox_files[idx])
-
     dataloaders_dict = None
-    image_datasets = {
-        "train": anomalyDataset.AnomalyDataset(dataset=train_names,
-                                                labels=train_labels,
-                                                numFrames=train_num_frames,
-                                                bbox_files=train_bbox_files,
-                                                spatial_transform=transforms["train"],
-                                                nDynamicImages=numDiPerVideos,
-                                                videoSegmentLength=videoSegmentLength,
-                                                positionSegment=positionSegment,
-                                                overlaping=overlaping,
-                                                frame_skip=frame_skip),
-        "val": anomalyDataset.AnomalyDataset(dataset=val_names,
-                                                labels=val_labels,
-                                                numFrames=val_num_frames,
-                                                bbox_files=val_bbox_files,
-                                                spatial_transform=transforms["val"], 
-                                                nDynamicImages=numDiPerVideos,
-                                                videoSegmentLength=videoSegmentLength,
-                                                positionSegment=positionSegment,
-                                                overlaping=overlaping,
-                                                frame_skip=frame_skip),
-        "test": anomalyDataset.AnomalyDataset(dataset=test_names,
-                                                labels=test_labels,
-                                                numFrames=test_num_frames,
-                                                bbox_files=test_bbox_files,
-                                                spatial_transform=transforms["test"],
-                                                nDynamicImages=numDiPerVideos,
-                                                videoSegmentLength=videoSegmentLength,
-                                                positionSegment=positionSegment,
-                                                overlaping=overlaping,
-                                                frame_skip=frame_skip)
-    }
-    dataloaders_dict = {
-        "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
-        "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
-        "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    }
-     
-    return dataloaders_dict
+    if split_type == 'train-val-test':
+        combined = list(zip(train_names, train_num_frames, train_bbox_files))
+        combined_train_names, combined_val_names, train_labels, val_labels = train_test_split(combined, train_labels, stratify=train_labels, test_size=0.25, shuffle=True)
+        train_names, train_num_frames, train_bbox_files = zip(*combined_train_names)
+        val_names, val_num_frames, val_bbox_files = zip(*combined_val_names)
+        util.print_balance(train_labels, 'train')
+        util.print_balance(val_labels, 'val')
+        util.print_balance(test_labels, 'test')
+        image_datasets = {
+            "train": anomalyDataset.AnomalyDataset(dataset=train_names,
+                                                    labels=train_labels,
+                                                    numFrames=train_num_frames,
+                                                    bbox_files=train_bbox_files,
+                                                    spatial_transform=transforms["train"],
+                                                    nDynamicImages=numDiPerVideos,
+                                                    videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment,
+                                                    overlaping=overlaping,
+                                                    frame_skip=frame_skip),
+            "val": anomalyDataset.AnomalyDataset(dataset=val_names,
+                                                    labels=val_labels,
+                                                    numFrames=val_num_frames,
+                                                    bbox_files=val_bbox_files,
+                                                    spatial_transform=transforms["val"], 
+                                                    nDynamicImages=numDiPerVideos,
+                                                    videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment,
+                                                    overlaping=overlaping,
+                                                    frame_skip=frame_skip),
+            "test": anomalyDataset.AnomalyDataset(dataset=test_names,
+                                                    labels=test_labels,
+                                                    numFrames=test_num_frames,
+                                                    bbox_files=test_bbox_files,
+                                                    spatial_transform=transforms["test"],
+                                                    nDynamicImages=numDiPerVideos,
+                                                    videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment,
+                                                    overlaping=overlaping,
+                                                    frame_skip=frame_skip)
+        }
+        dataloaders_dict = {
+            "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
+            "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=batch_size, shuffle=False, num_workers=num_workers),
+            "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+        }
+
+    elif split_type == 'train-test':
+        util.print_balance(train_labels, 'train')
+        util.print_balance(test_labels, 'test')
+        image_datasets = {
+            "train": anomalyDataset.AnomalyDataset(dataset=train_names,
+                                                    labels=train_labels,
+                                                    numFrames=train_num_frames,
+                                                    bbox_files=train_bbox_files,
+                                                    spatial_transform=transforms["train"],
+                                                    nDynamicImages=numDiPerVideos,
+                                                    videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment,
+                                                    overlaping=overlaping,
+                                                    frame_skip=frame_skip),
+            "test": anomalyDataset.AnomalyDataset(dataset=test_names,
+                                                    labels=test_labels,
+                                                    numFrames=test_num_frames,
+                                                    bbox_files=test_bbox_files,
+                                                    spatial_transform=transforms["test"],
+                                                    nDynamicImages=numDiPerVideos,
+                                                    videoSegmentLength=videoSegmentLength,
+                                                    positionSegment=positionSegment,
+                                                    overlaping=overlaping,
+                                                    frame_skip=frame_skip)
+        }
+        dataloaders_dict = {
+            "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
+            "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+        }
+    elif split_type == 'cross-val':
+        folds_number = 5
+        # train_names = train_names.extend(test_names)
+        # train_labels = train_labels.extend(test_labels)
+        # train_num_frames = train_num_frames.extend(test_num_frames)
+        # train_bbox_files = train_bbox_files.extend(test_bbox_files)
+        train_names = train_names + test_names
+        train_labels = train_labels + test_labels
+        train_num_frames = train_num_frames + test_num_frames
+        train_bbox_files = train_bbox_files + test_bbox_files
+
+        train_all = list(zip(train_names, train_labels, train_num_frames, train_bbox_files))
+        random.shuffle(train_all)
+        names, labels, num_frames, bbox_files = zip(*train_all)
+        dataloaders_list_splits = []
+        split=0
+        for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(train_names)):
+            split +=1
+            train_x = list(itemgetter(*train_idx)(names))
+            train_y = list(itemgetter(*train_idx)(labels))
+            train_num_frames = list(itemgetter(*train_idx)(num_frames))
+            train_bbox_files = list(itemgetter(*train_idx)(bbox_files))
+
+            test_x = list(itemgetter(*test_idx)(names))
+            test_y = list(itemgetter(*test_idx)(labels))
+            test_num_frames = list(itemgetter(*test_idx)(num_frames))
+            test_bbox_files = list(itemgetter(*test_idx)(bbox_files))
+            print('K-fold-Split: {}'.format(split))
+            util.print_balance(train_y, 'train')
+            util.print_balance(test_y, 'test')
+            image_datasets = {
+                "train": anomalyDataset.AnomalyDataset(dataset=train_x,
+                                                        labels=train_y,
+                                                        numFrames=train_num_frames,
+                                                        bbox_files=train_bbox_files,
+                                                        spatial_transform=transforms["train"],
+                                                        nDynamicImages=numDiPerVideos,
+                                                        videoSegmentLength=videoSegmentLength,
+                                                        positionSegment=positionSegment,
+                                                        overlaping=overlaping,
+                                                        frame_skip=frame_skip),
+                "test": anomalyDataset.AnomalyDataset(dataset=test_x,
+                                                        labels=test_y,
+                                                        numFrames=test_num_frames,
+                                                        bbox_files=test_bbox_files,
+                                                        spatial_transform=transforms["test"],
+                                                        nDynamicImages=numDiPerVideos,
+                                                        videoSegmentLength=videoSegmentLength,
+                                                        positionSegment=positionSegment,
+                                                        overlaping=overlaping,
+                                                        frame_skip=frame_skip)
+            }
+            dataloaders_dict = {
+                "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
+                "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+            }
+            dataloaders_list_splits.append(dataloaders_dict)
+            dataloaders_dict = dataloaders_list_splits
+    return dataloaders_dict, new_split
 
 def __main__():
     parser = argparse.ArgumentParser()
@@ -373,12 +539,14 @@ def __main__():
     parser.add_argument("--joinType", type=str)
     parser.add_argument("--overlaping", type=float)
     parser.add_argument("--learningRate", type=float)
+    parser.add_argument("--scheduler", type=str)
     parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--numWorkers", type=int, default=4)
     parser.add_argument("--videoSegmentLength", type=int, default=0)
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--frame_skip", type=int)
-    
+    parser.add_argument("--boardFolder", type=str)
+    parser.add_argument("--split_type", type=str)
 
 
     args = parser.parse_args()
@@ -399,55 +567,82 @@ def __main__():
     num_epochs = args.numEpochs
     feature_extract = args.featureExtract
     joinType = args.joinType
-    scheduler_type = 'OnPlateau'
+    scheduler_type = args.scheduler
     numDiPerVideos = args.ndis
     overlaping = args.overlaping
     learningRate = args.learningRate
     frame_skip = args.frame_skip
-    
+    board_folder = args.boardFolder
     transforms = transforms_anomaly.createTransforms(input_size)
-    num_classes = 2 
+    num_classes = 2
+    split_type = args.split_type
     #Training
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # if operation == constants.OPERATION_TRAINING_TRANSFER:
-    #     # path_dataset, batch_size, num_workers, transform, shuffle
-    #     dataloaders_dict = anomalyInitializeDataset.initialize_train_aumented_anomaly_dataset(constants.PATH_DATA_AUMENTATION_OUTPUT,batch_size, 
-    #                                                                                             num_workers,transforms,shuffle)
-    #     additional_info = '-transfered-data'
-    #     transferLearning(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
-    #             scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
-    # elif operation == constants.OPERATION_TRAINING_AUMENTED:
-    #     # path_dataset, batch_size, num_workers, transform, shuffle
-    #     dataloaders_dict = anomalyInitializeDataset.initialize_train_aumented_anomaly_dataset(constants.PATH_DATA_AUMENTATION_OUTPUT,batch_size, 
-    #                                                                                             num_workers,transforms,shuffle, val_split=0.35)
-    #     additional_info = '-aumented-data-30'
-    #     feature_extract = False
-    #     training(modelType, num_classes, feature_extract, numDiPerVideos, joinType, device, additional_info, path_learning_curves,
-    #             scheduler_type, num_epochs, dataloaders_dict, path_checkpoints, plot_samples,operation)
     only_violence = True
-    config = '-videoSegmentLength:'+str(videoSegmentLength)+'-overlaping:'+str(overlaping)+'-only_violence:'+str(only_violence)+'-skipFrame:'+str(frame_skip)
-    if mode == 'train':
 
-        dataloaders_dict = initialize_train_val_anomaly_dataset(batch_size,
-                                                                num_workers,
-                                                                numDiPerVideos,
-                                                                transforms,
-                                                                videoSegmentLength,
-                                                                positionSegment,
-                                                                shuffle,
-                                                                overlaping=overlaping,
-                                                                frame_skip=frame_skip)
+    
+    # '-videoSegmentLength:'+str(videoSegmentLength)+'-overlaping:'+str(overlaping)+'-only_violence:'+str(only_violence)+'-skipFrame:'+str(frame_skip)
 
-        training(modelType=modelType, transfer_model=None, num_classes=num_classes, feature_extract=feature_extract, numDiPerVideos=numDiPerVideos,
-                joinType=joinType, device=device, path_learning_curves=path_learning_curves, scheduler_type=scheduler_type,
-                num_epochs=num_epochs, dataloaders_dict=dataloaders_dict, path_checkpoints=path_checkpoints, mode=mode, config=config,
-                learningRate=learningRate) 
-    # elif mode == 'test':
-    #     dataloaders_dict, test_names = anomalyInitializeDataset.initialize_train_test_anomaly_dataset(path_dataset, train_videos_path,
-    #                                                     test_videos_path, batch_size, num_workers, numDiPerVideos, transforms,
-    #                                                     videoSegmentLength, positionSegment, shuffle, only_violence=only_violence, overlaping=overlaping)
-    #     training(modelType, None, num_classes, feature_extract, numDiPerVideos, joinType, device, path_learning_curves,
-    #             scheduler_type, num_epochs, dataloaders_dict, path_checkpoints,mode, config, learningRate)
+    dataloaders_dict, new_split = initialize_dataloaders(batch_size,
+                                                            num_workers,
+                                                            numDiPerVideos,
+                                                            transforms,
+                                                            videoSegmentLength,
+                                                            positionSegment,
+                                                            shuffle,
+                                                            overlaping=overlaping,
+                                                            frame_skip=frame_skip,
+                                                            split_type=split_type)
+
+    experimentConfig = 'Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, new_split-{}, split_type-{}'.format(modelType,
+                                                                                                videoSegmentLength,
+                                                                                                numDiPerVideos,
+                                                                                                frame_skip,
+                                                                                                num_epochs,
+                                                                                                new_split,
+                                                                                                split_type)
+
+    if split_type == 'cross-val':
+        models = []
+        for split, dlt in enumerate(dataloaders_dict):
+            print('====== Fold {}'.format(split+1))
+            model, input_size = initialize_model(model_name=modelType, num_classes=num_classes, feature_extract=feature_extract,
+                                                numDiPerVideos=numDiPerVideos, 
+                                                joinType=joinType, use_pretrained=True)
+            model = model.to(device)
+            params_to_update = verifiParametersToTrain(model, feature_extract)
+            optimizer = optim.SGD(params_to_update, lr=learningRate, momentum=0.9)
+            exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+            criterion = nn.CrossEntropyLoss()
+            
+            training(model=model, numDiPerVideos=numDiPerVideos,criterion=criterion, optimizer=optimizer, scheduler=exp_lr_scheduler, device=device,
+                num_epochs=num_epochs, dataloaders_dict=dlt, path_checkpoints=path_checkpoints, mode=mode, board_folder=experimentConfig+'-'+str(split+1),
+                split_type='train-test') 
+
+
+    # MODEL_NAME = mode+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-numEpochs:'+str(num_epochs) + config
+    
+
+    else:
+        
+        model, input_size = initialize_model(model_name=modelType, num_classes=num_classes, feature_extract=feature_extract,
+                                                numDiPerVideos=numDiPerVideos, 
+                                                joinType=joinType, use_pretrained=True)
+        model = model.to(device)
+        params_to_update = verifiParametersToTrain(model, feature_extract)
+        optimizer = optim.SGD(params_to_update, lr=learningRate, momentum=0.9)
+        # Decay LR by a factor of 0.1 every 7 epochs
+        # if scheduler_type == "StepLR":
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+        # elif scheduler_type == "OnPlateau":
+        #     exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau( optimizer, patience=5, verbose=True )
+        criterion = nn.CrossEntropyLoss()
+        # meanStdDataset()
+        # model, numDiPerVideos, criterion, optimizer, scheduler, device, num_epochs, dataloaders_dict, path_checkpoints, mode, board_folder
+        training(model=model, numDiPerVideos=numDiPerVideos,criterion=criterion, optimizer=optimizer, scheduler=exp_lr_scheduler, device=device,
+                num_epochs=num_epochs, dataloaders_dict=dataloaders_dict, path_checkpoints=path_checkpoints, mode=mode, board_folder=experimentConfig, split_type=split_type) 
+    
+    
   
     
 

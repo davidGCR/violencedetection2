@@ -64,7 +64,8 @@ def plotScalarCombined(trainlist,testlist, tepochs,title, ylabel, fig2, rows, co
 def plot_results(path, lastEpoch, nfolds,title, mode):
     train_lost = loadList(str(path)+'-train_lost.txt')
     train_acc = loadList(str(path) + '-train_acc.txt')
-    if mode=='train':
+    # if mode=='train':
+    if mode=='val':
       test_lost = loadList(str(path)+'-val_lost.txt')
       test_acc = loadList(str(path)+'-val_acc.txt')
 

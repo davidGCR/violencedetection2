@@ -151,7 +151,10 @@ class AnomalyDataset(Dataset):
             # if self.getRawFrames:
             #     video_raw_frames.append(frames)
             imgPIL, img = getDynamicImage(frames)
-            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            if self.spatial_transform is not None:
+                imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            # else:
+            #     imgPIL = transforms.ToTensor()(imgPIL)
             dinamycImages.append(imgPIL)
             
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])

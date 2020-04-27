@@ -3,6 +3,7 @@ import shutil
 import re
 import cv2
 import numpy as np
+import time
 
 class VideoDataPreparation():
     def __init__(self, dataset_folder, all_videos_file, train_split_file, test_split_file, dataset_frames_folder, temporal_annotations_folder, categories):
@@ -47,6 +48,11 @@ class VideoDataPreparation():
             elif label in categories:
                 shutil.copytree(vid_path_src, vid_path_dst)
           
+    def sortAlphaNumericArray(self, lista):
+
+        lista.sort(key=lambda f: int(re.sub('\D', '', f)))
+        return lista
+
     def get_video_intervals(self, num_frames, data, margen):
         normal_intervals = []
         start = -1
@@ -223,6 +229,84 @@ class VideoDataPreparation():
         new_nonviolence_samples.sort()       
         self.save_file(new_nonviolence_samples, out_new_nonviolence_file)
 
+    def frames2Video(self, folder_in, folder_out, fps):
+        frames = os.listdir(folder_in)
+        frames = self.sortAlphaNumericArray(frames)
+        frame_array = []
+        for i in range(len(frames)):
+            
+            frame_path = os.path.join(folder_in, frames[i])
+            #reading each files
+            img = cv2.imread(frame_path)
+            height, width, layers = img.shape
+            size = (width,height)
+            print(frame_path)
+            #inserting the frames into an image array
+            frame_array.append(img)
+        h, videoname = os.path.split(folder_in)
+        videoname = videoname + '.avi'
+        videoPath = os.path.join(folder_out,videoname)
+        out = cv2.VideoWriter(videoPath,cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+
+        for i in range(len(frame_array)):
+            # writing to a image array
+            out.write(frame_array[i])
+        out.release()
+
+def getFrame(vidcap, sec, path_out):
+    vidcap.set(cv2.CAP_PROP_POS_MSEC,sec*1000)
+    hasFrames,image = vidcap.read()
+    if hasFrames:
+        cv2.imwrite(path_out, image)     # save frame as JPG file
+    return hasFrames
+
+def video2Frames2(video_path, path_out, delayTime):
+    cap = cv2.VideoCapture(video_path)
+
+    _, videoName = os.path.split(video_path)
+    videoName = videoName[:-4]
+    framesPath = os.path.join(path_out, videoName)
+    if not os.path.exists(framesPath):
+        os.makedirs(framesPath)
+    
+    sec = 0
+    frameRate = delayTime #it will capture image in each 0.5 second
+    index_frame = 1
+    frame_name = framesPath+'/'+'frame' + str("{0:04}".format(index_frame)) + '.jpg'
+    success = getFrame(cap, sec, frame_name)
+    while success:
+        index_frame += 1
+        sec = sec + frameRate
+        sec = round(sec, 2)
+        frame_name = framesPath+'/'+'frame' + str("{0:04}".format(index_frame)) + '.jpg'
+        success = getFrame(cap, sec, frame_name)
+            
+        
+    # def video2Frames(self,video_path, path_out, delayTime):
+    #     cap = cv2.VideoCapture(video_path)
+    #     cap.set(cv2.CAP_PROP_POS_MSEC, 20)
+    #     if (cap.isOpened()== False):
+    #         print("Error opening video stream or file: ", video_path)
+    #     #   return 0
+    #     index_frame = 1
+    #     # print(video_path)
+    #     _, videoName = os.path.split(video_path)
+    #     videoName = videoName[:-4]
+    #     framesPath = os.path.join(path_out, videoName)
+    #     if not os.path.exists(framesPath):
+    #         os.makedirs(framesPath)
+    #     while(cap.isOpened()):
+    #         ret, frame = cap.read()
+    #         if ret == False:
+    #             break
+    #         frame_name = framesPath+'/'+'frame' + str("{0:03}".format(index_frame)) + '.jpg'
+    #         print ('Creating...' + frame_name)
+    #         cv2.imwrite(frame_name, frame)
+    #         index_frame += 1
+    #         # cv2.waitKey(delayTime)
+    #         time.sleep(delayTime)
+
+
 def __main__():
     # local_dataset = '/media/david/datos/Violence DATA/AnomalyCRIME/UCFCrime2Local/videos'
     categories = {'Normal_Videos':0, 'Arrest': 1, 'Assault': 2, 'Robbery': 4, 'Stealing': 5}
@@ -251,8 +335,18 @@ def __main__():
                     'out_raw_nonviolence_file': "CrimeViolence2LocalDATASET/readme/Train_raw_nonviolence_split.txt",
                     'out_new_nonviolence_file': "CrimeViolence2LocalDATASET/readme/Train_new_nonviolence_split.txt"
                     }
-    dataPreparator.generate_train_test_files(folders_path)
-    
+    # dataPreparator.generate_train_test_files(folders_path)
+    folder_in = "/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/CrimeViolence2LocalDATASET/frames/violence/Stealing055-VSplit2"
+    folder_out = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/CrimeViolence2LocalDATASET/videos'
+    fps = 30
+    dataPreparator.frames2Video(folder_in, folder_out, fps)
+    # videoPath = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/CrimeViolence2LocalDATASET/videos/Stealing055-VSplit2.avi'
+    # framesPath = "/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/CrimeViolence2LocalDATASET/frames20fps"
+    # delayTime = 0.5
+    # # video2Frames2(videoPath, framesPath, delayTime)
+    # dataPreparator.frames2Video(framesPath+'/'+'Stealing055-VSplit2', framesPath, fps)
     # vv = os.listdir('CrimeViolence2LocalDATASET/frames/nonviolence')
+
+
 
 __main__()

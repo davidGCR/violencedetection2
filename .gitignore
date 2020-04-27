@@ -7,3 +7,7 @@ DATA
 ANOMALYCRIME/checkpoints
 ANOMALYCRIME/learning_curves
 *.tar
+*.csv
+*.zip
+*.txt
+*.DS_Store
