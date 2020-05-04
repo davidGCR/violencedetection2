@@ -648,12 +648,13 @@ def __main_mask__():
                                                             frame_skip=args.frame_skip,
                                                             split_type=args.split_type)
     
-    experimentConfig = 'Mask_model, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{}'.format(
+    experimentConfig = 'Mask_model, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{}, image_idx-{}'.format(
                                                                                                 args.videoSegmentLength,
                                                                                                 args.ndis,
                                                                                                 args.frame_skip,
                                                                                                 args.numEpochs,
-                                                                                                args.split_type)
+                                                                                                args.split_type,
+                                                                                                args.image_idx)
     path_checkpoints = os.path.join(constants.ANOMALY_PATH_CHECKPOINTS, experimentConfig)
     black_box_file = include.root+'/ANOMALY_RESULTS/checkpoints/Model-resnet18, segmentLen-20, numDynIms-6, frameSkip-0, epochs-10, new_split-False, split_type-train-test'
 
