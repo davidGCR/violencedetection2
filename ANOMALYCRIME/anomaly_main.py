@@ -529,6 +529,7 @@ import SALIENCY.saliencyModel
 from SALIENCY.loss import Loss
 from tqdm import tqdm
 from torch.autograd import Variable
+import include
 
 def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataloaders_dict, black_box_file, numDynamicImages):
     num_classes = 2
@@ -653,7 +654,7 @@ def __main_mask__():
                                                                                                 args.numEpochs,
                                                                                                 args.split_type)
     path_checkpoints = os.path.join(constants.ANOMALY_PATH_CHECKPOINTS, experimentConfig)
-    black_box_file = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/ANOMALY_RESULTS/checkpoints/Model-resnet18, segmentLen-20, numDynIms-6, frameSkip-0, epochs-10, new_split-False, split_type-train-test'
+    black_box_file = include.root+'/ANOMALY_RESULTS/checkpoints/Model-resnet18, segmentLen-20, numDynIms-6, frameSkip-0, epochs-10, new_split-False, split_type-train-test'
 
     train_mask_model(args.numEpochs, regularizers, device, path_checkpoints, dataloaders_dict, black_box_file, args.ndis)
 
