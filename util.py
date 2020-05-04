@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
+import csv
 
 def createGifFromFrames(path):
   frames = os.listdir(path)
@@ -192,3 +193,8 @@ def save_file(data, out_file):
   with open(out_file, 'w') as output:
       for row in data:
           output.write(str(row) + '\n')
+
+def save_csvfile_multicolumn(data, out_file):
+  with open(out_file, 'w') as f:
+    writer = csv.writer(f, delimiter='\t')
+    writer.writerows(zip(a,b))

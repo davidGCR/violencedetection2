@@ -4,6 +4,7 @@ from include import *
 PATH_DATA_AUMENTATION_OUTPUT = root+'/AnomalyCRIMEDATASET/UCFCrime2Local/dataAumentation'
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'/HockeyFightsDATASET/frames/violence'
 PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/HockeyFightsDATASET/frames/nonviolence'
+PATH_HOCKEY_README = root + '/HockeyFightsDATASET/readme'
 
 PATH_HOCKEY_AUMENTED_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/violence'
 PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/nonviolence'

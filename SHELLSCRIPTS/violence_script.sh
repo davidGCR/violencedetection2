@@ -1,7 +1,7 @@
 
 python3  main_violence.py \
 --modelType resnet50 \
---numEpochs 30 \
+--numEpochs 25 \
 --numWorkers 4 \
 --batchSize 8 \
 --featureExtract false \
@@ -11,5 +11,5 @@ python3  main_violence.py \
 --positionSegment begin \
 --overlaping 0 \
 --frameSkip 1 \
---split_type cross-val
+--split_type train-test
 

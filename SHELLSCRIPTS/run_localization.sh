@@ -1,7 +1,8 @@
 # cd /media/david/datos/PAPERS-SOURCE_CODE/violencedetection
 # cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
+# --saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
 python3 LOCALIZATION/localization_main.py \
---saliencyModelFile SALIENCY/Models/anomaly/mask_model_10_frames_di__epochs-12.tar \
+--saliencyModelFile enCodigo \
 --classifierModelFile ANOMALYCRIME/checkpoints/resnet18_Finetuned-False-_di-1_fusionType-maxTempPool_num_epochs-23-aumented-data.pth \
 --batchSize 1 \
 --numWorkers 1 \
@@ -14,7 +15,7 @@ python3 LOCALIZATION/localization_main.py \
 --overlappingBlock 0 \
 --overlappingSegment 0 \
 --plot true \
---videoName Assault030 \
+--videoName Robbery001 \
 --delay 1
 
 # python3 LOCALIZATION/dense_sampling.py \

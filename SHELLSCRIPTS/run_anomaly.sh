@@ -31,19 +31,6 @@ cd /Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2
 # --typeTrain final \
 # --transferModel ninguno
 
-
-
-# parser.add_argument("--numEpochs",type=int,default=30)
-#     parser.add_argument("--batchSize", type=int, default=64)
-#     parser.add_argument("--numWorkers", type=int, default=4)
-#     parser.add_argument("--ndis", type=int, help="num dyn imgs")
-#     parser.add_argument("--videoSegmentLength", type=int, default=0)
-#     parser.add_argument("--positionSegment", type=str)
-#     parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
-#     parser.add_argument("--frame_skip", type=int)
-#     parser.add_argument("--overlaping", type=float)
-#     parser.add_argument("--split_type", type=str)
-
 python3 ANOMALYCRIME/anomaly_main.py \
 --numEpochs 10 \
 --ndis 6 \
@@ -54,5 +41,6 @@ python3 ANOMALYCRIME/anomaly_main.py \
 --numWorkers 2 \
 --shuffle true \
 --frame_skip 0 \
---split_type train-test
+--split_type train-test \
+--image_idx 2
 

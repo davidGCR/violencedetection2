@@ -57,6 +57,7 @@ class ViolenceModelResNet(nn.Module):
         # x size= torch.Size([ndi, bs, 3, 224, 224])
         # print('forward input size:',x.size())
         # if self.inference:
+            # num_di = 
         #     # batch_num = x.size()[0]
         #     # num_dyn_imgs_infer = x.size()[1]
         #     if self.numDiPerVideos > 1:
