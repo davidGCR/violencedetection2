@@ -111,6 +111,7 @@ class SaliencyModel(nn.Module):
     def forward(self, x, labels):
         # print()
         # print('=> forward input:', x.size())
+        
         out = self.conv1(x)
         # print('=> out conv1:', out.size())
         out = self.bn1(out)

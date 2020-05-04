@@ -9,8 +9,9 @@ import numpy as np
 
 class Loss: 
     # L = [mask smoothness] + [Region small] + [make sure classifier able to recognite selected class from preserved region] + [ensures the probab. of selected class , after remove salient region  is low]
-    def __init__(self,num_classes, regularizers):
+    def __init__(self,num_classes, regularizers, num_dynamic_images):
         self.num_classes = num_classes
+        self.num_dynamic_images = num_dynamic_images
         # self.area_loss_coef = 8
         # self.smoothness_loss_coef = 0.5
         # self.preserver_loss_coef = 0.3
@@ -21,13 +22,17 @@ class Loss:
         self.area_loss_power = regularizers['area_loss_power']
     
     def get(self, masks, images, targets, black_box_func):
-    
+        if self.num_dynamic_images > 1:
+            images_to_mask = images[0]
+            # images_to_mask = images_to_mask.unsqueeze(dim=0)
+            images_for_bbox = images
+            # print('images: {}, images_to_mask: {}'.format(images.size(),images_to_mask.size()))
         one_hot_targets = self.one_hot(targets)
         
         area_loss = self.area_loss(masks)
         smoothness_loss = self.smoothness_loss(masks)
-        destroyer_loss = self.destroyer_loss(images,masks,one_hot_targets,black_box_func)
-        preserver_loss = self.preserver_loss(images,masks,one_hot_targets,black_box_func)
+        destroyer_loss = self.destroyer_loss(images_to_mask, masks, one_hot_targets, black_box_func, images_for_bbox)
+        preserver_loss = self.preserver_loss(images_to_mask,masks,one_hot_targets,black_box_func, images_for_bbox)
         
         
         return destroyer_loss + self.area_loss_coef*area_loss + self.smoothness_loss_coef*smoothness_loss + self.preserver_loss_coef*preserver_loss
@@ -61,21 +66,21 @@ class Loss:
             border = 0.
         return (x_loss + y_loss + border) / float(power * masks.size(0))  # watch out, normalised by the batch size!
   
-    def destroyer_loss(self,images,masks,targets,black_box_func):
-        destroyed_images = self.apply_mask(images, 1 - masks)
+    def destroyer_loss(self,images_to_mask,masks,targets,black_box_func,images_for_bbox):
+        destroyed_images = self.apply_mask(images_to_mask, 1 - masks)
         # destroyed_images = torch.unsqueeze(destroyed_images, 0)
         # destroyed_images = destroyed_images.permute(1, 0, 2, 3, 4)
         # print('====>destroyed_images: ', destroyed_images.size()) #torch.Size([8, 1, 3, 224, 224])
-        out = black_box_func(destroyed_images)
+        out = black_box_func(images_for_bbox)
         # print('out destroyer: ', out.size(), targets.size())
         
         return self.cw_loss(out, targets, targeted=False, t_conf=1., nt_conf=5)
   
-    def preserver_loss(self,images,masks,targets,black_box_func):
-        preserved_images = self.apply_mask(images, masks)
+    def preserver_loss(self,images_to_mask,masks,targets,black_box_func, images_for_bbox):
+        preserved_images = self.apply_mask(images_to_mask, masks)
         # preserved_images = torch.unsqueeze(preserved_images,0)
         #preserved_images = preserved_images.permute(1, 0, 2, 3, 4)
-        out = black_box_func(preserved_images)
+        out = black_box_func(images_for_bbox)
         
         return self.cw_loss(out, targets, targeted=True, t_conf=1., nt_conf=1)
   

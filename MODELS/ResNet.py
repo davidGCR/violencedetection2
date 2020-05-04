@@ -48,7 +48,7 @@ class ViolenceModelResNet(nn.Module):
     
     def inferenceMode(self, numDiPerVideos):
         self.inference = True
-        self.numDiPerVideos = numDiPerVideos
+        # self.numDiPerVideos = numDiPerVideos
     
     def enableTransferLearning(self, feature_extract):
         set_parameter_requires_grad(self.convLayers, feature_extract)
@@ -56,14 +56,14 @@ class ViolenceModelResNet(nn.Module):
     def forward(self, x):
         # x size= torch.Size([ndi, bs, 3, 224, 224])
         # print('forward input size:',x.size())
-        if self.inference:
-            # batch_num = x.size()[0]
-            # num_dyn_imgs_infer = x.size()[1]
-            if self.numDiPerVideos > 1:
-                x = torch.unsqueeze(x, dim=1)
-                # x = x.repeat(1, self.numDiPerVideos, 1, 1, 1) ###no se porque puse esto..
-                # x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
-                # print('x forward: ', x.size())
+        # if self.inference:
+        #     # batch_num = x.size()[0]
+        #     # num_dyn_imgs_infer = x.size()[1]
+        #     if self.numDiPerVideos > 1:
+        #         x = torch.unsqueeze(x, dim=1)
+        #         # x = x.repeat(1, self.numDiPerVideos, 1, 1, 1) ###no se porque puse esto..
+        #         # x = x.permute(1, 0, 2, 3, 4)  #[ndi, bs, c, h, w]
+        #         # print('x forward: ', x.size())
             
 
         if self.numDiPerVideos == 1:

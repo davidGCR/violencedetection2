@@ -16,13 +16,13 @@ import time
 
 class AnomalyOnlineDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, bbox_files, spatial_transform, videoBlockLength, numDynamicImgsPerBlock,
-                    videoSegmentLength, overlappingBlock, overlappingSegment, temporal_gts=None):
+                    videoSegmentLength, overlappingBlock, overlappingSegment):
         self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
         self.numFrames = numFrames  #dataset total num frames by video
         self.bbox_files = bbox_files  # dataset bounding box txt file associated to video
-        self.temporal_gts = temporal_gts
+        # self.temporal_gts = temporal_gts
         self.numDynamicImgsPerBlock = numDynamicImgsPerBlock  #number of segments from the video/ -1 means all the segments from the video
         self.videoSegmentLength = videoSegmentLength # max number of frames by segment video
         
@@ -96,40 +96,29 @@ class AnomalyOnlineDataset(Dataset):
         
         if self.numDynamicImgsPerBlock > 1:
             # print('Len block: ', len(block))
-            if self.overlappingSegment == 0:
-                seqLen = int(len(block)/self.numDynamicImgsPerBlock)
-                segments_block = [block[x:x + seqLen] for x in range(0, len(block), seqLen)]
-            else:
-                seqLen = self.videoSegmentLength
-                num_frames_overlapped = int(self.overlappingSegment * seqLen)
-                segments_block.append(block[0:seqLen])
-                i = seqLen
-                end = 0
-                while i < len(block):
-                    if len(segments_block) == self.numDynamicImgsPerBlock:
-                        break
-                    else:
-                        start = i - num_frames_overlapped #10 20 
-                        end = start + seqLen  #29 39
-                        i = end #29 39
-                        segments_block.append(block[start:end])
+            indices = [x for x in range(start, idx_next_block, 1)]
+            indices_segments = [indices[x:x + self.videoSegmentLength] for x in range(0, len(indices), self.videoSegmentLength)]
+            print('indices_segments: ', indices_segments)
+            for i, indices_segment in enumerate(indices_segments):
+                segment = np.asarray(frames_list)[indices_segment].tolist()
+                segments_block.append(segment)
         else:
             segments_block.append(block)
         # print('block: ',block)
         return block, start, idx_next_block, segments_block
   
-    def getTemporalGroundTruth(self, idx_video, segment):
-        gt = self.temporal_gts[idx_video]
-        # print('gt: ', type(gt[0]), gt)
-        gt_segment = []
-        for frame in segment:
-            frame_number = re.findall(r'\d+', frame)
-            frame_number = int(frame_number[0])
-            if frame_number >= gt[0] and frame_number <= gt[1] or frame_number >= gt[2] and frame_number <= gt[3]:
-                gt_segment.append(1)
-            else:
-                gt_segment.append(0)
-        return gt_segment
+    # def getTemporalGroundTruth(self, idx_video, segment):
+    #     gt = self.temporal_gts[idx_video]
+    #     # print('gt: ', type(gt[0]), gt)
+    #     gt_segment = []
+    #     for frame in segment:
+    #         frame_number = re.findall(r'\d+', frame)
+    #         frame_number = int(frame_number[0])
+    #         if frame_number >= gt[0] and frame_number <= gt[1] or frame_number >= gt[2] and frame_number <= gt[3]:
+    #             gt_segment.append(1)
+    #         else:
+    #             gt_segment.append(0)
+    #     return gt_segment
 
     def videoGroundTruth(self, idx_video):
         bdx_file_path = self.bbox_files[idx_video]
@@ -241,23 +230,14 @@ class AnomalyOnlineDataset(Dataset):
         # print('idx_next_block:', idx_next_block)
         if idx_next_block < self.numFrames[idx_video]:
             # start = idx_next_block
-            block, start, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block,skip)
+            block, start, idx_next_block, segments_block = self.getOneBlock(frames_list, idx_next_block, skip)
+            print('Number of segments: ', len(segments_block))
             # print('start:%d, end:%d'%(start,idx_next_block))
             
             block_gt = self.getSegmentGt(video_gt, start, idx_next_block)
-            # one_segment = [] #join segments
-            # for segment in segments_block:
-            #     one_segment.extend(segment)
-            # if self.temporal_gts is not None:
-            #     block_boxes_info = self.getTemporalGroundTruth(idx_video,one_segment)
-            # else:
-            #     bdx_file_path = self.bbox_files[idx_video]
-            #     block_boxes_info = self.getSegmentInfo(one_segment,bdx_file_path)
-
-            
             # print(len(segments_block))
             for segment in segments_block:
-                # print(len(segment))
+                print('Len de segment: ',len(segment))
                 # print(segment)
                 frames = []
                 for i in range(len(segment)):
@@ -274,8 +254,9 @@ class AnomalyOnlineDataset(Dataset):
                 imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
                 dinamycImages.append(imgPIL)
             dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-            # if self.numDynamicImgsPerBlock == 1:
-            #     dinamycImages = dinamycImages.squeeze(dim=0)
+            if self.numDynamicImgsPerBlock > 1:
+                dinamycImages = dinamycImages.unsqueeze(dim=0)
+                dinamycImages = dinamycImages.permute(1, 0, 2, 3, 4)
             return dinamycImages, idx_next_block, block_gt, spend_time
         else:
             return None, None, None, 0
@@ -289,7 +270,6 @@ class AnomalyOnlineDataset(Dataset):
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         if idx_next_segment < self.numFrames[idx_video]:
             segment, idx_next_segment = self.getOneSegment(frames_list, idx_next_segment)
-            # print(segment)
             segment_info =  self.getSegmentInfo(segment, bbox_file)
             frames = []
             for frame in segment:
@@ -304,15 +284,6 @@ class AnomalyOnlineDataset(Dataset):
             imgPIL, img = getDynamicImage(frames)
             end_time = time.time()
             # spend_time = end_time - start_time
-
-            # ### USING CUDA PYTORCH
-            # frames_tensor = torch.tensor(frames).type(torch.FloatTensor)
-            # frames_tensor = frames_tensor.cuda()
-            # torch.cuda.synchronize()
-            # start_time = time.time()
-            # imgPIL, img = computeDynamicImage(frames_tensor)
-            # torch.cuda.synchronize()
-            # end_time = time.time()
             spend_time = end_time - start_time
             # spend_time = 0
             
@@ -330,8 +301,8 @@ class AnomalyOnlineDataset(Dataset):
         vid_name = self.videos[idx]
         # print(vid_name)
         label = self.labels[idx]
-        
-        return vid_name, label
+        numFrames = self.numFrames[idx]
+        return vid_name, label, numFrames
     
     def getindex(self, vid_name):
         matching = [s for s in self.videos if vid_name in s]

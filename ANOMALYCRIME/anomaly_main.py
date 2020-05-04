@@ -192,7 +192,7 @@ def training(model, numDiPerVideos, criterion, optimizer, scheduler, device, num
                         scheduler=scheduler,
                         device=device,
                         num_epochs=num_epochs,
-                        checkpoint_path=None,
+                        checkpoint_path=path_checkpoints,
                         numDynamicImage=numDiPerVideos,
                         plot_samples=False,
                         train_type=mode,
@@ -272,7 +272,7 @@ def train_test_videos(path_train_violence,
         train_names.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, tr_name))
         train_labels.append(1)
         video_name = re.findall(r'[\w\.-]+-', tr_name)[0][:-1]
-        train_bbox_files.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, video_name+'.txt'))
+        train_bbox_files.append(os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS, video_name+'.txt'))
 
     ##ramdom normal samples
     negative_samples=[]
@@ -308,7 +308,7 @@ def train_test_videos(path_train_violence,
         test_names.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, ts_name))
         test_labels.append(1)
         video_name = re.findall(r'[\w\.-]+-', ts_name)[0][:-1]
-        test_bbox_files.append(os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, video_name+'.txt'))
+        test_bbox_files.append(os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS, video_name+'.txt'))
    
     negative_samples=[]
     if not os.path.exists(constants.PATH_FINAL_RANDOM_NONVIOLENCE_TEST_SPLIT):
@@ -525,11 +525,140 @@ def initialize_dataloaders(batch_size,
             dataloaders_dict = dataloaders_list_splits
     return dataloaders_dict, new_split
 
+import SALIENCY.saliencyModel
+from SALIENCY.loss import Loss
+from tqdm import tqdm
+from torch.autograd import Variable
+
+def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataloaders_dict, black_box_file, numDynamicImages):
+    num_classes = 2
+    saliency_m = SALIENCY.saliencyModel.build_saliency_model(num_classes=num_classes)
+    saliency_m = saliency_m.to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(saliency_m.parameters())           
+    black_box_model = torch.load(black_box_file)
+    black_box_model = black_box_model.to(device)
+    black_box_model.inferenceMode(numDynamicImages)
+
+    loss_func = Loss(num_classes=num_classes, regularizers=regularizers, num_dynamic_images=numDynamicImages)
+    best_loss = 1000.0
+    for epoch in range(num_epochs):  # loop over the dataset multiple times
+        print("----- Epoch {}/{}".format(epoch+1, num_epochs))
+        running_loss = 0.0
+        running_loss_train = 0.0
+
+        for i, data in tqdm(enumerate(dataloaders_dict['train'], 0)):
+            # get the inputs
+            inputs, labels, video_name, bbox_segments = data #dataset load [bs,ndi,c,w,h]
+            # print('dataset element: ',inputs.shape) #torch.Size([8, 1, 3, 224, 224])
+            if numDynamicImages > 1:
+                inputs = inputs.permute(1, 0, 2, 3, 4) #[ndi,bs,c,w,h]
+            # print('inputs shape:',inputs.shape)
+            # wrap them in Variable
+            inputs, labels = Variable(inputs.to(device)), Variable(labels.to(device))
+            # zero the parameter gradients
+            optimizer.zero_grad()
+            mask, out = saliency_m(inputs[0], labels)
+            # print('mask shape:', mask.shape)
+            # print('inputs shape:',inputs.shape)
+            # print('labels shape:', labels.shape)
+            # print(labels)
+            # inputs_r = Variable(inputs_r.cuda())
+            loss = loss_func.get(mask,inputs,labels,black_box_model)
+            # running_loss += loss.data[0]
+            running_loss += loss.item()
+            running_loss_train += loss.item()*inputs.size(0)
+            # if(i%10 == 0):
+            #     print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(batch_size*(i+1))) )
+            loss.backward()
+            optimizer.step()
+        # exp_lr_scheduler.step(running_loss)
+
+        epoch_loss = running_loss / len(dataloaders_dict["train"].dataset)
+        epoch_loss_train = running_loss_train / len(dataloaders_dict["train"].dataset)
+        print("{} RawLoss: {:.4f} Loss: {:.4f}".format('train', epoch_loss, epoch_loss_train))
+
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+            # self.best_model_wts = copy.deepcopy(self.model.state_dict())
+            print('Saving entire saliency model...')
+            save_checkpoint(saliency_m, checkpoint_path)
+
+
+
+def __main_mask__():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--numEpochs",type=int,default=30)
+    parser.add_argument("--batchSize", type=int, default=64)
+    parser.add_argument("--numWorkers", type=int, default=4)
+    parser.add_argument("--ndis", type=int, help="num dyn imgs")
+    parser.add_argument("--videoSegmentLength", type=int, default=0)
+    parser.add_argument("--positionSegment", type=str)
+    parser.add_argument("--shuffle", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--frame_skip", type=int)
+    parser.add_argument("--overlaping", type=float)
+    parser.add_argument("--split_type", type=str)
+
+    parser.add_argument("--areaL", type=float, default=None)
+    parser.add_argument("--smoothL", type=float, default=None)
+    parser.add_argument("--preserverL", type=float, default=None)
+    parser.add_argument("--areaPowerL", type=float, default=None)
+    args = parser.parse_args()
+    if args.areaL == None:
+        areaL = 8
+    else:
+        areaL = args.areaL
+        checkpoint_info += '_areaL-'+str(args.areaL)
+    if args.smoothL == None:
+        smoothL = 0.5
+    else:
+        smoothL = args.smoothL
+        checkpoint_info += '_smoothL-' + str(args.smoothL)
+    if args.preserverL == None:
+        preserverL = 0.3
+    else:
+        preserverL = args.preserverL
+        checkpoint_info += '_preserverL-' + str(args.preserverL)
+    if args.areaPowerL == None:
+        areaPowerL = 0.3
+    else:
+        areaPowerL = args.areaPowerL
+    regularizers = {'area_loss_coef': areaL,
+                    'smoothness_loss_coef': smoothL,
+                    'preserver_loss_coef': preserverL,
+                    'area_loss_power': areaPowerL}
+    
+    input_size = 224
+    transforms = transforms_anomaly.createTransforms(input_size)
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    dataloaders_dict, new_split = initialize_dataloaders(args.batchSize,
+                                                            args.numWorkers,
+                                                            args.ndis,
+                                                            transforms,
+                                                            args.videoSegmentLength,
+                                                            args.positionSegment,
+                                                            args.shuffle,
+                                                            overlaping=args.overlaping,
+                                                            frame_skip=args.frame_skip,
+                                                            split_type=args.split_type)
+    
+    experimentConfig = 'Mask_model, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{}'.format(
+                                                                                                args.videoSegmentLength,
+                                                                                                args.ndis,
+                                                                                                args.frame_skip,
+                                                                                                args.numEpochs,
+                                                                                                args.split_type)
+    path_checkpoints = os.path.join(constants.ANOMALY_PATH_CHECKPOINTS, experimentConfig)
+    black_box_file = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/ANOMALY_RESULTS/checkpoints/Model-resnet18, segmentLen-20, numDynIms-6, frameSkip-0, epochs-10, new_split-False, split_type-train-test'
+
+    train_mask_model(args.numEpochs, regularizers, device, path_checkpoints, dataloaders_dict, black_box_file, args.ndis)
+
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str)
     parser.add_argument("--pathLearningCurves", type=str, default=constants.ANOMALY_PATH_LEARNING_CURVES)
-    parser.add_argument("--pathCheckpoints", type=str, default=constants.ANOMALY_PATH_CHECKPOINTS)
+    # parser.add_argument("--pathCheckpoints", type=str, default=constants.ANOMALY_PATH_CHECKPOINTS)
     parser.add_argument("--modelType",type=str,default="alexnet",help="model")
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -553,7 +682,7 @@ def __main__():
     mode = args.mode
     # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES
     path_learning_curves = args.pathLearningCurves
-    path_checkpoints = args.pathCheckpoints
+    
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
 
@@ -593,7 +722,7 @@ def __main__():
                                                             overlaping=overlaping,
                                                             frame_skip=frame_skip,
                                                             split_type=split_type)
-
+    
     experimentConfig = 'Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, new_split-{}, split_type-{}'.format(modelType,
                                                                                                 videoSegmentLength,
                                                                                                 numDiPerVideos,
@@ -601,6 +730,7 @@ def __main__():
                                                                                                 num_epochs,
                                                                                                 new_split,
                                                                                                 split_type)
+    path_checkpoints = os.path.join(constants.ANOMALY_PATH_CHECKPOINTS, experimentConfig)
 
     if split_type == 'cross-val':
         models = []
@@ -618,10 +748,6 @@ def __main__():
             training(model=model, numDiPerVideos=numDiPerVideos,criterion=criterion, optimizer=optimizer, scheduler=exp_lr_scheduler, device=device,
                 num_epochs=num_epochs, dataloaders_dict=dlt, path_checkpoints=path_checkpoints, mode=mode, board_folder=experimentConfig+'-'+str(split+1),
                 split_type='train-test') 
-
-
-    # MODEL_NAME = mode+'-'+str(numDiPerVideos)+'-Finetuned:'+str(not feature_extract)+'-'+joinType+'-numEpochs:'+str(num_epochs) + config
-    
 
     else:
         
@@ -646,7 +772,8 @@ def __main__():
   
     
 
-__main__()
+# __main__()
+__main_mask__()
 
 
 

@@ -17,6 +17,7 @@ import time
 
 # model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
 # model.eval()
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def random_colour_masks(image):
   """

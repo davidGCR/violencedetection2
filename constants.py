@@ -1,14 +1,14 @@
 import os
 from include import *
 # root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/'
-PATH_DATA_AUMENTATION_OUTPUT = root+'AnomalyCRIMEDATASET/UCFCrime2Local/dataAumentation'
-PATH_HOCKEY_FRAMES_VIOLENCE = root+'HockeyFightsDATASET/frames/violence'
-PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + 'HockeyFightsDATASET/frames/nonviolence'
+PATH_DATA_AUMENTATION_OUTPUT = root+'/AnomalyCRIMEDATASET/UCFCrime2Local/dataAumentation'
+PATH_HOCKEY_FRAMES_VIOLENCE = root+'/HockeyFightsDATASET/frames/violence'
+PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/HockeyFightsDATASET/frames/nonviolence'
 
-PATH_HOCKEY_AUMENTED_VIOLENCE = root + 'HockeyFightsDATASET/dataAumentation/violence'
-PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + 'HockeyFightsDATASET/dataAumentation/nonviolence'
+PATH_HOCKEY_AUMENTED_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/violence'
+PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/nonviolence'
 
-PATH_VIOLENTFLOWS_FRAMES = root+'violentflows/movies Frames'
+PATH_VIOLENTFLOWS_FRAMES = root+'/violentflows/movies Frames'
 PATH_VIOLENCE_CHECKPOINTS = 'VIOLENCE_RESULTS/checkpoints'
 PATH_TIME_RESULTS = 'VIOLENCE_RESULTS/timeResults'
 PATH_VIOLENCE_ROC_CURVES = 'VIOLENCE_RESULTS/roc_curves'
@@ -21,21 +21,21 @@ PATH_SALIENCY_MODELS = 'SALIENCY/Models'
 PATH_BLACK_BOX_MODELS = 'BlackBoxModels'
 PATH_SALIENCY_DATASET = 'DATA/saliency'
 # PATH_UCFCRIME2LOCAL_VIDEOS = root+'Crime2LocalDATASET/UCFCrime2Local/videos'
-PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE = root + 'CrimeViolence2LocalDATASET/frames/violence'
-PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE = root + 'CrimeViolence2LocalDATASET/frames/nonviolence'
-PATH_UCFCRIME2LOCAL_FRAMES_RAW_NONVIOLENCE = root + 'Crime2LocalDATASET/frames/nonviolence'
+PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/violence'
+PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/nonviolence'
+PATH_UCFCRIME2LOCAL_FRAMES_RAW_NONVIOLENCE = root + '/Crime2LocalDATASET/frames/nonviolence'
 
 
-PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TRAIN_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Train_violence_split.txt'
-PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TEST_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Test_violence_split.txt'
+PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TRAIN_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Train_violence_split.txt'
+PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TEST_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Test_violence_split.txt'
 
-PATH_VIOLENCECRIME2LOCAL_RAW_NONVIOLENCE_TRAIN_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Train_raw_nonviolence_split.txt'
-PATH_VIOLENCECRIME2LOCAL_NEW_NONVIOLENCE_TRAIN_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Train_new_nonviolence_split.txt'
-PATH_VIOLENCECRIME2LOCAL_RAW_NONVIOLENCE_TEST_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Test_raw_nonviolence_split.txt'
-PATH_VIOLENCECRIME2LOCAL_NEW_NONVIOLENCE_TEST_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Test_new_nonviolence_split.txt'
+PATH_VIOLENCECRIME2LOCAL_RAW_NONVIOLENCE_TRAIN_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Train_raw_nonviolence_split.txt'
+PATH_VIOLENCECRIME2LOCAL_NEW_NONVIOLENCE_TRAIN_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Train_new_nonviolence_split.txt'
+PATH_VIOLENCECRIME2LOCAL_RAW_NONVIOLENCE_TEST_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Test_raw_nonviolence_split.txt'
+PATH_VIOLENCECRIME2LOCAL_NEW_NONVIOLENCE_TEST_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Test_new_nonviolence_split.txt'
 
-PATH_FINAL_RANDOM_NONVIOLENCE_TRAIN_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Train_random_nonviolence_split.txt'
-PATH_FINAL_RANDOM_NONVIOLENCE_TEST_SPLIT = root + 'CrimeViolence2LocalDATASET/readme/Test_random_nonviolence_split.txt'
+PATH_FINAL_RANDOM_NONVIOLENCE_TRAIN_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Train_random_nonviolence_split.txt'
+PATH_FINAL_RANDOM_NONVIOLENCE_TEST_SPLIT = root + '/CrimeViolence2LocalDATASET/readme/Test_random_nonviolence_split.txt'
 
 PATHS_SPLITS_DICT = {'train_violence': PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TRAIN_SPLIT,
                         'test_violence': PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TEST_SPLIT,
@@ -44,14 +44,14 @@ PATHS_SPLITS_DICT = {'train_violence': PATH_VIOLENCECRIME2LOCAL_VIOLENCE_TRAIN_S
                         'test_raw_nonviolence': PATH_VIOLENCECRIME2LOCAL_RAW_NONVIOLENCE_TEST_SPLIT,
                         'test_new_nonviolence': PATH_VIOLENCECRIME2LOCAL_NEW_NONVIOLENCE_TEST_SPLIT}
 
-PATH_UCFCRIME2LOCAL_README = root+'Crime2LocalDATASET/readme'
-PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS = root+'CrimeViolence2LocalDATASET/Txt annotations'
+PATH_VIOLENCECRIME2LOCAL_README = root+'/CrimeViolence2LocalDATASET/readme'
+PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS = root+'/CrimeViolence2LocalDATASET/Txt annotations'
 # PATH_UCFCRIME2LOCAL_FRAMES_REDUCED = root+'Crime2LocalDATASET/frames_reduced'
 
-ANOMALY_PATH_CHECKPOINTS = root + 'ANOMALY_RESULTS/checkpoints'
-ANOMALY_PATH_LEARNING_CURVES = root + 'ANOMALY_RESULTS/learning_curves'
-ANOMALY_PATH_TRAIN_SPLIT = os.path.join(PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
-ANOMALY_PATH_TEST_SPLIT = os.path.join(PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
+ANOMALY_PATH_CHECKPOINTS = root + '/ANOMALY_RESULTS/checkpoints'
+ANOMALY_PATH_LEARNING_CURVES = root + '/ANOMALY_RESULTS/learning_curves'
+ANOMALY_PATH_TRAIN_SPLIT = os.path.join(PATH_VIOLENCECRIME2LOCAL_README, 'Train_split_AD.txt')
+ANOMALY_PATH_TEST_SPLIT = os.path.join(PATH_VIOLENCECRIME2LOCAL_README, 'Test_split_AD.txt')
 ANOMALY_PATH_SALIENCY_MODELS = 'SALIENCY/Models/anomaly'
 ANOMALY_PATH_BLACK_BOX_MODELS = 'SALIENCY/BlackBoxModels/anomaly'
 

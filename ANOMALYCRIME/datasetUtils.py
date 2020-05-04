@@ -266,13 +266,13 @@ def test_videos(test_file, g_path, only_abnormal, only_violence):
                 if only_abnormal:
                     if label != 'Normal_Videos':
                         file = row[:-1] + '.txt'
-                        file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                        file = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS, file)
                         test_bbox_files.append(file)
                         test_names.append(os.path.join(g_path,row[:-1]))
                         test_labels.append(label)
                 else:
                     file = row[:-1] + '.txt'
-                    file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, file)
+                    file = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS, file)
                     if label != 'Normal_Videos':
                         test_bbox_files.append(file)
                     else:

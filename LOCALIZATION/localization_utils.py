@@ -160,10 +160,11 @@ def filterClosePersonsInFrame(personsBBoxes, thresh_close_persons):
         for p1, p2 in itertools.combinations(personsBBoxes, 2):
             # iou = IOU(p1, p2)
             iou = intersetionArea(p1, p2)
-            iou = p1.percentajeArea(iou)
+            # iou = p1.percentajeArea(iou)
             # print('iou: ', iou, p1, p2)
             if iou >= thresh_close_persons:
-                presult = joinBBoxes(p1,p2)
+                presult = joinBBoxes(p1, p2)
+                presult.iou = iou
                 # persons_filtered.append(p1)
                 # persons_filtered.append(p2)
                 persons_filtered.append(presult)

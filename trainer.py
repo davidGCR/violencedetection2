@@ -34,7 +34,7 @@ class Trainer:
         self.num_epochs = num_epochs
         self.scheduler = scheduler
         self._checkpoint_path = checkpoint_path
-        self.best_model_wts = copy.deepcopy(model.state_dict())
+        # self.best_model_wts = copy.deepcopy(model.state_dict())
         self.best_acc = 0.0
         self.numDynamicImages = numDynamicImage
         self.plot_samples = plot_samples
@@ -105,12 +105,8 @@ class Trainer:
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format('train', epoch_loss, epoch_acc))
         # if self.train_type == constants.OPERATION_TRAINING_FINAL:
-        if self.save_model:
-            if epoch_acc > self.train_best_acc:
-                self.train_best_acc = epoch_acc.item()
-                checkpoint_name = self.checkpoint_path+'.pth'
-                print('Saving model...',checkpoint_name)
-                torch.save(self.model, checkpoint_name)
+        
+        
         # self.tb.save_value("trainLoss", "train_loss", epoch, epoch_loss)
         # self.tb.save_value("trainAcc", "train_acc", epoch, epoch_acc)
 
@@ -152,6 +148,12 @@ class Trainer:
         epoch_acc = running_corrects.double() / len(self.val_dataloader.dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format("val", epoch_loss, epoch_acc))
-    
+        if epoch_acc > self.train_best_acc:
+            self.train_best_acc = epoch_acc.item()
+            # best_model_wts = copy.deepcopy(self.model.state_dict())
+
+            # checkpoint_name = self.checkpoint_path+'.pth'
+            print('Saving model...',self._checkpoint_path)
+            torch.save(self.model, self._checkpoint_path)    
 
         return epoch_loss, epoch_acc

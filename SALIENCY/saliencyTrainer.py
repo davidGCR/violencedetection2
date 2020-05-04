@@ -38,22 +38,12 @@ def load_checkpoint(net,optimizer,filename='small.pth.tar'):
 
 
 def train(num_classes, num_epochs, regularizers, device, checkpoint_path, dataloaders_dict, black_box_file, numDynamicImages):
-    # trainloader,testloader,classes = cifar10()
     saliency_m = SALIENCY.saliencyModel.build_saliency_model(num_classes=num_classes)
     saliency_m = saliency_m.cuda()
     criterion = nn.CrossEntropyLoss()
-    # params_to_update = net.parameters()
-    # optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-    optimizer = optim.Adam(saliency_m.parameters())
-    # scheduler_type = "OnPlateau"
-    # if scheduler_type == "StepLR":
-    #     exp_lr_scheduler = lr_scheduler.StepLR( optimizer, step_size=7, gamma=0.1 )
-    # elif scheduler_type == "OnPlateau":
-    #     exp_lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, verbose=True)
-                
+    optimizer = optim.Adam(saliency_m.parameters())           
     black_box_model = torch.load(black_box_file)
     black_box_model = black_box_model.cuda()
-    
     black_box_model.inferenceMode()
 
     loss_func = Loss(num_classes=num_classes, regularizers=regularizers)
