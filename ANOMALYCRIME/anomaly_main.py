@@ -531,7 +531,7 @@ from tqdm import tqdm
 from torch.autograd import Variable
 import include
 
-def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataloaders_dict, black_box_file, numDynamicImages):
+def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataloaders_dict, black_box_file, numDynamicImages, image_idx):
     num_classes = 2
     saliency_m = SALIENCY.saliencyModel.build_saliency_model(num_classes=num_classes)
     saliency_m = saliency_m.to(device)
@@ -561,7 +561,7 @@ def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataload
             inputs, labels = Variable(inputs.to(device)), Variable(labels.to(device))
             # zero the parameter gradients
             optimizer.zero_grad()
-            mask, out = saliency_m(inputs[0], labels)
+            mask, out = saliency_m(inputs[image_idx], labels)
             # print('mask shape:', mask.shape)
             # print('inputs shape:',inputs.shape)
             # print('labels shape:', labels.shape)
@@ -602,6 +602,7 @@ def __main_mask__():
     parser.add_argument("--frame_skip", type=int)
     parser.add_argument("--overlaping", type=float)
     parser.add_argument("--split_type", type=str)
+    parser.add_argument("--image_idx", type=int)
 
     parser.add_argument("--areaL", type=float, default=None)
     parser.add_argument("--smoothL", type=float, default=None)
@@ -656,7 +657,7 @@ def __main_mask__():
     path_checkpoints = os.path.join(constants.ANOMALY_PATH_CHECKPOINTS, experimentConfig)
     black_box_file = include.root+'/ANOMALY_RESULTS/checkpoints/Model-resnet18, segmentLen-20, numDynIms-6, frameSkip-0, epochs-10, new_split-False, split_type-train-test'
 
-    train_mask_model(args.numEpochs, regularizers, device, path_checkpoints, dataloaders_dict, black_box_file, args.ndis)
+    train_mask_model(args.numEpochs, regularizers, device, path_checkpoints, dataloaders_dict, black_box_file, args.ndis, args.image_idx)
 
 def __main__():
     parser = argparse.ArgumentParser()
