@@ -27,6 +27,9 @@ class Loss:
             # images_to_mask = images_to_mask.unsqueeze(dim=0)
             images_for_bbox = images
             # print('images: {}, images_to_mask: {}'.format(images.size(),images_to_mask.size()))
+        else:
+            images_to_mask = images
+            images_for_bbox = images
         one_hot_targets = self.one_hot(targets)
         
         area_loss = self.area_loss(masks)
