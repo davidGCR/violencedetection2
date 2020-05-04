@@ -82,8 +82,10 @@ class Trainer:
             # print('inputs trainer: ', inputs.size())
             # print(video_names, labels)
             inputs, labels, _, _ = data
+            batch_size = inputs.size()[0]
             if self.numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
+                
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             # zero the parameter gradients
@@ -97,7 +99,7 @@ class Trainer:
                 self.optimizer.step()
 
             # print('Train Lost: ', outputs, labels, loss.item())
-            running_loss += loss.item() * inputs.size(0)
+            running_loss += loss.item() * batch_size
             running_corrects += torch.sum(preds == labels.data)
 
         epoch_loss = running_loss / len(self.train_dataloader.dataset)
@@ -123,6 +125,7 @@ class Trainer:
         # Iterate over data.
         for inputs, labels, video_names, _ in self.val_dataloader:
         # for inputs, labels  in self.dataloaders["val"]:
+            batch_size = inputs.size()[0]
             if self.numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
             inputs = inputs.to(self.device)
@@ -140,7 +143,7 @@ class Trainer:
                 _, preds = torch.max(outputs, 1)
 
                 # statistics
-                running_loss += loss.item() * inputs.size(0)
+                running_loss += loss.item() * batch_size
                 # running_loss += loss.item() 
                 running_corrects += torch.sum(preds == labels.data)
 

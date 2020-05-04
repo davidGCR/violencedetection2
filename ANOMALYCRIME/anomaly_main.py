@@ -551,6 +551,8 @@ def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataload
             # get the inputs
             inputs, labels, video_name, bbox_segments = data #dataset load [bs,ndi,c,w,h]
             # print('dataset element: ',inputs.shape) #torch.Size([8, 1, 3, 224, 224])
+            batch_size = inputs.size()[0]
+            print(batch_size)
             if numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4) #[ndi,bs,c,w,h]
             # print('inputs shape:',inputs.shape)
@@ -567,7 +569,7 @@ def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataload
             loss = loss_func.get(mask,inputs,labels,black_box_model)
             # running_loss += loss.data[0]
             running_loss += loss.item()
-            running_loss_train += loss.item()*inputs.size(0)
+            running_loss_train += loss.item()*batch_size
             # if(i%10 == 0):
             #     print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(batch_size*(i+1))) )
             loss.backward()
@@ -582,7 +584,8 @@ def train_mask_model(num_epochs, regularizers, device, checkpoint_path, dataload
             best_loss = epoch_loss
             # self.best_model_wts = copy.deepcopy(self.model.state_dict())
             print('Saving entire saliency model...')
-            save_checkpoint(saliency_m, checkpoint_path)
+            torch.save(saliency_m, checkpoint_path) 
+            # save_checkpoint(saliency_m, checkpoint_path)
 
 
 
