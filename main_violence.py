@@ -242,6 +242,8 @@ def __main__():
                                                                                                 frame_skip,
                                                                                                 num_epochs,
                                                                                                 split_type)
+        checkpoint_path = os.path.join(constants.HOCKEY_PATH_CHECKPOINTS, experimentConfig + '.tar')
+        
         writer = SummaryWriter('runs/'+experimentConfig)
         tr = trainer.Trainer(model=model,
                             train_dataloader=dataloaders_dict['train'],
@@ -251,7 +253,7 @@ def __main__():
                             scheduler=exp_lr_scheduler,
                             device=device,
                             num_epochs=num_epochs,
-                            checkpoint_path=experimentConfig,
+                            checkpoint_path=checkpoint_path,
                             numDynamicImage=numDynamicImagesPerVideo,
                             plot_samples=False,
                             train_type='train',

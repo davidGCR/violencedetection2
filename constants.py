@@ -5,6 +5,8 @@ PATH_DATA_AUMENTATION_OUTPUT = root+'/AnomalyCRIMEDATASET/UCFCrime2Local/dataAum
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'/HockeyFightsDATASET/frames/violence'
 PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/HockeyFightsDATASET/frames/nonviolence'
 PATH_HOCKEY_README = root + '/HockeyFightsDATASET/readme'
+HOCKEY_PATH_CHECKPOINTS = root + '/HOCKEY_RESULTS/checkpoints'
+# HOCKEY_PATH_CHECKPOINTS = root + '/drive/My Drive/VIOLENCE DATA/HOCKEY_RESULTS/checkpoints'
 
 PATH_HOCKEY_AUMENTED_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/violence'
 PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/nonviolence'
