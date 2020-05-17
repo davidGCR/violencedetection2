@@ -4,12 +4,11 @@ import os
 import glob
 from violenceDataset import ViolenceDataset, ViolenceDatasetAumented
 from violenceDatasetOnline import ViolenceOnlineDataset
-from MaskDataset import MaskDataset
 # import Saliency.saliencyModel as saliencyModel
 import constants
-import util
+# import util
 from operator import itemgetter
-import kfolds
+import UTIL.kfolds as kfolds
 import random
 import numpy as np
 
@@ -112,7 +111,10 @@ def createDataset(path_violence, path_noviolence, suffle):
     imagesF = []
 
     list_violence = os.listdir(path_violence)
+    # print(list_violence[0:20])
     list_violence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+    # list_violence.sort()
+    print(list_violence[0:20])
 
     for target in list_violence:
         d = os.path.join(path_violence, target)
@@ -134,7 +136,7 @@ def createDataset(path_violence, path_noviolence, suffle):
         random.shuffle(combined)
         Dataset[:], Labels[:], NumFrames[:] = zip(*combined)
 
-    print('Dataset, Labels, NumFrames: ', len(Dataset), len(Labels), len(NumFrames))
+    print('Creating dataset: Names, Labels, NumFrames: ', len(Dataset), len(Labels), len(NumFrames))
     return Dataset, Labels, NumFrames
 
 # def getViolenceDataLoader(x, y, data_transform, numDiPerVideos, dataset_source, avgmaxDuration, interval_duration, batch_size, num_workers, debugg_mode):

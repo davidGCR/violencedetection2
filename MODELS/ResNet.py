@@ -2,12 +2,14 @@
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/MyCode')
 import torch.nn as nn
 from torchvision import models
-from util import * 
-from Identity import *
+# from util import * 
+
 # from tempPooling import *
 import torch
 import constants
 import MODELS.Pooling as Pooling
+from MODELS.Identity import Identity
+from MODELS.freeze_parameters import set_parameter_requires_grad
 
 class ViolenceModelResNet(nn.Module):
     def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract, inference=False):

@@ -1,8 +1,8 @@
 import torch.nn as nn
 from torchvision import models
-from util import * 
-from Identity import *
-from tempPooling import *
+# from util import * 
+from MODELS.Identity import Identity
+import MODELS.Pooling as Pooling
 import torch
 
 class ViolenceModelVGG(nn.Module):

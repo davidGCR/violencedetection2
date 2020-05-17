@@ -1,28 +1,12 @@
 import os
 from include import *
-# root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/'
-PATH_DATA_AUMENTATION_OUTPUT = root+'/AnomalyCRIMEDATASET/UCFCrime2Local/dataAumentation'
-PATH_HOCKEY_FRAMES_VIOLENCE = root+'/HockeyFightsDATASET/frames/violence'
-PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/HockeyFightsDATASET/frames/nonviolence'
-PATH_HOCKEY_README = root + '/HockeyFightsDATASET/readme'
-HOCKEY_PATH_CHECKPOINTS = root + '/HOCKEY_RESULTS/checkpoints'
-# HOCKEY_PATH_CHECKPOINTS = root + '/drive/My Drive/VIOLENCE DATA/HOCKEY_RESULTS/checkpoints'
 
-PATH_HOCKEY_AUMENTED_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/violence'
-PATH_HOCKEY_AUMENTED_NON_VIOLENCE = root + '/HockeyFightsDATASET/dataAumentation/nonviolence'
+PATH_HOCKEY_FRAMES_VIOLENCE = root+'/DATASETS/HockeyFightsDATASET/frames/violence'
+PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/DATASETS/HockeyFightsDATASET/frames/nonviolence'
+PATH_HOCKEY_README = root + '/DATASETS/HockeyFightsDATASET/readme'
+PATH_HOCKEY_CHECKPOINTS = root + '/RESULTS/HOCKEY_RESULTS/checkpoints'
+PATH_HOCKEY_GIFTS = root + '/RESULTS/HOCKEY_RESULTS/gifts'
 
-PATH_VIOLENTFLOWS_FRAMES = root+'/violentflows/movies Frames'
-PATH_VIOLENCE_CHECKPOINTS = 'VIOLENCE_RESULTS/checkpoints'
-PATH_TIME_RESULTS = 'VIOLENCE_RESULTS/timeResults'
-PATH_VIOLENCE_ROC_CURVES = 'VIOLENCE_RESULTS/roc_curves'
-PATH_VIOLENCE_TMP_RESULTS = 'VIOLENCE_RESULTS/temporalResults'
-PATH_VIOLENCE_TMP_PLOTS = 'VIOLENCE_RESULTS/temporalPlots'
-# PATH_CHECKPOINTS_MASK = 'checkpoints/masked'
-PATH_VIOLENCE_LEARNING_CURVES = 'VIOLENCE_RESULTS/learningCurves'
-# PATH_LEARNING_CURVES_MASK = 'learningCurves/masked'
-PATH_SALIENCY_MODELS = 'SALIENCY/Models'
-PATH_BLACK_BOX_MODELS = 'BlackBoxModels'
-PATH_SALIENCY_DATASET = 'DATA/saliency'
 # PATH_UCFCRIME2LOCAL_VIDEOS = root+'Crime2LocalDATASET/UCFCrime2Local/videos'
 PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/violence'
 PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/nonviolence'
@@ -52,6 +36,7 @@ PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS = root+'/CrimeViolence2LocalDATASET/Tx
 # PATH_UCFCRIME2LOCAL_FRAMES_REDUCED = root+'Crime2LocalDATASET/frames_reduced'
 
 ANOMALY_PATH_CHECKPOINTS = root + '/ANOMALY_RESULTS/checkpoints'
+ANOMALY_PATH_GIFTS = root + '/ANOMALY_RESULTS/gifts'
 # ANOMALY_PATH_CHECKPOINTS = root + '/drive/My Drive/VIOLENCE DATA/ANOMALY_RESULTS/checkpoints'
 
 ANOMALY_PATH_LEARNING_CURVES = root + '/ANOMALY_RESULTS/learning_curves'
@@ -59,12 +44,6 @@ ANOMALY_PATH_TRAIN_SPLIT = os.path.join(PATH_VIOLENCECRIME2LOCAL_README, 'Train_
 ANOMALY_PATH_TEST_SPLIT = os.path.join(PATH_VIOLENCECRIME2LOCAL_README, 'Test_split_AD.txt')
 ANOMALY_PATH_SALIENCY_MODELS = 'SALIENCY/Models/anomaly'
 ANOMALY_PATH_BLACK_BOX_MODELS = 'SALIENCY/BlackBoxModels/anomaly'
-
-OPERATION_TRAINING = 'train'
-OPERATION_TRAINING_FINAL = 'trainfinal'
-OPERATION_TESTING = 'testing'
-OPERATION_TRAINING_AUMENTED = 'aumented'
-OPERATION_TRAINING_TRANSFER = 'transfer'
 
 TEMP_MAX_POOL = 'maxTempPool'
 TEMP_AVG_POOL = 'avgTempPool'
@@ -97,11 +76,6 @@ green = (0, 255, 0)
 blue = (255, 0, 0)
 yellow = (0, 255, 255)
 magenta = (255,50,255)
-
-FRAME_POS_FIRST = 'first'
-FRAME_POS_END = 'end'
-FRAME_POS_ALL = 'all'
-FRAME_POS_EXTREMES = 'extremes'
 
 YOLO = 'yolov3'
 MASKRCNN = 'maskrcnn'

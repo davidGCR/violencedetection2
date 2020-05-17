@@ -1,9 +1,10 @@
 import torch.nn as nn
 from torchvision import models
-from util import *
-from parameters import set_parameter_requires_grad
-from tempPooling import *
-from Identity import *
+# from util import *
+from UTIL.parameters import set_parameter_requires_grad
+# from tempPooling import *
+import MODELS.Pooling as Pooling
+import MODELS.Identity as Identity
 import torch
 import constants
 
@@ -30,45 +31,45 @@ class ViolenceModelAlexNet(nn.Module): ##ViolenceModel2
   
   def forward(self, x):
     # shape = x.size()
-    if self.numDiPerVideos == 1:
-      x = self.model(x)
-      x = torch.flatten(x, 1)
-      # print('x: ',x.size())
-    else:
-      if self.joinType == 'cat':
-        x = self.getFeatureVectorCat(x)
-      elif self.joinType == constants.TEMP_MAX_POOL:
-        x = self.getFeatureVectorTempPool(x)
+    # if self.numDiPerVideos == 1:
+    #   x = self.model(x)
+    #   x = torch.flatten(x, 1)
+    #   # print('x: ',x.size())
+    # else:
+    #   if self.joinType == 'cat':
+    #     x = self.getFeatureVectorCat(x)
+    #   elif self.joinType == constants.TEMP_MAX_POOL:
+    #     x = self.getFeatureVectorTempPool(x)
     
-    x = self.linear(x)
+    # x = self.linear(x)
     return x
   
-  def getFeatureVectorCat(self, x):
-    lista = []
-    for dimage in range(0, self.numDiPerVideos):
-      feature = self.model(x[dimage])
-      lista.append(feature)
-    x = torch.cat(lista, dim=1)  
-    return x
+  # def getFeatureVectorCat(self, x):
+  #   lista = []
+  #   for dimage in range(0, self.numDiPerVideos):
+  #     feature = self.model(x[dimage])
+  #     lista.append(feature)
+  #   x = torch.cat(lista, dim=1)  
+  #   return x
 
-  def getFeatureVectorTempPool(self, x):
-    lista = []
-    seqLen = self.numDiPerVideos
-    for dimage in range(0, seqLen):
-      feature = self.model(x[dimage])
-      lista.append(feature)
-    minibatch = torch.stack(lista, 0)
-    minibatch = minibatch.permute(1, 0, 2, 3, 4)
-    num_dynamic_images = self.numDiPerVideos
-    tmppool = nn.MaxPool2d((num_dynamic_images, 1))
-    lista_minibatch = []
-    for idx in range(minibatch.size()[0]):
-        out = tempMaxPooling(minibatch[idx], tmppool)
-        lista_minibatch.append(out)
-    feature = torch.stack(lista_minibatch, 0)
-    feature = torch.flatten(feature, 1)
-    # feature = self.classifier(feature)
-    return feature
+  # def getFeatureVectorTempPool(self, x):
+  #   lista = []
+  #   seqLen = self.numDiPerVideos
+  #   for dimage in range(0, seqLen):
+  #     feature = self.model(x[dimage])
+  #     lista.append(feature)
+  #   minibatch = torch.stack(lista, 0)
+  #   minibatch = minibatch.permute(1, 0, 2, 3, 4)
+  #   num_dynamic_images = self.numDiPerVideos
+  #   tmppool = nn.MaxPool2d((num_dynamic_images, 1))
+  #   lista_minibatch = []
+  #   for idx in range(minibatch.size()[0]):
+  #       out = tempMaxPooling(minibatch[idx], tmppool)
+  #       lista_minibatch.append(out)
+  #   feature = torch.stack(lista_minibatch, 0)
+  #   feature = torch.flatten(feature, 1)
+  #   # feature = self.classifier(feature)
+  #   return feature
 
 
 

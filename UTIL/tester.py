@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
 import numpy as np
-from FPS import FPSMeter
+from METRICS.FPS import FPSMeter
 
 class Tester:
     def __init__(self, model, dataloader, loss, device, numDiPerVideos, plot_samples=False):

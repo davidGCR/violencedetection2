@@ -4,8 +4,6 @@ import torch.optim as optim
 import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
-# from util import set_parameter_requires_grad
-from parameters import set_parameter_requires_grad
 import MODELS.AlexNet as alexnet
 import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg

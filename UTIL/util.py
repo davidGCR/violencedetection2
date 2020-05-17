@@ -8,6 +8,22 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 import csv
 
+def load_model_inference(file, device):
+    if str(device) == 'cpu':
+        model = torch.load(file, map_location=torch.device('cpu'))
+    else:
+        model = torch.load(file)
+        model = model.cuda()
+    model = model.eval()
+    return model
+
+def min_max_normalize_tensor(img):
+    # print("normalize:", img.size())
+    _min = torch.min(img)
+    _max = torch.max(img)
+    # print("min:", _min.item(), ", max:", _max.item())
+    return (img - _min) / (_max - _min)
+
 def createGifFromFrames(path):
   frames = os.listdir(path)
   frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
@@ -24,81 +40,24 @@ def print_balance(train_y,name):
     unique, counts = np.unique(tx, return_counts=True)
     print(name +'-balance: ', dict(zip(unique, counts)))
 
-def get_model_name(modelType, scheduler_type, numDiPerVideos, feature_extract, joinType,num_epochs):
-    model_name = str(modelType) + '_Finetuned-' + str(not feature_extract) + '-' +'_di-'+str(numDiPerVideos) + '_fusionType-'+str(joinType) +'_num_epochs-' +str(num_epochs)
-    return model_name
-    
-def save_checkpoint(state, path):
-  print('saving checkpoint ...')
-  torch.save(state, path+'.tar')
 
 
+def read_file(file):
+  names = []
+  with open(file, 'r') as file:
+      for row in file:
+          names.append(row[:-1])
+  return names
 
-def imshow(img, title):
-    img = img / 2 + 0.5    
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.title(title)
-    plt.show()
+def save_file(data, out_file):
+  with open(out_file, 'w') as output:
+      for row in data:
+          output.write(str(row) + '\n')
 
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
-    else:
-        for param in model.parameters():
-            param.requires_grad = True
-
-
-
-def saveList(path_out,model, scheduler_type,curve, numDI, feature_extract, joinType,lista):
-  data_file = path_out+'/'+str(model)+'-Finetuned:'+str(not feature_extract)+'-'+str(numDI)+'di-'+joinType+'-'+scheduler_type+'-'+str(curve)+'.txt'
-  with open(data_file, 'wb') as filehandle:
-      # store the data as binary data stream
-    pickle.dump(lista, filehandle)
-    print('saved ... ', data_file)
-
-def saveLearningCurve(path_out, lista):
-  data_file = path_out
-  with open(data_file, 'wb') as filehandle:
-      # store the data as binary data stream
-    pickle.dump(lista, filehandle)
-    print('saved ... ',data_file)
-
-def saveData(path_out,model,curve, numDI, source_type, feature_extract, joinType,lista):
-  data_file = path_out+'/'+str(model)+'-'+source_type+'-Finetuned:'+str(not feature_extract)+'-'+str(numDI)+'di-'+joinType+'-'+str(curve)+'.txt'
-  with open(data_file, 'wb') as filehandle:
-      # store the data as binary data stream
-    pickle.dump(lista, filehandle)
-    print('saved ... ', data_file)
-    
-def saveList2(path_out,lista):
-  data_file = path_out
-  with open(data_file, 'wb') as filehandle:
-      # store the data as binary data stream
-    pickle.dump(lista, filehandle)
-    print('saved ... ',data_file)
-
-def loadList(name):
-  with open(name, 'rb') as filehandle:
-    # read the data as binary data stream
-    hist2 = pickle.load(filehandle)
-    return hist2
-
-def loadArray(path_out, model,curve, numDI, source_type, feature_extract, joinType):
-  data_file = path_out+'/'+str(model)+'-'+source_type+'-Finetuned:'+str(not feature_extract)+'-'+str(numDI)+'di-'+joinType+'-'+str(curve)+'.txt'
-  with open(data_file, 'rb') as filehandle:
-    # read the data as binary data stream
-    print('loading... ',data_file)
-    hist2 = pickle.load(filehandle)
-    return hist2
-
-def saveArray(path, array):
-  with open(path,'wb') as f:
-    print('saved ... ',path)
-    pickle.dump(array, f)
-
-
+def save_csvfile_multicolumn(data, out_file):
+  with open(out_file, 'w') as f:
+    writer = csv.writer(f, delimiter='\t')
+    writer.writerows(zip(a,b))
 
 #######################################################################################
 ################################# Videos to Frames ####################################
@@ -182,19 +141,3 @@ def dataset_statistisc(path):
   avg = np.average(np.array(n_frames))
   return avg
 
-def read_file(file):
-  names = []
-  with open(file, 'r') as file:
-      for row in file:
-          names.append(row[:-1])
-  return names
-
-def save_file(data, out_file):
-  with open(out_file, 'w') as output:
-      for row in data:
-          output.write(str(row) + '\n')
-
-def save_csvfile_multicolumn(data, out_file):
-  with open(out_file, 'w') as f:
-    writer = csv.writer(f, delimiter='\t')
-    writer.writerows(zip(a,b))

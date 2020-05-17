@@ -7,7 +7,7 @@ import cv2
 import torch
 import glob
 import time
-from dynamicImage import *
+import VIDEO_REPRESENTATION.dynamicImage as dynamicImage
 import random
 
 
@@ -26,6 +26,76 @@ class ViolenceDataset(Dataset):
 
     def __len__(self):
         return len(self.videos)
+    
+    def getindex(self, vid_name):
+        matching = [s for s in self.videos if vid_name in s]
+        
+        if len(matching)>0:
+            vid_name = matching[0]
+            index = self.videos.index(vid_name)
+            return index
+        else:
+            return None
+
+    def getTemporalSegment(self, frames_list, start):
+        segments_block = []
+        if start == 0: #first segment
+            block = []
+            for i in range(start,start + self.videoSegmentLength):
+                block.append(frames_list[i])
+            # block = frames_list[start:start + self.videoBlockLength]
+            idx_next_block = self.videoSegmentLength
+            
+        else:
+            start = start - int(self.videoSegmentLength * self.overlaping)
+            end = start + self.videoSegmentLength
+            # block = frames_list[start:end]
+            block = []
+            for i in range(start,end):
+                if i<len(frames_list):
+                    block.append(frames_list[i])
+            idx_next_block = end
+            
+        
+        segments_block.append(block)
+        # print('block: ',block)
+        return block, start, idx_next_block, segments_block
+        
+    def getTemporalBlock(self, vid_name, idx_next_block):
+        # vid_name = self.videos[idx_video]
+        idx_video = self.getindex(vid_name)
+        label = self.labels[idx_video]
+        print('video buscado: {}, video encontrado: {}'.format(vid_name, self.videos[idx_video]))
+        frames_list = os.listdir(vid_name)
+        frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        preprocessing_time = 0
+        dinamycImages = []
+        real_frames = None
+        if idx_next_block < self.numFrames[idx_video]:
+            block, start, idx_next_block, segments_block = self.getTemporalSegment(frames_list, idx_next_block)
+            for seq in segments_block:
+                # print('segment len:{}, segment: {}',len(seq), seq)
+                frames = []
+                real_frames = seq
+                # r_frames = []
+                for frame in seq:
+                    img_dir = str(vid_name) + "/" + frame
+                    img1 = Image.open(img_dir).convert("RGB")
+                    img = np.array(img1)
+                    frames.append(img)
+                start_time = time.time()
+                imgPIL, img = dynamicImage.getDynamicImage(frames)
+                end_time = time.time()
+                imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+                
+                preprocessing_time += (end_time - start_time)
+                dinamycImages.append(imgPIL)
+            # print('Len: ', len(dinamycImages), vid_name)
+            dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+            # if self.numDynamicImagesPerVideo == 1:
+            #     dinamycImages = dinamycImages.squeeze(dim=0)  ## get normal pytorch tensor [bs, ch, h, w]
+                
+        return dinamycImages, label, idx_next_block, preprocessing_time, real_frames
 
     def getVideoSegmentsOverlapped(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
@@ -107,7 +177,7 @@ class ViolenceDataset(Dataset):
                 img = np.array(img1)
                 frames.append(img)
             start_time = time.time()
-            imgPIL, img = getDynamicImage(frames)
+            imgPIL, img = dynamicImage.getDynamicImage(frames)
             end_time = time.time()
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             

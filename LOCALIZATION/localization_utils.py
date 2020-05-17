@@ -21,7 +21,7 @@ import itertools
 import random
 
 from YOLOv3 import yolo_inference
-import MaskRCNN
+# import MaskRCNN
 
 def getPersonDetectorModel(detector_type):
     classes = None
@@ -637,9 +637,10 @@ def bboxes_from_contours(img, contours):
         # print('REct: ', rect)
         bb = cvRect2BoundingBox(rect)
         bboxes.append(bb)
-        color_red = (0,0,255)
+        color_red = (0, 0, 255)
+        yellow = (0, 255, 255)
         # cv2.drawContours(drawing, contours_poly, i, color)
-        cv2.rectangle(image, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color_red, 2)
+        cv2.rectangle(image, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), yellow, 2)
     return image, bboxes
 
 def cvRect2BoundingBox(cvRect):

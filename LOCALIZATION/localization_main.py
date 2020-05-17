@@ -162,14 +162,15 @@ def plotOpencv(video_name, no_segment, prediction, real_frames, gt_bboxes, perso
     green = (0, 255, 0)
     blue = (255, 0, 0)
     yellow = (0, 255, 255)
-    magenta = (255,50,255)
+    magenta = (255, 50, 255)
+    frames2gif = []
     for idx,image in enumerate(real_frames):
         
         image = np.array(image)
         w = image.shape[0]
         h = image.shape[1]
-        if prediction == 1:
-            cv2.rectangle(image, (0, 0), (h, w), magenta, 4)
+        # if prediction == 1:
+        #     cv2.rectangle(image, (0, 0), (h, w), magenta, 4)
 
         image_saliencies = image.copy()
         image_persons = image.copy()
@@ -179,12 +180,13 @@ def plotOpencv(video_name, no_segment, prediction, real_frames, gt_bboxes, perso
 
         for gt_bbox in gt_bboxes:
             # print('ccooooooooooocluded: ', gt_bbox.occluded)
+            # image_gt = image.copy()
             if gt_bbox.occluded == 0:
-                cv2.rectangle(image, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), red, 2)
+                cv2.rectangle(image, (int(gt_bbox.pmin.x), int(gt_bbox.pmin.y)), (int(gt_bbox.pmax.x), int(gt_bbox.pmax.y)), red, 1)
         
         
         for s_bbox in saliency_bboxes:
-            cv2.rectangle(image_saliencies, (int(s_bbox.pmin.x), int(s_bbox.pmin.y)), (int(s_bbox.pmax.x), int(s_bbox.pmax.y)), yellow, 1)
+            cv2.rectangle(image_saliencies, (int(s_bbox.pmin.x), int(s_bbox.pmin.y)), (int(s_bbox.pmax.x), int(s_bbox.pmax.y)), yellow, 2)
         
         # if idx < len(persons_in_segment):
         #     if persons_in_segment[idx] is not  None:
@@ -193,19 +195,25 @@ def plotOpencv(video_name, no_segment, prediction, real_frames, gt_bboxes, perso
         if  len(persons_in_segment)>0:
             if persons_in_segment[0] is not  None:
                 for person in persons_in_segment[0]:
-                    cv2.rectangle(image_persons, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), green, 1)
+                    cv2.rectangle(image_persons, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), green, 2)
+                    cv2.rectangle(image_saliencies, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), green, 2)
                 
                 # for person in persons_in_segment[1]:
-                person = persons_in_segment[1][0]
-                cv2.rectangle(image_persons, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), magenta, 1)
+                # person = persons_in_segment[1][0]
+                # cv2.rectangle(image_persons, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), magenta, 1)
         
         for pred in bbox_predictions:
             if pred is not None:
-                cv2.rectangle(image_anomalous, (int(pred.pmin.x), int(pred.pmin.y)), (int(pred.pmax.x), int(pred.pmax.y)), blue, 2)
-            vid_path = os.path.join('RESULTS/animations', video_name)
-            if not os.path.exists(vid_path):
-                os.makedirs(vid_path)
-            status = cv2.imwrite(vid_path+'/'+str(no_segment)+'.png',image_anomalous)
+                cv2.rectangle(image_anomalous, (int(pred.pmin.x), int(pred.pmin.y)), (int(pred.pmax.x), int(pred.pmax.y)), blue, 3)
+                cv2.rectangle(image_saliencies, (int(pred.pmin.x), int(pred.pmin.y)), (int(pred.pmax.x), int(pred.pmax.y)), blue, 3)
+            # vid_path = os.path.join('RESULTS/animations', video_name)
+            # if not os.path.exists(vid_path):
+            #     os.makedirs(vid_path)
+            # status = cv2.imwrite(vid_path+'/'+str(no_segment)+'.png',image_anomalous)
+        
+        img = cv2.cvtColor(image_saliencies, cv2.COLOR_BGR2RGB)
+        im_pil = Image.fromarray(img)
+        frames2gif.append(im_pil)
 
         
         # aa = np.concatenate((image, image), axis=1)
@@ -243,6 +251,7 @@ def plotOpencv(video_name, no_segment, prediction, real_frames, gt_bboxes, perso
             break   
         # if k == 27:         # wait for ESC key to exit
         #     cv2.destroyAllWindows()
+    return frames2gif
 
 def temporalTest(anomalyDataset, model_name, config, class_tester, saliency_tester, type_person_detector, h, w, plot, only_video_name, delay, datasetType='UCF2Local'):
     # person_model, classes = getPersonDetectorModel(type_person_detector)
@@ -559,6 +568,7 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         bbox_last = None
         
         video_name, label, numFrames = data
+        _, gif_name = os.path.split(video_name)
         # print(numFrames, type(numFrames))
         print("-" * 150, 'video No:{}, numFrames: {} '.format(idx_video,numFrames))
         video_name = [video_name]
@@ -569,11 +579,13 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
         block_dinamyc_images, idx_next_block, block_gt, spend_time = anomalyDataset.computeBlockDynamicImg(idx_video, idx_next_block=0, skip=1)
         
         num_block = 0
+        frames2gif = []
         while (block_dinamyc_images is not None): #dis_images : torch.Size([3, 224, 224])
             num_block += 1            
             print(video_name, '---segment No: {}, nextBlockIdx: {}, Tensor input: {}'.format(str(num_block), idx_next_block, block_dinamyc_images.size()))
             
-            prediction, score = class_tester.predict(block_dinamyc_images)
+            # prediction, score = class_tester.predict(block_dinamyc_images)
+            prediction = 1
             print('Prediction: ',prediction)
             # print('- dis_images: ', type(dis_images), dis_images.size())
             # print('- video_name: ', type(video_name), video_name)
@@ -587,10 +599,20 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             # block_boxes_info = default_collate([block_boxes_info])
             # block_boxes_info = np.array(block_boxes_info)
 
-            block_dinamyc_images = block_dinamyc_images[0] / 2 + 0.5 
+            # block_dinamyc_images = block_dinamyc_images[int(len(block_dinamyc_images)/2)] / 2 + 0.5 
+            block_dinamyc_images = block_dinamyc_images / 2 + 0.5 
             ttttt = saliency_tester.min_max_normalize_tensor(block_dinamyc_images) 
             ttttt = ttttt.numpy()[0].transpose(1, 2, 0)
+            
+            # gray = cv2.cvtColor(ttttt, cv2.COLOR_BGR2GRAY)
+            # print('gray tipo:{}, size:{}'.format(type(gray), gray.shape))
+            # cv2.imshow('Dynamic Image', gray)
+            # if cv2.waitKey(20) & 0xFF == ord('q'):
+            #     break
+
             ttttt = cv2.resize(ttttt, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
+
+            
             
             ########################### LOCALIZATION ##################################################3
             ######################## mask
@@ -601,6 +623,8 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
             mascara = torch.squeeze(mascara,0)#(1, 224, 224)
             mascara = saliency_tester.min_max_normalize_tensor(mascara)  #to 0-1
             mascara = mascara.numpy().transpose(1, 2, 0)
+
+            print('mascara tipo:{}, size:{}'.format(type(mascara), mascara.shape))
 
             # ##resize 
             mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
@@ -740,10 +764,11 @@ def spatioTemporalDetection(anomalyDataset, class_tester, saliency_tester, type_
                 # prediction = 0
                 head, tail = os.path.split(video_name[0])
                 num_segment=-1
-                plotOpencv(tail, num_segment, prediction, real_frames,real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 300, delay)
+                frames = plotOpencv(tail, num_segment, prediction, real_frames, real_bboxes, persons_in_segment, anomalous_regions, dynamic_image, saliencia_suave, preprocess, saliency_bboxes, 300, delay)
+                frames2gif.extend(frames)
             #     ######################################
             ################################################## REFINEMENT ################################################################
-        
+        frames2gif[0].save(os.path.join(constants.ANOMALY_PATH_GIFTS,gif_name+'.gif'), save_all=True, append_images=frames2gif[1:],optimize=False, duration=40, loop=0)
         # row_time = [video_name[0], round(fpsMeter.fps(),2), round(fpsMeter.mspf(),2)]
         # print(row)
         # times.append(row_time)
@@ -798,8 +823,8 @@ def train_test_videos(path_test_violence, path_violent_frames, min_num_frames):
         test_names.append(os.path.join(path_violent_frames, ts_name))
         test_labels.append(1)
         # print(ts_name)
-        # video_name = re.findall(r'[\w\.-]+-', ts_name)[0][:-1]
-        video_name = ts_name
+        video_name = re.findall(r'[\w\.-]+-', ts_name)[0][:-1]
+        # video_name = ts_name
         test_bbox_files.append(os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_BBOX_ANNOTATIONS, video_name+'.txt'))
    
     # negative_samples=[]
@@ -901,7 +926,9 @@ def __main__():
     transforms_dataset = transforms_anomaly.createTransforms(input_size)
     batch_size = args.batchSize
     num_workers = args.numWorkers
+
     saliency_model_file = args.saliencyModelFile
+
     shuffle = args.shuffle
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     threshold = 0.5
@@ -911,10 +938,10 @@ def __main__():
     saliency_model_config = saliency_model_file
     # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
     # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES
-    path_dataset = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/CrimeViolence2LocalDATASET/frames/long-videos-violence'
+    path_dataset = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/CrimeViolence2LocalDATASET/frames/violence'
     # train_videos_path = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_README, 'Train_split_AD.txt')
-    test_videos_path = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_README, 'Test_split_AD.txt')
-    # test_videos_path = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_README, 'Test_violence_split.txt')
+    # test_videos_path = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_README, 'Test_split_AD.txt')
+    test_videos_path = os.path.join(constants.PATH_VIOLENCECRIME2LOCAL_README, 'Test_violence_split.txt')
     data = train_test_videos(test_videos_path, path_dataset,30)
     # only_anomalous = False
     dataloader_test, test_names, test_labels, anomalyDataset  = get_test_dataloader(data,
@@ -927,7 +954,9 @@ def __main__():
                                                                                 shuffle,
                                                                                 overlappingBlock,
                                                                                 overlappingSegment)
-    
+
+    # saliency_model_file = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/ANOMALY_RESULTS/checkpoints/Mask_model, segmentLen-20, numDynIms-6, frameSkip-0, epochs-20, split_type-train-test'
+    saliency_model_file  = os.path.join(constants.HOCKEY_PATH_CHECKPOINTS,'Mask_model, segmentLen-10, numDynIms-1, frameSkip-1, epochs-10')
     saliency_tester = saliencyTester.SaliencyTester(saliency_model_file, num_classes, dataloader_test, test_names,
                                         input_size, saliency_model_config, 1, threshold)
     ####Waqas

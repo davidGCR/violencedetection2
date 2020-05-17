@@ -6,7 +6,7 @@ import os
 import torch
 import glob
 import time
-from dynamicImage import *
+import VIDEO_REPRESENTATION.dynamicImage as dynamicImage
 import random
 import sys
 import torchvision.transforms as transforms
@@ -51,7 +51,7 @@ class ViolenceOnlineDataset(Dataset):
                 img = np.array(img1)
                 frames.append(img)
 
-            imgPIL, img = getDynamicImage(frames)
+            imgPIL, img = dynamicImage.getDynamicImage(frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dinamycImages.append(imgPIL)
                 
