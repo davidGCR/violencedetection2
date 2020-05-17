@@ -7,6 +7,9 @@ PATH_HOCKEY_README = root + '/DATASETS/HockeyFightsDATASET/readme'
 PATH_HOCKEY_CHECKPOINTS = root + '/RESULTS/HOCKEY_RESULTS/checkpoints'
 PATH_HOCKEY_GIFTS = root + '/RESULTS/HOCKEY_RESULTS/gifts'
 
+PATH_VIF_VIDEOS = root + '/DATASETS/violentflows/movies'
+PATH_VIF_FRAMES = root + '/DATASETS/violentflows/frames'
+
 # PATH_UCFCRIME2LOCAL_VIDEOS = root+'Crime2LocalDATASET/UCFCrime2Local/videos'
 PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/violence'
 PATH_UCFCRIME2LOCAL_FRAMES_NEW_NONVIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/nonviolence'

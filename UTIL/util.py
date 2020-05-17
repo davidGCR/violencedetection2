@@ -72,14 +72,20 @@ def video2Images2(video_path, path_out):
   # print(video_path)
   while(cap.isOpened()):
       ret, frame = cap.read()
-      # if not ret:
+      if not ret:
       #   print('video can not read ...')
-      #   break
+        break
       name = path_out+'/'+'frame' + str("{0:03}".format(index_frame)) + '.jpg'
       print ('Creating...' + name)
       cv2.imwrite(name, frame)
       index_frame += 1
-          
+
+def sortListByStrNumbers(lt):
+  """
+    Sort a list of numeric strings as '0', '1', '2'
+  """
+  lt.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+  return lt    
 
       
 def hockeyVideos2Frames(path_videos, path_frames):
