@@ -235,7 +235,7 @@ def __main__():
                                 criterion=criterion,
                                 optimizer=optimizer,
                                 scheduler=exp_lr_scheduler,
-                                device=device,
+                                device=constants.DEVICE,
                                 num_epochs=num_epochs,
                                 checkpoint_path=experimentConfig,
                                 numDynamicImage=numDynamicImagesPerVideo,

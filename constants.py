@@ -1,5 +1,8 @@
 import os
 from include import *
+import torch
+
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'/DATASETS/HockeyFightsDATASET/frames/violence'
 PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/DATASETS/HockeyFightsDATASET/frames/nonviolence'

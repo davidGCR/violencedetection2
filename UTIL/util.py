@@ -57,7 +57,8 @@ def save_file(data, out_file):
 def save_csvfile_multicolumn(data, out_file):
   with open(out_file, 'w') as f:
     writer = csv.writer(f, delimiter='\t')
-    writer.writerows(zip(a,b))
+    writer.writerows(data)
+    
 
 #######################################################################################
 ################################# Videos to Frames ####################################
