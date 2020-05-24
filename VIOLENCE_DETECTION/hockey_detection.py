@@ -4,7 +4,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # print(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import include
+from include import root, enviroment
 import constants
 import torch
 
@@ -229,8 +229,10 @@ def __main__():
                                                                                                     frame_skip,
                                                                                                     num_epochs,
                                                                                                     split_type)
-            writer = SummaryWriter('runs/'+experimentConfig)
-            tr = trainer.Trainer(model=model,
+            if enviroment == 'colab':
+                from tensorboardcolab import TensorBoardColab
+                tb = TensorBoardColab()
+                tr = trainer.Trainer(model=model,
                                 train_dataloader=dataloaders_dict['train'],
                                 val_dataloader=dataloaders_dict['val'],
                                 criterion=criterion,
@@ -244,17 +246,45 @@ def __main__():
                                 train_type='train',
                                 save_model=False)
 
-            for epoch in range(1, num_epochs + 1):
-                print("Fold {} ----- Epoch {}/{}".format(fold,epoch, num_epochs))
-                # Train and evaluate
-                epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
-                epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
-                exp_lr_scheduler.step()
+                for epoch in range(1, num_epochs + 1):
+                    print("Fold {} ----- Epoch {}/{}".format(fold,epoch, num_epochs))
+                    # Train and evaluate
+                    epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
+                    epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
+                    exp_lr_scheduler.step()
 
-                writer.add_scalar('training loss', epoch_loss_train, epoch)
-                writer.add_scalar('validation loss', epoch_loss_val, epoch)
-                writer.add_scalar('training Acc', epoch_acc_train, epoch)
-                writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+                    tb.save_value('training Loss', 'train_loss', epoch, epoch_loss_train)
+                    tb.save_value('validation Loss', 'train_loss', epoch, epoch_loss_val)
+                    tb.save_value('training Acc', 'train_loss', epoch, epoch_acc_train)
+                    tb.save_value('validation Acc', 'train_loss', epoch, epoch_acc_val)
+            else:
+                writer = SummaryWriter('runs/' + experimentConfig)
+                tr = trainer.Trainer(model=model,
+                                train_dataloader=dataloaders_dict['train'],
+                                val_dataloader=dataloaders_dict['val'],
+                                criterion=criterion,
+                                optimizer=optimizer,
+                                scheduler=exp_lr_scheduler,
+                                device=constants.DEVICE,
+                                num_epochs=num_epochs,
+                                checkpoint_path=experimentConfig,
+                                numDynamicImage=numDynamicImagesPerVideo,
+                                plot_samples=False,
+                                train_type='train',
+                                save_model=False)
+
+                for epoch in range(1, num_epochs + 1):
+                    print("Fold {} ----- Epoch {}/{}".format(fold,epoch, num_epochs))
+                    # Train and evaluate
+                    epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
+                    epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
+                    exp_lr_scheduler.step()
+
+                    writer.add_scalar('training loss', epoch_loss_train, epoch)
+                    writer.add_scalar('validation loss', epoch_loss_val, epoch)
+                    writer.add_scalar('training Acc', epoch_acc_train, epoch)
+                    writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+            
     
 # __main_mask__()
 __main__()

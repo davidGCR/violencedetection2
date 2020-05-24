@@ -15,12 +15,14 @@ def getRoot():
   # print(IN_COLAB)
   if dirname == '/content':
       root = '/content'
+      enviroment = 'colab'
   else:
       root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2'
-  return root
+      enviroment = 'local'
+  return root, enviroment
 
-root = getRoot()
-print('root:', root)
+root, enviroment = getRoot()
+# print('root:', root)
 
 # root = '/content/'
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
