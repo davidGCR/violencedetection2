@@ -1,5 +1,5 @@
 import os
-from include import *
+from include import dirname, root
 import torch
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -14,10 +14,10 @@ PATH_VIF_VIDEOS = root + '/DATASETS/violentflows/movies'
 PATH_VIF_FRAMES = root + '/DATASETS/violentflows/frames'
 
 
-import sys
-IN_COLAB = 'google.colab' in sys.modules
+# import sys
+# IN_COLAB = 'google.colab' in sys.modules
 PATH_RESULTS = ''
-if IN_COLAB:
+if dirname == '/content':
     PATH_RESULTS = "/content/drive/My Drive/VIOLENCE DATA/RESULTS"
 else:
     PATH_RESULTS = root + '/RESULTS'

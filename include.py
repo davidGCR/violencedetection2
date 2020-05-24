@@ -4,13 +4,23 @@
 # root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2'
 
 import sys
-root = ''
-IN_COLAB = 'google.colab' in sys.modules
-if IN_COLAB:
-    root = '/content'
-else:
-    root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2'
+import os
+dirname = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# print(dirname)
+# sys.path.append(dirname)
+# subprocess.run(['python3', 'import sys', 'IN_COLAB = 'google.colab' in sys.modules'])
 
+def getRoot():
+  # IN_COLAB = 'google.colab' in sys.modules
+  # print(IN_COLAB)
+  if dirname == '/content':
+      root = '/content'
+  else:
+      root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2'
+  return root
+
+root = getRoot()
+print('root:', root)
 
 # root = '/content/'
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')

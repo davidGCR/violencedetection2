@@ -159,7 +159,7 @@ def __main__():
                                                                                                 frame_skip,
                                                                                                 num_epochs,
                                                                                                 split_type)
-        checkpoint_path = os.path.join(constants.PATH_HOCKEY_CHECKPOINTS, experimentConfig + '.tar')
+        checkpoint_path = os.path.join(path_checkpoints, experimentConfig + '.tar')
         
         writer = SummaryWriter('runs/'+experimentConfig)
         tr = trainer.Trainer(model=model,
