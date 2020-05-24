@@ -12,6 +12,7 @@ PATH_HOCKEY_GIFTS = root + '/RESULTS/HOCKEY_RESULTS/gifts'
 
 PATH_VIF_VIDEOS = root + '/DATASETS/violentflows/movies'
 PATH_VIF_FRAMES = root + '/DATASETS/violentflows/frames'
+PATH_RESULTS = root + '/RESULTS'
 
 # PATH_UCFCRIME2LOCAL_VIDEOS = root+'Crime2LocalDATASET/UCFCrime2Local/videos'
 PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/violence'

@@ -207,7 +207,7 @@ def __main__():
                     scheduler=exp_lr_scheduler,
                     device=constants.DEVICE,
                     num_epochs=args.numEpochs,
-                    checkpoint_path=experimentConfig,
+                    checkpoint_path=os.path.join(constants.PATH_RESULTS,'VIF','checkpoints',experimentConfig+'.tar'),
                     numDynamicImage=args.numDynamicImagesPerVideo,
                     plot_samples=False,
                     train_type='train',
