@@ -60,10 +60,11 @@ def __main__():
     parser.add_argument("--overlaping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
 
+
     args = parser.parse_args()
     split_type = args.split_type
     
-    path_checkpoints = constants.PATH_HOCKEY_CHECKPOINTS
+    path_checkpoints = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints')
 
     modelType = args.modelType
     batch_size = args.batchSize

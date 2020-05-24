@@ -7,12 +7,20 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'/DATASETS/HockeyFightsDATASET/frames/violence'
 PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/DATASETS/HockeyFightsDATASET/frames/nonviolence'
 PATH_HOCKEY_README = root + '/DATASETS/HockeyFightsDATASET/readme'
-PATH_HOCKEY_CHECKPOINTS = root + '/RESULTS/HOCKEY_RESULTS/checkpoints'
-PATH_HOCKEY_GIFTS = root + '/RESULTS/HOCKEY_RESULTS/gifts'
+# PATH_HOCKEY_CHECKPOINTS = root + '/RESULTS/HOCKEY_RESULTS/checkpoints'
+# PATH_HOCKEY_GIFTS = root + '/RESULTS/HOCKEY_RESULTS/gifts'
 
 PATH_VIF_VIDEOS = root + '/DATASETS/violentflows/movies'
 PATH_VIF_FRAMES = root + '/DATASETS/violentflows/frames'
-PATH_RESULTS = root + '/RESULTS'
+
+
+import sys
+IN_COLAB = 'google.colab' in sys.modules
+PATH_RESULTS = ''
+if IN_COLAB:
+    PATH_RESULTS = "/content/drive/My Drive/VIOLENCE DATA/RESULTS"
+else:
+    PATH_RESULTS = root + '/RESULTS'
 
 # PATH_UCFCRIME2LOCAL_VIDEOS = root+'Crime2LocalDATASET/UCFCrime2Local/videos'
 PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE = root + '/CrimeViolence2LocalDATASET/frames/violence'
