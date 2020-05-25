@@ -14,6 +14,7 @@ PATH_VIF_VIDEOS = root + '/DATASETS/violentflows/movies'
 PATH_VIF_FRAMES = root + '/DATASETS/violentflows/frames'
 
 
+
 # import sys
 # IN_COLAB = 'google.colab' in sys.modules
 PATH_RESULTS = ''

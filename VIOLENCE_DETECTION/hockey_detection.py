@@ -231,14 +231,16 @@ def __main__():
             
             criterion = nn.CrossEntropyLoss()
             split_type = split_type+str(fold)
-            experimentConfig = 'HOCKEY-Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{}'.format(modelType,
+            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{}'.format(modelType,
                                                                                                     videoSegmentLength,
                                                                                                     numDynamicImagesPerVideo,
                                                                                                     frame_skip,
                                                                                                     num_epochs,
                                                                                                     split_type)
             
-            writer = SummaryWriter('runs/' + experimentConfig)
+            if not os.path.exists(os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs')):
+                os.mkdir(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs'))
+            writer = SummaryWriter(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs',experimentConfig))
             tr = trainer.Trainer(model=model,
                             train_dataloader=dataloaders_dict['train'],
                             val_dataloader=dataloaders_dict['val'],
