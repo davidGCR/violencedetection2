@@ -61,6 +61,8 @@ def k_folds(n_splits, subjects, splits_folder):
             for fold in range(n_splits):
                 train_idx = read_file(os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_train.txt'))
                 test_idx = read_file(os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_test.txt'))
+                train_idx = list(map(int, train_idx))
+                test_idx = list(map(int, test_idx))
                 yield train_idx, test_idx
             
 

@@ -37,6 +37,7 @@ from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
 import UTIL.tester as tester
 from UTIL.kfolds import k_folds
+from UTIL.util import save_csvfile_multicolumn, read_csvfile_threecolumns
 import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
@@ -81,8 +82,15 @@ def __main__():
     shuffle = True
     path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
     path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
-            
-    datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
+
+    if not os.path.exists(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv')):
+        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
+        all_data = zip(datasetAll, labelsAll, numFramesAll)
+        save_csvfile_multicolumn(all_data, os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+    else:
+        datasetAll, labelsAll, numFramesAll = read_csvfile_threecolumns(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+
+
     transforms = createTransforms(input_size)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if split_type == 'train-test':

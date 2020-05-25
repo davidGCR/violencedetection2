@@ -56,9 +56,22 @@ def save_file(data, out_file):
           output.write(str(row) + '\n')
 
 def save_csvfile_multicolumn(data, out_file):
+  print('saving ... ', out_file)
   with open(out_file, 'w') as f:
     writer = csv.writer(f, delimiter='\t')
     writer.writerows(data)
+
+def read_csvfile_threecolumns(file):
+  x = []
+  y = []
+  numFrames = []
+  with open(file) as csvfile:
+    readCSV = csv.reader(csvfile, delimiter='\t')
+    for row in readCSV:
+        x.append(row[0])
+        y.append(int(row[1]))
+        numFrames.append(int(row[2]))
+  return x, y, numFrames
     
 
 #######################################################################################
