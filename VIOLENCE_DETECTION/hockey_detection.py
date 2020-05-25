@@ -230,13 +230,14 @@ def __main__():
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
             
             criterion = nn.CrossEntropyLoss()
-            split_type = split_type+str(fold)
-            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{}'.format(modelType,
+            # split_type = split_type+str(fold)
+            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(modelType,
                                                                                                     videoSegmentLength,
                                                                                                     numDynamicImagesPerVideo,
                                                                                                     frame_skip,
                                                                                                     num_epochs,
-                                                                                                    split_type)
+                                                                                                    split_type,
+                                                                                                    fold)
             
             if not os.path.exists(os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs')):
                 os.mkdir(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs'))
@@ -249,7 +250,7 @@ def __main__():
                             scheduler=exp_lr_scheduler,
                             device=constants.DEVICE,
                             num_epochs=num_epochs,
-                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig+'.tar'),
+                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig),
                             numDynamicImage=numDynamicImagesPerVideo,
                             plot_samples=False,
                             train_type='train',
