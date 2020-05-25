@@ -52,6 +52,7 @@ def k_folds(n_splits, subjects, splits_folder):
     # indices = np.arange(subjects * frames).astype(int)
     else:
         if not os.path.exists(os.path.join(splits_folder, 'fold_1_train.txt')):
+        # if True:
             for fold,test_idx in enumerate(get_indices(n_splits, subjects)):
                 train_idx = np.setdiff1d(indices, test_idx)
                 save_file(train_idx, os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_train.txt'))

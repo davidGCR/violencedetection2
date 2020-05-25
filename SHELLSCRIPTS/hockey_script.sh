@@ -1,7 +1,7 @@
 
 python3  VIOLENCE_DETECTION/hockey_detection.py \
 --modelType alexnet \
---numEpochs 25 \
+--numEpochs 1 \
 --numWorkers 4 \
 --batchSize 8 \
 --featureExtract false \
@@ -11,7 +11,7 @@ python3  VIOLENCE_DETECTION/hockey_detection.py \
 --positionSegment begin \
 --overlaping 0 \
 --frameSkip 0 \
---split_type train-test
+--split_type cross_val
 
 # python3  main_violence.py \
 # --numEpochs 10 \

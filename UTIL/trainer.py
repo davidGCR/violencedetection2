@@ -155,7 +155,8 @@ class Trainer:
             # best_model_wts = copy.deepcopy(self.model.state_dict())
 
             # checkpoint_name = self.checkpoint_path+'.pth'
+            # self._checkpoint_path = self._checkpoint_path+'-epoch-'+str(epoch)+'.tar'
             print('Saving model...',self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')
-            torch.save(self.model, self._checkpoint_path)    
+            torch.save(self.model, self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')    
 
         return epoch_loss, epoch_acc
