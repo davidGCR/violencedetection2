@@ -80,7 +80,7 @@ class Trainer:
             # print(video_names, labels)
             
             inputs, labels, _, _ = data
-            print(inputs.size())
+            # print(inputs.size())
             batch_size = inputs.size()[0]
             if self.numDynamicImages > 1:
                 inputs = inputs.permute(1, 0, 2, 3, 4)
