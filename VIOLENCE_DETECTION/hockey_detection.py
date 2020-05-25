@@ -192,7 +192,7 @@ def __main__():
     elif split_type == 'cross_val':
         folds_number = 5
         fold = 0
-        for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
+        for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll), splits_folder=constants.PATH_HOCKEY_README):
             fold = fold + 1
             print("**************** Fold:{}/{} ".format(fold, folds_number))
             train_x, train_y, test_x, test_y = None, None, None, None

@@ -50,6 +50,7 @@ def read_file(file):
   return names
 
 def save_file(data, out_file):
+  print('saving ... ', out_file)
   with open(out_file, 'w') as output:
       for row in data:
           output.write(str(row) + '\n')

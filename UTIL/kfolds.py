@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import torch
+from UTIL.util import save_file, read_file
 
 def partitions(number, k):
     """
@@ -35,7 +36,7 @@ def get_indices(n_splits, subjects):
         yield (indices[int(start) : int(stop)])
 
 
-def k_folds(n_splits, subjects):
+def k_folds(n_splits, subjects, splits_folder):
     """
     Generates folds for cross validation
     Args:
@@ -49,10 +50,19 @@ def k_folds(n_splits, subjects):
             train, test = train_test_split(80, 20, subjects)
             yield train, test
     # indices = np.arange(subjects * frames).astype(int)
-    else: 
-        for test_idx in get_indices(n_splits, subjects):
-            train_idx = np.setdiff1d(indices, test_idx)
-            yield train_idx, test_idx
+    else:
+        if not os.path.exists(os.path.join(splits_folder, 'fold_1_train.txt')):
+            for fold,test_idx in enumerate(get_indices(n_splits, subjects)):
+                train_idx = np.setdiff1d(indices, test_idx)
+                save_file(train_idx, os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_train.txt'))
+                save_file(test_idx, os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_test.txt'))
+                yield train_idx, test_idx
+        else:
+            for fold in n_splits:
+                train_idx = read_file(os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_train.txt'))
+                test_idx = read_file(os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_test.txt'))
+                yield train_idx, test_idx
+            
 
 def train_test_split(s1, s2, len_indices):
     indices = np.arange(len_indices).astype(int)
