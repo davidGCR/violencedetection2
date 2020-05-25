@@ -109,12 +109,8 @@ def createAumentedDataset(path_violence, path_noviolence, suffle):
 def createDataset(path_violence, path_noviolence, suffle):
     """ Create Violence dataset with paths and labels """
     imagesF = []
-
     list_violence = os.listdir(path_violence)
-    # print(list_violence[0:20])
     list_violence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-    # list_violence.sort()
-    print(list_violence[0:20])
 
     for target in list_violence:
         d = os.path.join(path_violence, target)
