@@ -58,7 +58,7 @@ def k_folds(n_splits, subjects, splits_folder):
                 save_file(test_idx, os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_test.txt'))
                 yield train_idx, test_idx
         else:
-            for fold in n_splits:
+            for fold in range(n_splits):
                 train_idx = read_file(os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_train.txt'))
                 test_idx = read_file(os.path.join(splits_folder, 'fold_' + str(fold + 1) + '_test.txt'))
                 yield train_idx, test_idx
