@@ -23,6 +23,7 @@ class ViolenceDataset(Dataset):
         self.positionSegment = positionSegment
         self.overlaping = overlaping
         self.frame_skip = frame_skip
+        self.minSegmentLen = 10
 
     def __len__(self):
         return len(self.videos)
@@ -113,39 +114,42 @@ class ViolenceDataset(Dataset):
             # video_segments.append(frames_list[indices_segment])
                
         return video_segments
-        
+
+    def checkSegmentLength(self, segment):
+        return (len(segment) == self.videoSegmentLength or len(segment) > self.minSegmentLen)
+    
+    def padding(self, segment_list):
+        if  len(segment_list) < self.numDynamicImagesPerVideo:
+            last_element = segment_list[len(segment_list) - 1]
+            for i in range(self.numDynamicImagesPerVideo - len(segment_list)):
+                segment_list.append(last_element)
+        elif len(segment_list) > self.numDynamicImagesPerVideo:
+            segment_list = segment_list[0:self.numDynamicImagesPerVideo]
+
+        return segment_list
+           
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         video_segments = []
-        seqLen = self.videoSegmentLength
+        
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
-        # print('indices: ',indices)
-        
-        # video_splits_by_no_Di = []
-        indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen)]
-        # print('indices_segments: ',indices_segments)
-        for i, indices_segment in enumerate(indices_segments):
-            if i < self.numDynamicImagesPerVideo:
-                segment = np.asarray(frames_list)[indices_segment].tolist()
-                video_segments.append(segment)
-            else:
-                break
-        
-        # print(video_splits_by_no_Di)
+        seqLen = self.videoSegmentLength
+        overlap_length = int(self.overlaping*seqLen)
+        indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen-overlap_length)]
+        # print('indices1: ', indices_segments)
+        indices_segments_cpy = []
+        for i,seg in enumerate(indices_segments): #Verify is a segment has at least 2 or more frames.
+            if self.checkSegmentLength(seg):
+                indices_segments_cpy.append(indices_segments[i])
+        indices_segments = indices_segments_cpy
+        # print('indices2: ',indices_segments)
+        indices_segments = self.padding(indices_segments) #If numDynamicImages < wanted the padding else delete
+        # print('indices3: ', len(indices_segments), indices_segments)
 
-        if len(video_segments) > 1:
-            last_idx = len(video_segments)-1
-            split = video_segments[last_idx]
-            if len(split) < 10:
-                del video_segments[last_idx]
-                
-        if self.numDynamicImagesPerVideo > 1:
-            for i in range(len(video_segments)):
-                if i < self.numDynamicImagesPerVideo:
-                    video_segments.append(video_segments[i])
-                else:
-                    break
+        for i, indices_segment in enumerate(indices_segments): #Generate segments using indices
+            segment = np.asarray(frames_list)[indices_segment].tolist()
+            video_segments.append(segment)
                 
         return video_segments
 
@@ -154,17 +158,8 @@ class ViolenceDataset(Dataset):
         # print(vid_name)
         label = self.labels[idx]
         dinamycImages = []
-        # print('jujujujujuj:', self.overlaping)
-        if self.overlaping > 0:
-            
-            video_segments = self.getVideoSegmentsOverlapped(vid_name, idx)
-            # print(len(sequences), self.numDynamicImagesPerVideo)
-            # print(sequences)
-        else:
-            # print('fdsgfjsdhgkjshgksdgs')
-            video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
-        
-        # print(len(video_segments))
+        video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+       
         
         preprocessing_time = 0.0
         for seq in video_segments:
@@ -187,8 +182,6 @@ class ViolenceDataset(Dataset):
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         if self.numDynamicImagesPerVideo == 1:
             dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
-        
-        
         return dinamycImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
 
