@@ -134,7 +134,6 @@ def __main__():
                                                                                                 split_type)
         
         writer = SummaryWriter(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs',experimentConfig))
-        writer = SummaryWriter('runs/'+experimentConfig)
         tr = trainer.Trainer(model=model,
                             train_dataloader=dataloaders_dict['train'],
                             val_dataloader=dataloaders_dict['val'],
@@ -148,6 +147,11 @@ def __main__():
                             plot_samples=False,
                             train_type='train',
                             save_model=False)
+        
+        final_val_loss = 1000
+        final_train_loss = 1000
+        final_val_acc = 0
+        best_epoch = 0
 
         for epoch in range(1, num_epochs + 1):
             print("----- Epoch {}/{}".format(epoch, num_epochs))
@@ -161,6 +165,14 @@ def __main__():
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
 
+            # if final_val_loss
+            if epoch_loss_train >= epoch_loss_val and epoch_acc_val > final_val_acc:
+                final_val_acc = epoch_acc_val
+                final_val_loss = epoch_loss_val
+                final_train_loss = epoch_loss_train
+                best_epoch = epoch
+
+        print('Best Validation Accuracy={} in Epoch ({}) with val_loss ({}) <  train_loss ({})'.format(final_val_acc, best_epoch, final_val_loss, final_train_loss))
             
     elif split_type == 'cross-val':
         folds_number = 5
