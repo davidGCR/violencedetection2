@@ -132,8 +132,8 @@ def __main__():
                                                                                                 frame_skip,
                                                                                                 num_epochs,
                                                                                                 split_type)
-        checkpoint_path = os.path.join(path_checkpoints, experimentConfig + '.tar')
         
+        writer = SummaryWriter(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs',experimentConfig))
         writer = SummaryWriter('runs/'+experimentConfig)
         tr = trainer.Trainer(model=model,
                             train_dataloader=dataloaders_dict['train'],
@@ -143,7 +143,7 @@ def __main__():
                             scheduler=exp_lr_scheduler,
                             device=device,
                             num_epochs=num_epochs,
-                            checkpoint_path=checkpoint_path,
+                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig+ '.tar'),
                             numDynamicImage=numDynamicImagesPerVideo,
                             plot_samples=False,
                             train_type='train',
