@@ -181,8 +181,8 @@ class ViolenceDataset(Dataset):
         # print('Len: ', len(dinamycImages), vid_name)
         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         # print(dinamycImages.size())
-        if self.numDynamicImagesPerVideo == 1:
-            dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
+        # if self.numDynamicImagesPerVideo == 1:
+        #     dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
         return dinamycImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
 

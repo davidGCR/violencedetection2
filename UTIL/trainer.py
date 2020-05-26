@@ -82,8 +82,8 @@ class Trainer:
             inputs, labels, _, _ = data
             # print(inputs.size())
             batch_size = inputs.size()[0]
-            if self.numDynamicImages > 1:
-                inputs = inputs.permute(1, 0, 2, 3, 4)
+            # if self.numDynamicImages > 1:
+            #     inputs = inputs.permute(1, 0, 2, 3, 4)
                 
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
@@ -125,8 +125,8 @@ class Trainer:
         for inputs, labels, video_names, _ in self.val_dataloader:
         # for inputs, labels  in self.dataloaders["val"]:
             batch_size = inputs.size()[0]
-            if self.numDynamicImages > 1:
-                inputs = inputs.permute(1, 0, 2, 3, 4)
+            # if self.numDynamicImages > 1:
+            #     inputs = inputs.permute(1, 0, 2, 3, 4)
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             # zero the parameter gradients

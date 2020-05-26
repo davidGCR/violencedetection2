@@ -37,7 +37,7 @@ from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
 import UTIL.tester as tester
 from UTIL.kfolds import k_folds
-from UTIL.util import save_csvfile_multicolumn, read_csvfile_threecolumns
+from UTIL.util import save_csvfile_multicolumn, read_csvfile_threecolumns, read_file
 import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
@@ -94,52 +94,17 @@ def __main__():
     transforms = createTransforms(input_size)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if split_type == 'train-test':
-        folds_number = 1
-        if not os.path.exists(os.path.join(constants.PATH_HOCKEY_README, 'train_split.csv')):
-            for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll)):
-                # print("**************** Fold:{}/{} ".format(fold, folds_number))
-                train_x, train_y, test_x, test_y = None, None, None, None
-            
-                train_x = list(itemgetter(*train_idx)(datasetAll))
-                train_y = list(itemgetter(*train_idx)(labelsAll))
-                train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-                test_x = list(itemgetter(*test_idx)(datasetAll))
-                test_y = list(itemgetter(*test_idx)(labelsAll))
-                test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-                # initializeDataset.print_balance(train_y, test_y)
-
-                train_split = zip(train_x, train_y, train_numFrames)
-                test_split = zip(test_x, test_y, test_numFrames)
-                out_file = os.path.join(constants.PATH_HOCKEY_README,'train_split.csv')
-                with open(out_file, 'w') as f:
-                    writer = csv.writer(f, delimiter='\t')
-                    writer.writerows(train_split)
+        train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_train.txt'))
+        test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_test.txt'))
+        train_idx = list(map(int, train_idx))
+        test_idx = list(map(int, test_idx))
         
-                out_file = os.path.join(constants.PATH_HOCKEY_README, 'test_split.csv')
-                with open(out_file, 'w') as f:
-                    writer = csv.writer(f, delimiter='\t')
-                    writer.writerows(test_split)
-        else:
-            train_x = []
-            train_y = []
-            test_x = []
-            test_y = []
-            train_numFrames = []
-            test_numFrames = []
-            
-            with open(os.path.join(constants.PATH_HOCKEY_README,'train_split.csv')) as csvfile:
-                readCSV = csv.reader(csvfile, delimiter='\t')
-                for row in readCSV:
-                    train_x.append(row[0])
-                    train_y.append(int(row[1]))
-                    train_numFrames.append(int(row[2]))
-            
-            with open(os.path.join(constants.PATH_HOCKEY_README,'test_split.csv')) as csvfile:
-                readCSV = csv.reader(csvfile, delimiter='\t')
-                for row in readCSV:
-                    test_x.append(row[0])
-                    test_y.append(int(row[1]))
-                    test_numFrames.append(int(row[2]))
+        train_x = list(itemgetter(*train_idx)(datasetAll))
+        train_y = list(itemgetter(*train_idx)(labelsAll))
+        train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+        test_x = list(itemgetter(*test_idx)(datasetAll))
+        test_y = list(itemgetter(*test_idx)(labelsAll))
+        test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
         initializeDataset.print_balance(train_y, test_y)
 
@@ -197,7 +162,7 @@ def __main__():
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
 
             
-    elif split_type == 'cross_val':
+    elif split_type == 'cross-val':
         folds_number = 5
         fold = 0
         for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll), splits_folder=constants.PATH_HOCKEY_README):
@@ -219,11 +184,11 @@ def __main__():
                                                 positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
             
             model, _ = initializeModel.initialize_model(model_name=modelType,
-                                    num_classes=2,
-                                    feature_extract=feature_extract,
-                                    numDiPerVideos=numDynamicImagesPerVideo,
-                                    joinType=joinType,
-                                    use_pretrained=True)
+                                                        num_classes=2,
+                                                        feature_extract=feature_extract,
+                                                        numDiPerVideos=numDynamicImagesPerVideo,
+                                                        joinType=joinType,
+                                                        use_pretrained=True)
             model.to(device)
             params_to_update = verifiParametersToTrain(model, feature_extract)
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)

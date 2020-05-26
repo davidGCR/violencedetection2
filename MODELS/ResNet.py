@@ -133,12 +133,3 @@ class ViolenceModelResNet(nn.Module):
         # print('forward output: ', x.size())
         return x
   
-    # def getFeatureVectorCat(self, x):
-    #     lista = []
-    #     for dimage in range(0, self.numDiPerVideos):
-    #         feature = self.model_ft(x[dimage])
-    #         # feature = torch.flatten(feature, 1)
-    #         # feature = feature.view(feature.size(0), self.num_ftrs)
-    #         lista.append(feature)
-    #     x = torch.cat(lista, dim=1)
-    #     return x

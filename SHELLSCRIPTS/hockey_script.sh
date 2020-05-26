@@ -7,11 +7,11 @@ python3  VIOLENCE_DETECTION/hockey_detection.py \
 --featureExtract false \
 --joinType maxTempPool \
 --videoSegmentLength 20 \
---numDynamicImagesPerVideo 2 \
+--numDynamicImagesPerVideo 1 \
 --positionSegment begin \
 --overlaping 0 \
 --frameSkip 0 \
---split_type cross_val
+--split_type train-test
 
 # python3  main_violence.py \
 # --numEpochs 10 \
