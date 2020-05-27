@@ -132,8 +132,9 @@ def __main__():
                                                                                                 frame_skip,
                                                                                                 num_epochs,
                                                                                                 split_type)
-        
-        writer = SummaryWriter(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs',experimentConfig))
+        log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
+        writer = SummaryWriter(log_dir)
+        print('Tensorboard logDir={}'.format(log_dir))
         tr = trainer.Trainer(model=model,
                             train_dataloader=dataloaders_dict['train'],
                             val_dataloader=dataloaders_dict['val'],
@@ -216,9 +217,9 @@ def __main__():
                                                                                                     split_type,
                                                                                                     fold)
             
-            if not os.path.exists(os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs')):
-                os.mkdir(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs'))
-            writer = SummaryWriter(os.path.join(constants.PATH_RESULTS,'HOCKEY','tensorboard-runs',experimentConfig))
+            log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
+            writer = SummaryWriter(log_dir)
+            print('Tensorboard logDir={}'.format(log_dir))
             tr = trainer.Trainer(model=model,
                             train_dataloader=dataloaders_dict['train'],
                             val_dataloader=dataloaders_dict['val'],

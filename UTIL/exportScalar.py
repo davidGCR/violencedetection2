@@ -5,8 +5,9 @@ import pandas as pd
 from collections import defaultdict
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import argparse
+import matplotlib.pyplot as plt
 
-def tabulate_events(dpath):
+def tabulate_events(dpath, dout, save):
     final_out = {}
     for dname in os.listdir(dpath):
         print(f"Converting run {dname}",end="")
@@ -25,13 +26,39 @@ def tabulate_events(dpath):
                 steps.append(event.step)
 
             # out[tag]=pd.DataFrame(data=dict(zip(steps,np.array([tag_values,wall_time]).transpose())), columns=steps,index=['value','wall_time'])
-            out[tag] = pd.DataFrame(data=dict(zip(steps, np.array([tag_values]).transpose())), columns=steps,index=['value'])
+            
+            out[tag] = pd.DataFrame(data=dict(zip(steps, np.array([tag_values]).transpose())), columns=steps, index=None)
             # print(out[tag].head(10))
 
         if len(tags)>0:      
-            df = pd.concat(out.values(), keys=out.keys())
-            # print(df.head(10))
-            # df.to_csv(f'{dname}.csv')
+            df = pd.concat(out.values())
+
+            # print('values: ',out.keys())
+            if save:
+                df.to_csv(f'{os.path.join(dout,dname)}.csv')
+            else:
+                df_T = df.transpose()
+                df_T.columns = out.keys()
+                # print(df_T.head(10))
+                x = df_T.index.values.tolist()
+                train_loss = df_T['training loss'].to_numpy()
+                val_loss = df_T['validation loss'].to_numpy()
+                train_acc = df_T['training Acc'].to_numpy()
+                val_acc = df_T['validation Acc'].to_numpy()
+                
+                # plt.figure()
+                fig, (ax1, ax2)= plt.subplots(1, 2)
+                ax1.plot(x, train_loss, 'r', label='train')
+                ax1.plot(x, val_loss, 'b', label='val')
+                ax1.set_title('Loss curves')
+                legend = ax1.legend(loc='upper right', shadow=True, fontsize='large')
+
+                ax2.plot(x, train_acc, 'r', label='train')
+                ax2.plot(x, val_acc,'b', label='val')
+                ax2.set_title('Accuracy curves')
+                legend = ax2.legend(loc='lower right', shadow=True, fontsize='large')
+               
+                plt.show()
             print("- Done")
         else:
             print('- Not scalers to write')
@@ -81,15 +108,17 @@ def tabulate_events_kfolds(dpath):
     return fff
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--folderIn", type=str)
-    # parser.add_argument("--folderOut", type=str)
-    # args = parser.parse_args()
-    folderIn = 'RESULTS/Vif-tensorboard/VIF-Model-resnet50, segmentLen-26, numDynIms-1, frameSkip-0, epochs-25, splitType-cross-val, fold-1'
-    folderOut = 'RESULTS/VIF/learningCurves'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--folderIn", type=str)
+    parser.add_argument("--folderOut", type=str)
+    parser.add_argument("--save", type=lambda x: (str(x).lower() == 'true'))
+    args = parser.parse_args()
+    # folderIn = 'RESULTS/Vif-tensorboard/VIF-Model-resnet50, segmentLen-26, numDynIms-1, frameSkip-0, epochs-25, splitType-cross-val, fold-1'
+    # folderIn = 'RESULTS/HOCKEY/tensorboard-runs/HOCKEY-Model-alexnet, segmentLen-20, numDynIms-1, frameSkip-0, epochs-25, split_type-train-test'
+    # folderOut = 'RESULTS/HOCKEY/learningCurves'
     # steps = tabulate_events(folderIn)
-    path, file_name = os.path.split(folderIn)
-    final = tabulate_events_kfolds(path)
-    final.to_csv(os.path.join(folderOut, file_name[:-1]+'5Folds.csv'))
+    path, file_name = os.path.split(args.folderIn)
+    final = tabulate_events(path, dout=args.folderOut, save=args.save)
+    # final.to_csv(os.path.join(folderOut, file_name[:-1]+'.csv'))
     # pd.concat(steps.values()).to_csv(os.path.join(folderOut, file_name+'.csv'))
     # pd.concat(steps.values(),keys=steps.keys())
