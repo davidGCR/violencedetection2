@@ -12,69 +12,70 @@ import matplotlib.pyplot as plt
 
 def tabulate_events(dpath, dout, save):
     final_out = {}
-    for dname in os.listdir(dpath):
-        print(f"Converting run {dname}",end="")
-        ea = EventAccumulator(os.path.join(dpath, dname)).Reload()
-        tags = ea.Tags()['scalars']
+    # for dname in os.listdir(dpath):
+    dname = os.listdir(dpath)[0]
+    print(f"Converting run {dname}",end="")
+    ea = EventAccumulator(os.path.join(dpath, dname)).Reload()
+    tags = ea.Tags()['scalars']
 
-        out = {}
+    out = {}
 
-        for tag in tags: #training_loss validation_loss training_Acc validation_Acc
-            tag_values=[]
-            # wall_time=[]
-            steps=[]
-            for event in ea.Scalars(tag):
-                tag_values.append(event.value)
-                # wall_time.append(event.wall_time)
-                steps.append(event.step)
+    for tag in tags: #training_loss validation_loss training_Acc validation_Acc
+        tag_values=[]
+        # wall_time=[]
+        steps=[]
+        for event in ea.Scalars(tag):
+            tag_values.append(event.value)
+            # wall_time.append(event.wall_time)
+            steps.append(event.step)
 
-            # out[tag]=pd.DataFrame(data=dict(zip(steps,np.array([tag_values,wall_time]).transpose())), columns=steps,index=['value','wall_time'])
-            
-            out[tag] = pd.DataFrame(data=dict(zip(steps, np.array([tag_values]).transpose())), columns=steps, index=None)
-            # print(out[tag].head(10))
+        # out[tag]=pd.DataFrame(data=dict(zip(steps,np.array([tag_values,wall_time]).transpose())), columns=steps,index=['value','wall_time'])
+        
+        out[tag] = pd.DataFrame(data=dict(zip(steps, np.array([tag_values]).transpose())), columns=steps, index=None)
+        # print(out[tag].head(10))
 
-        if len(tags)>0:      
-            df = pd.concat(out.values())
+    if len(tags)>0:      
+        df = pd.concat(out.values())
 
-            # print('values: ',out.keys())
-            if save:
-                df.to_csv(f'{os.path.join(dout,dname)}.csv')
-            else:
-                df_T = df.transpose()
-                df_T.columns = out.keys()
-                # print(df_T.head(10))
-                x = df_T.index.values.tolist()
-                train_loss = df_T['training loss'].to_numpy()
-                val_loss = df_T['validation loss'].to_numpy()
-                train_acc = df_T['training Acc'].to_numpy()
-                val_acc = df_T['validation Acc'].to_numpy()
-                
-                # plt.figure()
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4))
-                # fig.set_figheight(20)
-                # fig.set_figwidth(60)
-
-                ax1.plot(x, train_loss, 'r', label='train')
-                ax1.plot(x, val_loss, 'b', label='val')
-                ax1.set_title('Loss curves')
-                legend = ax1.legend(loc='upper right', shadow=True, fontsize='large')
-
-                ax2.plot(x, train_acc, 'r', label='train')
-                ax2.plot(x, val_acc,'b', label='val')
-                ax2.set_title('Accuracy curves')
-                legend = ax2.legend(loc='lower right', shadow=True, fontsize='large')
-                
-                # plt.figure(figsize=(3, 8))
-                
-                if not os.path.exists('tmp_images'):
-                    os.mkdir('tmp_images')
-                fig.savefig('tmp_images/tmp.png')
-                # plt.show()
-            print("- Done")
+        # print('values: ',out.keys())
+        if save:
+            df.to_csv(f'{os.path.join(dout,dname)}.csv')
         else:
-            print('- Not scalers to write')
+            df_T = df.transpose()
+            df_T.columns = out.keys()
+            # print(df_T.head(10))
+            x = df_T.index.values.tolist()
+            train_loss = df_T['training loss'].to_numpy()
+            val_loss = df_T['validation loss'].to_numpy()
+            train_acc = df_T['training Acc'].to_numpy()
+            val_acc = df_T['validation Acc'].to_numpy()
+            
+            # plt.figure()
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4))
+            # fig.set_figheight(20)
+            # fig.set_figwidth(60)
 
-        final_out[dname] = df
+            ax1.plot(x, train_loss, 'r', label='train')
+            ax1.plot(x, val_loss, 'b', label='val')
+            ax1.set_title('Loss curves')
+            legend = ax1.legend(loc='upper right', shadow=True, fontsize='large')
+
+            ax2.plot(x, train_acc, 'r', label='train')
+            ax2.plot(x, val_acc,'b', label='val')
+            ax2.set_title('Accuracy curves')
+            legend = ax2.legend(loc='lower right', shadow=True, fontsize='large')
+            
+            # plt.figure(figsize=(3, 8))
+            
+            if not os.path.exists('tmp_images'):
+                os.mkdir('tmp_images')
+            fig.savefig('tmp_images/tmp.png')
+            # plt.show()
+        print("- Done")
+    else:
+        print('- Not scalers to write')
+
+    final_out[dname] = df
 
 
     return final_out
