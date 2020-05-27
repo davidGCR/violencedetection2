@@ -53,6 +53,7 @@ def tabulate_events(dpath, dout, save):
             # plt.figure()
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4), sharex=True)
             plt.xticks(np.arange(min(x), max(x), 2))
+            # plt.yticks(np.arange(0, 1, 0.05))
 
             ax1.plot(x, train_loss, 'r', label='train')
             ax1.plot(x, val_loss, 'b', label='val')
@@ -129,8 +130,8 @@ if __name__ == '__main__':
     # folderIn = 'RESULTS/HOCKEY/tensorboard-runs/HOCKEY-Model-alexnet, segmentLen-20, numDynIms-1, frameSkip-0, epochs-25, split_type-train-test'
     # folderOut = 'RESULTS/HOCKEY/learningCurves'
     # steps = tabulate_events(folderIn)
-    path, file_name = os.path.split(args.folderIn)
-    final = tabulate_events(path, dout=args.folderOut, save=args.save)
+    # path, file_name = os.path.split(args.folderIn)
+    final = tabulate_events(args.folderIn, dout=args.folderOut, save=args.save)
     # final.to_csv(os.path.join(folderOut, file_name[:-1]+'.csv'))
     # pd.concat(steps.values()).to_csv(os.path.join(folderOut, file_name+'.csv'))
     # pd.concat(steps.values(),keys=steps.keys())

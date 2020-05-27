@@ -19,9 +19,20 @@ class AlexNet(nn.Module):  # ViolenceModel2
         set_parameter_requires_grad(self.model, feature_extract)
         self.linear = None
         self.model = nn.Sequential(*list(self.model.children())[:-2])  # to tempooling
-        # self.linear = nn.Linear(4096,2)
-        self.linear = nn.Linear(256 * 6 * 6, self.num_classes)
+        
+        
         self.tmpPooling = nn.MaxPool2d((numDiPerVideos, 1))
+
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
+        # self.linear = nn.Linear(256 * 6 * 6, self.num_classes)
         # num_ftrs = model_ft.classifier[6].in_features
         # self.model.classifier[6] = nn.Linear(num_ftrs,num_classes)
 
@@ -42,7 +53,7 @@ class AlexNet(nn.Module):  # ViolenceModel2
         # print('Re-structure: ', x.size())
         x = x.max(dim=1).values
         # print('maxpooling: ', x.size())
-        x = self.linear(x)
+        x = self.classifier(x)
 
         # print('Finalx: ', x.size())
         return x
