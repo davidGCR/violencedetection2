@@ -5,9 +5,9 @@ import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
 # from MODELS.AlexNet import AlexNet
-import MODELS.ResNet as resnet
+# import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg
-from MODELS.ViolenceModels import AlexNet, AlexNetV2
+from MODELS.ViolenceModels import AlexNet, AlexNetV2, ResNet
 
 def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
     # if model_name == "resnet18" or model_name == "resnet34":
@@ -30,7 +30,8 @@ def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, j
         # set_parameter_requires_grad(model_ft, feature_extract)
         input_size = 224
     elif model_name == "resnet18" or model_name == "resnet34" or model_name == "resnet50":
-        model_ft = resnet.ViolenceModelResNet(num_classes, numDiPerVideos, model_name, joinType, feature_extract)
+        # model_ft = resnet.ViolenceModelResNet(num_classes, numDiPerVideos, model_name, joinType, feature_extract)
+        model_ft = ResNet(num_classes, numDiPerVideos, model_name, joinType, feature_extract)
         input_size = 224
     elif model_name == "vgg":
         """ VGG11_bn
