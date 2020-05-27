@@ -126,7 +126,7 @@ def __main__():
         
         criterion = nn.CrossEntropyLoss()
         # split_type = split_type+str(fold)
-        experimentConfig = 'HOCKEY-Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{}'.format(modelType,
+        experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{}'.format(modelType,
                                                                                                 videoSegmentLength,
                                                                                                 numDynamicImagesPerVideo,
                                                                                                 frame_skip,

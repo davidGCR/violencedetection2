@@ -1,4 +1,6 @@
 import os
+# import sys
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 
@@ -6,6 +8,7 @@ from collections import defaultdict
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import argparse
 import matplotlib.pyplot as plt
+# import constants
 
 def tabulate_events(dpath, dout, save):
     final_out = {}
@@ -47,7 +50,10 @@ def tabulate_events(dpath, dout, save):
                 val_acc = df_T['validation Acc'].to_numpy()
                 
                 # plt.figure()
-                fig, (ax1, ax2)= plt.subplots(1, 2)
+                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4))
+                # fig.set_figheight(20)
+                # fig.set_figwidth(60)
+
                 ax1.plot(x, train_loss, 'r', label='train')
                 ax1.plot(x, val_loss, 'b', label='val')
                 ax1.set_title('Loss curves')
@@ -57,8 +63,13 @@ def tabulate_events(dpath, dout, save):
                 ax2.plot(x, val_acc,'b', label='val')
                 ax2.set_title('Accuracy curves')
                 legend = ax2.legend(loc='lower right', shadow=True, fontsize='large')
-               
-                plt.show()
+                
+                # plt.figure(figsize=(3, 8))
+                
+                if not os.path.exists('tmp_images'):
+                    os.mkdir('tmp_images')
+                fig.savefig('tmp_images/tmp.png')
+                # plt.show()
             print("- Done")
         else:
             print('- Not scalers to write')
@@ -110,7 +121,7 @@ def tabulate_events_kfolds(dpath):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--folderIn", type=str)
-    parser.add_argument("--folderOut", type=str)
+    parser.add_argument("--folderOut", type=str, default='')
     parser.add_argument("--save", type=lambda x: (str(x).lower() == 'true'))
     args = parser.parse_args()
     # folderIn = 'RESULTS/Vif-tensorboard/VIF-Model-resnet50, segmentLen-26, numDynIms-1, frameSkip-0, epochs-25, splitType-cross-val, fold-1'
