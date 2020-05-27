@@ -51,14 +51,14 @@ def tabulate_events(dpath, dout, save):
             val_acc = df_T['validation Acc'].to_numpy()
             
             # plt.figure()
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4))
-            # fig.set_figheight(20)
-            # fig.set_figwidth(60)
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4), sharex=True)
+            plt.xticks(np.arange(min(x), max(x), 2))
 
             ax1.plot(x, train_loss, 'r', label='train')
             ax1.plot(x, val_loss, 'b', label='val')
             ax1.set_title('Loss curves')
             legend = ax1.legend(loc='upper right', shadow=True, fontsize='large')
+            
 
             ax2.plot(x, train_acc, 'r', label='train')
             ax2.plot(x, val_acc,'b', label='val')
@@ -70,7 +70,7 @@ def tabulate_events(dpath, dout, save):
             if not os.path.exists('tmp_images'):
                 os.mkdir('tmp_images')
             fig.savefig('tmp_images/tmp.png')
-            # plt.show()
+            plt.show()
         print("- Done")
     else:
         print('- Not scalers to write')
