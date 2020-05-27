@@ -7,7 +7,7 @@ from torchvision import datasets, models, transforms
 # from MODELS.AlexNet import AlexNet
 import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg
-from MODELS.ViolenceModels import AlexNet
+from MODELS.ViolenceModels import AlexNet, AlexNetV2
 
 def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
     # if model_name == "resnet18" or model_name == "resnet34":
@@ -22,8 +22,11 @@ def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, j
     #   variables is model specific.
     model_ft = None
     input_size = 0
-    if model_name == "alexnet":
-        model_ft = AlexNet(num_classes, numDiPerVideos, joinType, feature_extract)
+    if model_name == "alexnet" or model_name == "alexnetv2":
+        if model_name == "alexnet":
+            model_ft = AlexNet(num_classes, numDiPerVideos, joinType, feature_extract)
+        elif  model_name== "alexnetv2":
+            model_ft = AlexNetV2(num_classes, numDiPerVideos, joinType, feature_extract)
         # set_parameter_requires_grad(model_ft, feature_extract)
         input_size = 224
     elif model_name == "resnet18" or model_name == "resnet34" or model_name == "resnet50":

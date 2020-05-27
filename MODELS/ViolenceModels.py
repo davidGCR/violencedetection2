@@ -19,20 +19,8 @@ class AlexNet(nn.Module):  # ViolenceModel2
         set_parameter_requires_grad(self.model, feature_extract)
         self.linear = None
         self.model = nn.Sequential(*list(self.model.children())[:-2])  # to tempooling
-        
-        
         self.tmpPooling = nn.MaxPool2d((numDiPerVideos, 1))
-
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(256 * 6 * 6, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
-            nn.Linear(4096, num_classes),
-        )
-        # self.linear = nn.Linear(256 * 6 * 6, self.num_classes)
+        self.linear = nn.Linear(256 * 6 * 6, self.num_classes)
         # num_ftrs = model_ft.classifier[6].in_features
         # self.model.classifier[6] = nn.Linear(num_ftrs,num_classes)
 
@@ -53,9 +41,49 @@ class AlexNet(nn.Module):  # ViolenceModel2
         # print('Re-structure: ', x.size())
         x = x.max(dim=1).values
         # print('maxpooling: ', x.size())
-        x = self.classifier(x)
+        x = self.linear(x)
 
         # print('Finalx: ', x.size())
+        return x
+
+class AlexNetV2(nn.Module):  # ViolenceModel2
+    def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
+        super(AlexNet, self).__init__()
+        self.numDiPerVideos = numDiPerVideos
+        self.joinType = joinType
+        self.num_classes = num_classes
+        self.model = models.alexnet(pretrained=True)
+        set_parameter_requires_grad(self.model, feature_extract)
+        self.linear = None
+        self.model = nn.Sequential(*list(self.model.children())[:-2])  # to tempooling
+        
+        
+        self.tmpPooling = nn.MaxPool2d((numDiPerVideos, 1))
+
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
+
+    def forward(self, x):
+        batch_size, timesteps, C, H, W = x.size()
+        c_in = x.view(batch_size * timesteps, C, H, W)
+        # print('cin: ', c_in.size())
+        c_out = self.model(c_in)
+        # print('cout: ', c_out.size())
+        x = torch.flatten(c_out, 1)
+        # print('flatten: ', x.size())
+        # Re-structure the data and then temporal max-pool.
+        x = x.view(batch_size, timesteps, 256 * 6 * 6)
+        # print('Re-structure: ', x.size())
+        x = x.max(dim=1).values
+        # print('maxpooling: ', x.size())
+        x = self.classifier(x)
         return x
 
 
