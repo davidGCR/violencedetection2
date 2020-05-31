@@ -89,7 +89,7 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, split_type-{},fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
                                                                                                                                         args.frameSkip,
@@ -114,34 +114,32 @@ def __main__():
         log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
         writer = SummaryWriter(log_dir)
         print('Tensorboard logDir={}'.format(log_dir))
+        
         tr = Trainer(model=model,
                         train_dataloader=dataloaders_dict['train'],
                         val_dataloader=dataloaders_dict['test'],
                         criterion=criterion,
                         optimizer=optimizer,
-                        scheduler=exp_lr_scheduler,
-                        device=DEVICE,
                         num_epochs=args.numEpochs,
-                        checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig),
-                        numDynamicImage=args.numDynamicImagesPerVideo,
-                        plot_samples=False,
-                        train_type='train',
-                        save_model=False)
+                        checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
         policy = ResultPolicy()
         for epoch in range(1, args.numEpochs + 1):
             print("Fold {} ----- Epoch {}/{}".format(i+1,epoch, args.numEpochs))
             # Train and evaluate
             epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
+            
             exp_lr_scheduler.step()
 
-            policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+            flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+            # print(flac, type(flac))
+            tr.saveCheckpoint(epoch, flac)
 
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-        cv_test_accs.append(policy.getFinalTestAcc())
+        cv_test_accs.append(policy.getFinalTestAcc().numpy())
         cv_test_losses.append(policy.getFinalTestLoss())
         cv_final_epochs.append(policy.getFinalEpoch())
     

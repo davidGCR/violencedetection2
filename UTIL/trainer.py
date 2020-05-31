@@ -7,45 +7,19 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from torch.utils.tensorboard import SummaryWriter
+from constants import DEVICE
 
 class Trainer:
-    def __init__(self, model, train_dataloader, val_dataloader, criterion, optimizer, scheduler, device, num_epochs, checkpoint_path,
-                    numDynamicImage, plot_samples, train_type, save_model):
+    def __init__(self, model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs, checkpoint_path):
         self.model = model
-        # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
-        # self.model_name = "alexnet"
-        # Number of classes in the dataset
-        self.num_classes = 2
-        self.train_type = train_type
-        # Flag for feature extracting. When False, we finetune the whole model,
-        #   when True we only update the reshaped layer params
-        self.feature_extract = True
-
-        self.input_size = 224
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
         self.criterion = criterion
-        # self.tb = TensorBoardColab()
-        self.device = device
-        self.num_epochs = num_epochs
-        self.scheduler = scheduler
-        self._checkpoint_path = checkpoint_path
-        # self.best_model_wts = copy.deepcopy(model.state_dict())
-        self.best_acc = 0.0
-        self.numDynamicImages = numDynamicImage
-        self.plot_samples = plot_samples
-        self.train_best_acc = 0
-        self._save_model = save_model
-        # self.writer = SummaryWriter('runs/anomaly')
-        # self.minibatch = 0
 
-    @property
-    def save_model(self):
-        return self._save_model
-    @save_model.setter
-    def save_model(self, value):
-        self._save_model = value
+        self.num_epochs = num_epochs
+        self._checkpoint_path = checkpoint_path
+
     
     @property
     def checkpoint_path(self):
@@ -85,8 +59,8 @@ class Trainer:
             # if self.numDynamicImages > 1:
             #     inputs = inputs.permute(1, 0, 2, 3, 4)
                 
-            inputs = inputs.to(self.device)
-            labels = labels.to(self.device)
+            inputs = inputs.to(DEVICE)
+            labels = labels.to(DEVICE)
             # zero the parameter gradients
             self.optimizer.zero_grad()
             # track history if only in train
@@ -105,14 +79,6 @@ class Trainer:
         epoch_acc = running_corrects.double() / len(self.train_dataloader.dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format('train', epoch_loss, epoch_acc))
-        # if self.train_type == constants.OPERATION_TRAINING_FINAL:
-        
-        
-        # self.tb.save_value("trainLoss", "train_loss", epoch, epoch_loss)
-        # self.tb.save_value("trainAcc", "train_acc", epoch, epoch_acc)
-
-        # running_loss += loss.item()
-        # i = 
         
         return epoch_loss, epoch_acc
 
@@ -127,8 +93,8 @@ class Trainer:
             batch_size = inputs.size()[0]
             # if self.numDynamicImages > 1:
             #     inputs = inputs.permute(1, 0, 2, 3, 4)
-            inputs = inputs.to(self.device)
-            labels = labels.to(self.device)
+            inputs = inputs.to(DEVICE)
+            labels = labels.to(DEVICE)
             # zero the parameter gradients
             # self.optimizer.zero_grad()
             # forward
@@ -150,13 +116,18 @@ class Trainer:
         epoch_acc = running_corrects.double() / len(self.val_dataloader.dataset)
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format("val", epoch_loss, epoch_acc))
-        if epoch_acc > self.train_best_acc:
-            self.train_best_acc = epoch_acc.item()
+        # if epoch_acc > self.train_best_acc:
+        #     self.train_best_acc = epoch_acc.item()
             # best_model_wts = copy.deepcopy(self.model.state_dict())
 
             # checkpoint_name = self.checkpoint_path+'.pth'
             # self._checkpoint_path = self._checkpoint_path+'-epoch-'+str(epoch)+'.tar'
+            
+
+        return epoch_loss, epoch_acc
+    
+    def saveCheckpoint(self, epoch, flac):
+        if flac:
             print('Saving model...',self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')
             torch.save(self.model, self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')    
 
-        return epoch_loss, epoch_acc
