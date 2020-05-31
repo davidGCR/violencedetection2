@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import lr_scheduler
+import numpy as np
 
 from constants import DEVICE
 import constants
@@ -21,6 +22,7 @@ from UTIL.trainer import Trainer
 # from UTIL.tester import Tester
 from UTIL.parameters import verifiParametersToTrain
 from ucfcrime2local_transforms import createTransforms
+from UTIL.resultsPolicy import ResultPolicy
 
 def __main__():
     parser = argparse.ArgumentParser()
@@ -44,6 +46,10 @@ def __main__():
     transforms = createTransforms(input_size)
     num_classes = 2
     shuffle = True
+
+    cv_test_accs = []
+    cv_test_losses = []
+    cv_final_epochs = []
 
     X, y, numFrames = crime2localLoadData()
     for i, (train_idx, test_idx) in enumerate(crime2localgGetSplit(5)):
@@ -121,7 +127,7 @@ def __main__():
                         plot_samples=False,
                         train_type='train',
                         save_model=False)
-
+        policy = ResultPolicy()
         for epoch in range(1, args.numEpochs + 1):
             print("Fold {} ----- Epoch {}/{}".format(i+1,epoch, args.numEpochs))
             # Train and evaluate
@@ -129,9 +135,20 @@ def __main__():
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
             exp_lr_scheduler.step()
 
+            policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+        cv_test_accs.append(policy.getFinalTestAcc)
+        cv_test_losses.append(policy.getFinalTestLoss)
+        cv_final_epochs.append(policy.getFinalEpoch)
+    
+    print('CV Accuracies=', cv_test_accs)
+    print('CV Losses=', cv_test_losses)
+    print('CV Epochs=', cv_final_epochs)
+    print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
+        
 
 __main__()
