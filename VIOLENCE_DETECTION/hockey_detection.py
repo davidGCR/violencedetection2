@@ -233,13 +233,13 @@ def __main__():
                 "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers)
             }
             
-            model, _ = initializeModel.initialize_model(model_name=args.modelType,
+            model, _ = initialize_model(model_name=args.modelType,
                                                         num_classes=2,
                                                         feature_extract=args.featureExtract,
                                                         numDiPerVideos=args.numDynamicImagesPerVideo,
                                                         joinType=args.joinType,
                                                         use_pretrained=True)
-            model.to(device)
+            model.to(DEVICE)
             params_to_update = verifiParametersToTrain(model, args.featureExtract)
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
@@ -263,8 +263,7 @@ def __main__():
                             criterion=criterion,
                             optimizer=optimizer,
                             num_epochs=args.numEpochs,
-                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig),
-                            numDynamicImage=args.numDynamicImagesPerVideo)
+                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig))
             
             policy = ResultPolicy()
 
