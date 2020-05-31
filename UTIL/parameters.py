@@ -8,7 +8,7 @@ def set_parameter_requires_grad(model, feature_extract):
             
 def verifiParametersToTrain(model, feature_extract):
     params_to_update = model.parameters()
-    print("Finetuning?:"+str(not feature_extract))
+    # print("Finetuning?:"+str(not feature_extract))
     if feature_extract:
         params_to_update = []
         for name,param in model.named_parameters():

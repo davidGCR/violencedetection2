@@ -75,7 +75,7 @@ def __main__():
             "test": ViolenceDataset(dataset=test_x,
                                     labels=test_y,
                                     numFrames=test_numFrames,
-                                    spatial_transform=transforms["test"],
+                                    spatial_transform=transforms["val"],
                                     numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
@@ -141,9 +141,9 @@ def __main__():
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-        cv_test_accs.append(policy.getFinalTestAcc)
-        cv_test_losses.append(policy.getFinalTestLoss)
-        cv_final_epochs.append(policy.getFinalEpoch)
+        cv_test_accs.append(policy.getFinalTestAcc())
+        cv_test_losses.append(policy.getFinalTestLoss())
+        cv_final_epochs.append(policy.getFinalEpoch())
     
     print('CV Accuracies=', cv_test_accs)
     print('CV Losses=', cv_test_losses)
