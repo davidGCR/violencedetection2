@@ -1,13 +1,13 @@
 
 python3  VIOLENCE_DETECTION/hockey_detection.py \
---modelType alexnet \
+--modelType resnet50 \
 --numEpochs 1 \
 --numWorkers 4 \
 --batchSize 8 \
 --featureExtract false \
 --joinType maxTempPool \
 --videoSegmentLength 20 \
---numDynamicImagesPerVideo 1 \
+--numDynamicImagesPerVideo 2 \
 --positionSegment begin \
 --overlaping 0 \
 --frameSkip 0 \

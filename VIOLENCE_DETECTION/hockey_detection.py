@@ -32,12 +32,13 @@ from operator import itemgetter
 import random
 from hockey_transforms import *
 import UTIL.initializeDataset as initializeDataset
-import UTIL.initializeModel as initializeModel
+import UTIL.chooseModel as initializeModel
 from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
 import UTIL.tester as tester
 from UTIL.kfolds import k_folds
 from UTIL.util import save_csvfile_multicolumn, read_csvfile_threecolumns, read_file
+from constants import DEVICE
 import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
@@ -92,7 +93,6 @@ def __main__():
 
 
     transforms = createTransforms(input_size)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if split_type == 'train-test':
         train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_train.txt'))
         test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_test.txt'))
@@ -113,13 +113,13 @@ def __main__():
                                                 train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
                                                 positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
             
-        model, _ = initializeModel.initialize_model(model_name=modelType,
+        model, _ = initialize_model(model_name=modelType,
                                 num_classes=2,
                                 feature_extract=feature_extract,
                                 numDiPerVideos=numDynamicImagesPerVideo,
                                 joinType=joinType,
                                 use_pretrained=True)
-        model.to(device)
+        model.to(DEVICE)
         params_to_update = verifiParametersToTrain(model, feature_extract)
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)

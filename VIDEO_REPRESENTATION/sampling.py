@@ -10,8 +10,8 @@ import cv2
 import constants
 
 class FrameSampler():
-    def __init__(self, minSampleLength, threshold1, threshold2):
-        self.minSampleLength = minSampleLength
+    def __init__(self, maxSampleLength, threshold1, threshold2):
+        self.maxSampleLength = maxSampleLength
         self.threshold1 = threshold1
         self.threshold2 = threshold2
 
@@ -30,7 +30,7 @@ class FrameSampler():
         return x_c, y_c
 
     def centroidDistance(self, x_c1, y_c1, x_c2, y_c2):
-        l = ((x_c1-x_c2)**2) + ((y_c1-y_c2)**2) 
+        l = math.sqrt(((x_c1-x_c2)**2) + ((y_c1-y_c2)**2))
         return l
 
     def relativeDistance(self, x_c1, y_c1, x_c2, y_c2):
@@ -90,23 +90,29 @@ class FrameSampler():
             [x_c0, y_c0] = frames_centroids[len(frames_centroids)-1]
             x_c1, y_c1 = self.grayCentroid(frameT1)
             
-            # if len(frames_centroids) < self.minSampleLength:
+            # 
             x_c_start, y_c_start = self.averageCentroid(frames_centroids)
             d = self.relativeDistance(x_c_start, y_c_start, x_c1, y_c1)
 
             if d < self.threshold1:
                 frames_centroids.append([x_c1, y_c1])
+                if len(frames_centroids) > self.maxSampleLength:
+                    [x_c0, y_c0] = frames_centroids[len(frames_centroids)-1]
+                    frames_centroids = [[x_c0, y_c0]]
             else:
                 frames_samples.append(frameT1)
                 frames_samples_indices.append(i)
-            print('frame t({})-frame t+1({}) = {}'.format(i-1,i, d))
+            print('LenSimilarFrames({}), frame t({})-frame t+1({}) = {}, avg ({}, {}), current_centroid ({}, {})'.format(len(frames_centroids), i-1,i, d, x_c_start, y_c_start, x_c1, y_c1))
             frameT0 = frameT1
         return frames_samples, frames_samples_indices
 
 def main():
-    # video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/HockeyFightsDATASET/frames/violence/1'
-    video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/nonviolence/Normal_Videos-Arrest002-NSplit-2'
-    Sampler = FrameSampler(minSampleLength=4, threshold1=0.002, threshold2=0.3)
+    # video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/HockeyFightsDATASET/frames/nonviolence/1'
+    # video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/nonviolence/Normal_Videos-Arrest002-NSplit-2'
+    # video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/nonviolence/Normal_Videos-Arrest003-NSplit-2'
+    # video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/violence/Arrest003-VSplit1'
+    video_dir = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/long-videos-violence/Arrest006'
+    Sampler = FrameSampler(maxSampleLength=30, threshold1=1.0, threshold2=0.3)
     frames_samples, frames_samples_indices = Sampler.sample(video_dir)
     print('LenSampled: ', len(frames_samples))
 

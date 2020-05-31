@@ -72,6 +72,16 @@ def read_csvfile_threecolumns(file):
         y.append(int(row[1]))
         numFrames.append(int(row[2]))
   return x, y, numFrames
+
+def read_csvfile_twoColumns(file):
+  x = []
+  y = []
+  with open(file) as csvfile:
+    readCSV = csv.reader(csvfile, delimiter='\t')
+    for row in readCSV:
+        x.append(row[0])
+        y.append(int(row[1]))
+  return x, y
     
 
 #######################################################################################
