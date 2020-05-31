@@ -31,14 +31,15 @@ from violenceDataset import *
 from operator import itemgetter
 import random
 from hockey_transforms import *
-import UTIL.initializeDataset as initializeDataset
-import UTIL.chooseModel as initializeModel
+# import UTIL.initializeDataset as initializeDataset
+from UTIL.chooseModel import initialize_model
 from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
 import UTIL.tester as tester
 from UTIL.kfolds import k_folds
 from UTIL.util import save_csvfile_multicolumn, read_csvfile_threecolumns, read_file
 from constants import DEVICE
+from UTIL.resultsPolicy import ResultPolicy
 import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
@@ -59,27 +60,13 @@ def __main__():
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--split_type", type=str)
-    parser.add_argument("--overlaping", type=float)
+    parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
 
 
     args = parser.parse_args()
     split_type = args.split_type
-    
-    path_checkpoints = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints')
-
-    modelType = args.modelType
-    batch_size = args.batchSize
-    num_epochs = args.numEpochs
-    frame_skip = args.frameSkip
-    feature_extract = args.featureExtract
-    joinType = args.joinType
-    numDynamicImagesPerVideo = args.numDynamicImagesPerVideo
-    overlaping = args.overlaping
-    num_workers = args.numWorkers
     input_size = 224
-    videoSegmentLength = args.videoSegmentLength
-    positionSegment = args.positionSegment
     shuffle = True
     path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
     path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
@@ -93,6 +80,10 @@ def __main__():
 
 
     transforms = createTransforms(input_size)
+    cv_test_accs = []
+    cv_test_losses = []
+    cv_final_epochs = []
+
     if split_type == 'train-test':
         train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_train.txt'))
         test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_test.txt'))
@@ -106,32 +97,56 @@ def __main__():
         test_y = list(itemgetter(*test_idx)(labelsAll))
         test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
-        initializeDataset.print_balance(train_y, test_y)
+        # initializeDataset.print_balance(train_y, test_y)
 
-        dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
-                                                transforms, numDynamicImagesPerVideo, train_batch_size=batch_size, test_batch_size=1,
-                                                train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
-                                                positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
+        # dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
+        #                                         transforms, numDynamicImagesPerVideo, train_batch_size=batch_size, test_batch_size=1,
+        #                                         train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
+        #                                         positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
+        image_datasets = {
+            "train": ViolenceDataset(dataset=train_x,
+                                    labels=train_y,
+                                    numFrames=train_numFrames,
+                                    spatial_transform=transforms["train"],
+                                    numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                    videoSegmentLength=args.videoSegmentLength,
+                                    positionSegment=args.positionSegment,
+                                    overlaping=args.overlapping,
+                                    frame_skip=args.frameSkip),
+            "val": ViolenceDataset(dataset=test_x,
+                                    labels=test_y,
+                                    numFrames=test_numFrames,
+                                    spatial_transform=transforms["val"],
+                                    numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                    videoSegmentLength=args.videoSegmentLength,
+                                    positionSegment=args.positionSegment,
+                                    overlaping=args.overlapping,
+                                    frame_skip=args.frameSkip),
+        }
+        dataloaders_dict = {
+            "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
+            "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers)
+        }
             
-        model, _ = initialize_model(model_name=modelType,
-                                num_classes=2,
-                                feature_extract=feature_extract,
-                                numDiPerVideos=numDynamicImagesPerVideo,
-                                joinType=joinType,
-                                use_pretrained=True)
+        model, _ = initialize_model(model_name=args.modelType,
+                                    num_classes=2,
+                                    feature_extract=args.featureExtract,
+                                    numDiPerVideos=args.numDynamicImagesPerVideo,
+                                    joinType=args.joinType,
+                                    use_pretrained=True)
         model.to(DEVICE)
-        params_to_update = verifiParametersToTrain(model, feature_extract)
+        params_to_update = verifiParametersToTrain(model, args.featureExtract)
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         
         criterion = nn.CrossEntropyLoss()
         # split_type = split_type+str(fold)
-        experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{}'.format(modelType,
-                                                                                                videoSegmentLength,
-                                                                                                numDynamicImagesPerVideo,
-                                                                                                frame_skip,
-                                                                                                num_epochs,
-                                                                                                split_type)
+        experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{}'.format(args.modelType,
+                                                                                                                    args.videoSegmentLength,
+                                                                                                                    args.numDynamicImagesPerVideo,
+                                                                                                                    args.frameSkip,
+                                                                                                                    args.numEpochs,
+                                                                                                                    args.split_type)
         log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
         writer = SummaryWriter(log_dir)
         print('Tensorboard logDir={}'.format(log_dir))
@@ -140,40 +155,42 @@ def __main__():
                             val_dataloader=dataloaders_dict['val'],
                             criterion=criterion,
                             optimizer=optimizer,
-                            scheduler=exp_lr_scheduler,
-                            device=device,
-                            num_epochs=num_epochs,
-                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig+ '.tar'),
-                            numDynamicImage=numDynamicImagesPerVideo,
-                            plot_samples=False,
-                            train_type='train',
-                            save_model=False)
+                            num_epochs=args.numEpochs,
+                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig+ '.tar'))
         
         final_val_loss = 1000
         final_train_loss = 1000
         final_val_acc = 0
         best_epoch = 0
+        policy = ResultPolicy()
 
-        for epoch in range(1, num_epochs + 1):
-            print("----- Epoch {}/{}".format(epoch, num_epochs))
+        for epoch in range(1, args.numEpochs + 1):
+            print("----- Epoch {}/{}".format(epoch, args.numEpochs))
             # Train and evaluate
             epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
             exp_lr_scheduler.step()
+
+            flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+            # print(flac, type(flac))
+            tr.saveCheckpoint(epoch, flac)
 
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
 
-            # if final_val_loss
-            if epoch_loss_train >= epoch_loss_val and epoch_acc_val > final_val_acc:
-                final_val_acc = epoch_acc_val
-                final_val_loss = epoch_loss_val
-                final_train_loss = epoch_loss_train
-                best_epoch = epoch
+            # # if final_val_loss
+            # if epoch_loss_train >= epoch_loss_val and epoch_acc_val > final_val_acc:
+            #     final_val_acc = epoch_acc_val
+            #     final_val_loss = epoch_loss_val
+            #     final_train_loss = epoch_loss_train
+            #     best_epoch = epoch
+        cv_test_accs.append(policy.getFinalTestAcc())
+        cv_test_losses.append(policy.getFinalTestLoss())
+        cv_final_epochs.append(policy.getFinalEpoch())
 
-        print('Best Validation Accuracy={} in Epoch ({}) with val_loss ({}) <  train_loss ({})'.format(final_val_acc, best_epoch, final_val_loss, final_train_loss))
+        # print('Best Validation Accuracy={} in Epoch ({}) with val_loss ({}) <  train_loss ({})'.format(final_val_acc, best_epoch, final_val_loss, final_train_loss))
             
     elif split_type == 'cross-val':
         folds_number = 5
@@ -189,33 +206,53 @@ def __main__():
             test_x = list(itemgetter(*test_idx)(datasetAll))
             test_y = list(itemgetter(*test_idx)(labelsAll))
             test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-            initializeDataset.print_balance(train_y, test_y)
+            # initializeDataset.print_balance(train_y, test_y)
 
-            dataloaders_dict = initializeDataset.getDataLoaders(train_x, train_y, train_numFrames, test_x, test_y, test_numFrames,
-                                                transforms, numDynamicImagesPerVideo, train_batch_size=batch_size, test_batch_size=1,
-                                                train_num_workers=num_workers, test_num_workers=1, videoSegmentLength=videoSegmentLength,
-                                                positionSegment=positionSegment, overlaping=overlaping, frame_skip=frame_skip)
+            image_datasets = {
+            "train": ViolenceDataset(dataset=train_x,
+                                    labels=train_y,
+                                    numFrames=train_numFrames,
+                                    spatial_transform=transforms["train"],
+                                    numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                    videoSegmentLength=args.videoSegmentLength,
+                                    positionSegment=args.positionSegment,
+                                    overlaping=args.overlapping,
+                                    frame_skip=args.frameSkip),
+            "val": ViolenceDataset(dataset=test_x,
+                                    labels=test_y,
+                                    numFrames=test_numFrames,
+                                    spatial_transform=transforms["val"],
+                                    numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                    videoSegmentLength=args.videoSegmentLength,
+                                    positionSegment=args.positionSegment,
+                                    overlaping=args.overlapping,
+                                    frame_skip=args.frameSkip),
+            }
+            dataloaders_dict = {
+                "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
+                "val": torch.utils.data.DataLoader( image_datasets["val"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers)
+            }
             
-            model, _ = initializeModel.initialize_model(model_name=modelType,
+            model, _ = initializeModel.initialize_model(model_name=args.modelType,
                                                         num_classes=2,
-                                                        feature_extract=feature_extract,
-                                                        numDiPerVideos=numDynamicImagesPerVideo,
-                                                        joinType=joinType,
+                                                        feature_extract=args.featureExtract,
+                                                        numDiPerVideos=args.numDynamicImagesPerVideo,
+                                                        joinType=args.joinType,
                                                         use_pretrained=True)
             model.to(device)
-            params_to_update = verifiParametersToTrain(model, feature_extract)
+            params_to_update = verifiParametersToTrain(model, args.featureExtract)
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
             
             criterion = nn.CrossEntropyLoss()
             # split_type = split_type+str(fold)
-            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(modelType,
-                                                                                                    videoSegmentLength,
-                                                                                                    numDynamicImagesPerVideo,
-                                                                                                    frame_skip,
-                                                                                                    num_epochs,
-                                                                                                    split_type,
-                                                                                                    fold)
+            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
+                                                                                                                                args.videoSegmentLength,
+                                                                                                                                args.numDynamicImagesPerVideo,
+                                                                                                                                args.frameSkip,
+                                                                                                                                args.numEpochs,
+                                                                                                                                args.split_type,
+                                                                                                                                fold)
             
             log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
             writer = SummaryWriter(log_dir)
@@ -225,27 +262,34 @@ def __main__():
                             val_dataloader=dataloaders_dict['val'],
                             criterion=criterion,
                             optimizer=optimizer,
-                            scheduler=exp_lr_scheduler,
-                            device=constants.DEVICE,
-                            num_epochs=num_epochs,
+                            num_epochs=args.numEpochs,
                             checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig),
-                            numDynamicImage=numDynamicImagesPerVideo,
-                            plot_samples=False,
-                            train_type='train',
-                            save_model=False)
+                            numDynamicImage=args.numDynamicImagesPerVideo)
+            
+            policy = ResultPolicy()
 
-            for epoch in range(1, num_epochs + 1):
-                print("Fold {} ----- Epoch {}/{}".format(fold,epoch, num_epochs))
+            for epoch in range(1, args.numEpochs + 1):
+                print("Fold {} ----- Epoch {}/{}".format(fold,epoch, args.numEpochs))
                 # Train and evaluate
                 epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
                 epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
                 exp_lr_scheduler.step()
+                flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+                # print(flac, type(flac))
+                tr.saveCheckpoint(epoch, flac)
 
                 writer.add_scalar('training loss', epoch_loss_train, epoch)
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
                 writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-            
+            cv_test_accs.append(policy.getFinalTestAcc())
+            cv_test_losses.append(policy.getFinalTestLoss())
+            cv_final_epochs.append(policy.getFinalEpoch())
+   
+    print('CV Accuracies=', cv_test_accs)
+    print('CV Losses=', cv_test_losses)
+    print('CV Epochs=', cv_final_epochs)
+    print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
     
 # __main_mask__()
 __main__()

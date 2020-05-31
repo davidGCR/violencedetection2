@@ -1,6 +1,6 @@
 python3  VIOLENCE_DETECTION/crime2local_detection.py \
---modelType resnet50 \
---numEpochs 25 \
+--modelType alexnetv2 \
+--numEpochs 2 \
 --numWorkers 4 \
 --batchSize 8 \
 --featureExtract false \

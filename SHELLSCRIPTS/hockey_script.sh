@@ -9,7 +9,7 @@ python3  VIOLENCE_DETECTION/hockey_detection.py \
 --videoSegmentLength 20 \
 --numDynamicImagesPerVideo 2 \
 --positionSegment begin \
---overlaping 0 \
+--overlapping 0 \
 --frameSkip 0 \
 --split_type train-test
 

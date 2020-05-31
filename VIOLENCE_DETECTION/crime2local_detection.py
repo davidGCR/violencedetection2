@@ -139,7 +139,7 @@ def __main__():
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-        cv_test_accs.append(policy.getFinalTestAcc().cpu().numpy())
+        cv_test_accs.append(policy.getFinalTestAcc())
         cv_test_losses.append(policy.getFinalTestLoss())
         cv_final_epochs.append(policy.getFinalEpoch())
     

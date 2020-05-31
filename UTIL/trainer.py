@@ -80,7 +80,7 @@ class Trainer:
 
         print("{} Loss: {:.4f} Acc: {:.4f}".format('train', epoch_loss, epoch_acc))
         
-        return epoch_loss, epoch_acc
+        return epoch_loss, epoch_acc.item()
 
     def val_epoch(self, epoch):
         running_loss = 0.0
@@ -124,7 +124,7 @@ class Trainer:
             # self._checkpoint_path = self._checkpoint_path+'-epoch-'+str(epoch)+'.tar'
             
 
-        return epoch_loss, epoch_acc
+        return epoch_loss, epoch_acc.item()
     
     def saveCheckpoint(self, epoch, flac):
         if flac:
