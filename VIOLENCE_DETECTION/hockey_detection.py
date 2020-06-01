@@ -60,9 +60,9 @@ def __main__():
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--split_type", type=str)
-    # parser.add_argument("--fold", type=str)
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
+    parser.add_argument("--transferModel", type=str, default=None)
 
 
     args = parser.parse_args()
@@ -152,6 +152,7 @@ def __main__():
         writer = SummaryWriter(log_dir)
         print('Tensorboard logDir={}'.format(log_dir))
         tr = trainer.Trainer(model=model,
+                            model_transfer= args.transferModel,
                             train_dataloader=dataloaders_dict['train'],
                             val_dataloader=dataloaders_dict['val'],
                             criterion=criterion,
@@ -259,6 +260,7 @@ def __main__():
             writer = SummaryWriter(log_dir)
             print('Tensorboard logDir={}'.format(log_dir))
             tr = trainer.Trainer(model=model,
+                            model_transfer= args.transferModel,
                             train_dataloader=dataloaders_dict['train'],
                             val_dataloader=dataloaders_dict['val'],
                             criterion=criterion,
