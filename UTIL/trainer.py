@@ -13,10 +13,10 @@ class Trainer:
     def __init__(self, model, model_transfer, train_dataloader, val_dataloader, criterion, optimizer, num_epochs, checkpoint_path):
         self.model = model
         if model_transfer is not None:
-            if DEVICE != 'cpu':
+            if DEVICE == 'cuda:0':
                 self.model.load_state_dict(torch.load(model_transfer), strict=False)
             else:
-                self.model.load_state_dict(torch.load(model_transfer, map_location=device))
+                self.model.load_state_dict(torch.load(model_transfer, map_location=DEVICE))
         
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader

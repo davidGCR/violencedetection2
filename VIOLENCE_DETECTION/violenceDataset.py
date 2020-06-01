@@ -13,7 +13,7 @@ import random
 
 class ViolenceDataset(Dataset):
     def __init__(self, dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo,
-                                videoSegmentLength, positionSegment, overlaping, frame_skip):
+                                videoSegmentLength, positionSegment, overlaping, frame_skip, skipInitialFrames):
         self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
@@ -24,6 +24,7 @@ class ViolenceDataset(Dataset):
         self.overlaping = overlaping
         self.frame_skip = frame_skip
         self.minSegmentLen = 10
+        self.skipInitialFrames = skipInitialFrames 
 
     def __len__(self):
         return len(self.videos)
@@ -131,6 +132,7 @@ class ViolenceDataset(Dataset):
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        frames_list = frames_list[self.skipInitialFrames:len(frames_list)-1]
         video_segments = []
         
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]

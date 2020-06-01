@@ -39,6 +39,7 @@ def __main__():
     parser.add_argument("--frameSkip", type=int)
     parser.add_argument("--split_type", type=str)
     parser.add_argument("--transferModel", type=str, default=None)
+    parser.add_argument("--skipInitialFrames", type=int, default=0)
     args = parser.parse_args()
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
@@ -72,7 +73,8 @@ def __main__():
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
-                                    frame_skip=args.frameSkip),
+                                    frame_skip=args.frameSkip,
+                                    skipInitialFrames = args.skipInitialFrames),
             "test": ViolenceDataset(dataset=test_x,
                                     labels=test_y,
                                     numFrames=test_numFrames,
@@ -81,7 +83,8 @@ def __main__():
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
-                                    frame_skip=args.frameSkip),
+                                    frame_skip=args.frameSkip,
+                                    skipInitialFrames = args.skipInitialFrames),
         }
         dataloaders_dict = {
             "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
@@ -90,13 +93,14 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},skipInitialFrames-{},fold-{}'.format(args.modelType,
                                                                                                                                         args.transferModel is not None,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
                                                                                                                                         args.frameSkip,
                                                                                                                                         args.numEpochs,
                                                                                                                                         args.split_type,
+                                                                                                                                        args.skipInitialFrames,
                                                                                                                                         i+1)
     
         
