@@ -53,8 +53,9 @@ def __main__():
     cv_test_losses = []
     cv_final_epochs = []
 
-    X, y, numFrames = crime2localLoadData()
-    for i, (train_idx, test_idx) in enumerate(crime2localgGetSplit(5)):
+    X, y, numFrames = crime2localLoadData(min_frames=40)
+    print('X={}, y={}, numFrames={}'.format(len(X), len(y), len(numFrames)))
+    for i, (train_idx, test_idx) in enumerate(crime2localgGetSplit(X, y, numFrames, 5)):
         train_x = list(itemgetter(*train_idx)(X))
         train_y = list(itemgetter(*train_idx)(y))
         train_numFrames = list(itemgetter(*train_idx)(numFrames))

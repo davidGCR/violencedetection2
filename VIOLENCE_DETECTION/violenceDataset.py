@@ -23,7 +23,7 @@ class ViolenceDataset(Dataset):
         self.positionSegment = positionSegment
         self.overlaping = overlaping
         self.frame_skip = frame_skip
-        self.minSegmentLen = 10
+        self.minSegmentLen = 5
         self.skipInitialFrames = skipInitialFrames 
 
     def __len__(self):
@@ -132,7 +132,10 @@ class ViolenceDataset(Dataset):
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        frames_list = frames_list[self.skipInitialFrames:len(frames_list)-1]
+        if self.skipInitialFrames < len(frames_list):
+            le = len(frames_list)
+            frames_list = frames_list[self.skipInitialFrames:le]
+            self.numFrames[idx] -= self.skipInitialFrames
         video_segments = []
         
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]

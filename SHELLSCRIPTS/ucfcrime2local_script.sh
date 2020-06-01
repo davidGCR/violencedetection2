@@ -10,4 +10,5 @@ python3  VIOLENCE_DETECTION/crime2local_detection.py \
 --positionSegment begin \
 --overlapping 0 \
 --frameSkip 0 \
+--skipInitialFrames 10 \
 --split_type cross-val

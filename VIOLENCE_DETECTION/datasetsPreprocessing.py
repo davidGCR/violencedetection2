@@ -11,7 +11,8 @@ import numpy as np
 
 from sklearn.model_selection import KFold
 
-def crime2localLoadData():
+
+def crime2localLoadData(min_frames):
     if not os.path.exists(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt')):
         train_violence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_violence_split.txt')
         train_nonviolence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_nonviolence_split.txt')
@@ -41,6 +42,11 @@ def crime2localLoadData():
         y = y_train_pos + y_train_neg + y_test_pos + y_test_neg
         X = X_train_pos + X_train_neg + X_test_pos + X_test_neg
         numFrames = [len(glob.glob1(X[i], "*.jpg")) for i in range(len(X))]
+        
+        yxn = list(zip(y, X, numFrames))
+        yxn_sorted = [(y, x, n) for y, x, n in yxn if n > min_frames]
+        y, X, numFrames = zip(*yxn_sorted)
+
         X_t = []
         for i in range(len(X)):
             _, vname = os.path.split(X[i])
@@ -59,9 +65,7 @@ def crime2localLoadData():
 
     return X, y, numFrames
 
-def crime2localgGetSplit(splits=5):
-    X, y, numFrames = crime2localLoadData()
-    print('X={}, y={}, numFrames={}'.format(len(X), len(y), len(numFrames)))
+def crime2localgGetSplit(X, y, numFrames, splits=5):
     # print(X)
     kfold = KFold(splits, shuffle=True)
     
