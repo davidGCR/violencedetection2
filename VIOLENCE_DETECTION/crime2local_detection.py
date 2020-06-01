@@ -90,7 +90,8 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
+                                                                                                                                        args.transferModel is not None,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
                                                                                                                                         args.frameSkip,
@@ -118,7 +119,7 @@ def __main__():
         print('Tensorboard logDir={}'.format(log_dir))
         
         tr = Trainer(model=model,
-                    model_transfer=args.transferModel
+                    model_transfer=args.transferModel,
                     train_dataloader=dataloaders_dict['train'],
                     val_dataloader=dataloaders_dict['test'],
                     criterion=criterion,

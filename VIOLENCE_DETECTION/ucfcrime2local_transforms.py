@@ -11,9 +11,9 @@ def createTransforms(input_size):
         "train": transforms.Compose(
             [
                 # transforms.Resize(input_size),
-                transforms.CenterCrop(input_size),
-                # transforms.RandomResizedCrop(input_size),
-                # transforms.RandomHorizontalFlip(),
+                # transforms.CenterCrop(input_size),
+                transforms.RandomResizedCrop(input_size),
+                transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.4973763, 0.4973337, 0.4961658], std=[0.14330065, 0.1428894,  0.14266236]) #All Train split
                 # transforms.Normalize(mean=[0.48765567, 0.4882961,  0.48771954], std=[0.1199861,  0.12041671, 0.12118535]) #onli train split
