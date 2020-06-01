@@ -85,9 +85,9 @@ def __main__():
     cv_test_losses = []
     cv_final_epochs = []
 
-    if split_type == 'train-test':
-        train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_train.txt'.format(2)))
-        test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_test.txt'.format(2)))
+    if split_type[:-2] == 'train-test':
+        train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_train.txt'.format(int(split_type[len(split_type)-1]))))
+        test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_test.txt'.format(int(split_type[len(split_type)-1]))))
         train_idx = list(map(int, train_idx))
         test_idx = list(map(int, test_idx))
         
