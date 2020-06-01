@@ -40,6 +40,7 @@ def __main__():
     parser.add_argument("--split_type", type=str)
     parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--skipInitialFrames", type=int, default=0)
+    parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     args = parser.parse_args()
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
@@ -142,7 +143,8 @@ def __main__():
 
             flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
             # print(flac, type(flac))
-            tr.saveCheckpoint(epoch, flac)
+            if args.saveCheckpoint:
+                tr.saveCheckpoint(epoch, flac)
 
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
