@@ -38,7 +38,7 @@ def __main__():
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--frameSkip", type=int)
     parser.add_argument("--split_type", type=str)
-    parser.add_argument("--transferLearn", type=str, default='empty')
+    parser.add_argument("--transferModel", type=str, default=None)
     args = parser.parse_args()
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
@@ -106,6 +106,7 @@ def __main__():
                                     joinType=args.joinType,
                                     use_pretrained=True)
         model.to(DEVICE)
+
         params_to_update = verifiParametersToTrain(model, args.featureExtract)
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
@@ -117,12 +118,13 @@ def __main__():
         print('Tensorboard logDir={}'.format(log_dir))
         
         tr = Trainer(model=model,
-                        train_dataloader=dataloaders_dict['train'],
-                        val_dataloader=dataloaders_dict['test'],
-                        criterion=criterion,
-                        optimizer=optimizer,
-                        num_epochs=args.numEpochs,
-                        checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
+                    model_transfer=args.transferModel
+                    train_dataloader=dataloaders_dict['train'],
+                    val_dataloader=dataloaders_dict['test'],
+                    criterion=criterion,
+                    optimizer=optimizer,
+                    num_epochs=args.numEpochs,
+                    checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
         policy = ResultPolicy()
         for epoch in range(1, args.numEpochs + 1):
             print("Fold {} ----- Epoch {}/{}".format(i+1,epoch, args.numEpochs))
