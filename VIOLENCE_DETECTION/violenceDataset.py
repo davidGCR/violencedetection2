@@ -159,8 +159,6 @@ class ViolenceDataset(Dataset):
         label = self.labels[idx]
         dinamycImages = []
         video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
-       
-        
         preprocessing_time = 0.0
         for seq in video_segments:
             # print(len(seq))
@@ -185,30 +183,6 @@ class ViolenceDataset(Dataset):
         #     dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
         return dinamycImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
-
-class ViolenceDatasetAumented(Dataset):
-    def __init__(self, images, labels, spatial_transform):
-        self.spatial_transform = spatial_transform
-        self.images = images
-        self.labels = labels
-
-    def __len__(self):
-        return len(self.images)
-
-    def __getitem__(self, idx):
-        image_path = self.images[idx]
-        # print(vid_name)
-        label = self.labels[idx]        
-        imgPIL = Image.open(image_path).convert("RGB")
-        imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-        # dinamycImages.append(imgPIL)
-            
-        # dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-        # if self.numDynamicImagesPerVideo == 1:
-        #     dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
-        
-        
-        return imgPIL, label, image_path, 0 #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
 
 

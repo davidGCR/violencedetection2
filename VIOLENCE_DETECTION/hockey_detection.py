@@ -60,6 +60,7 @@ def __main__():
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--split_type", type=str)
+    # parser.add_argument("--fold", type=str)
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
 
@@ -85,8 +86,8 @@ def __main__():
     cv_final_epochs = []
 
     if split_type == 'train-test':
-        train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_train.txt'))
-        test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_1_test.txt'))
+        train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_train.txt'.format(2)))
+        test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_test.txt'.format(2)))
         train_idx = list(map(int, train_idx))
         test_idx = list(map(int, test_idx))
         

@@ -38,6 +38,7 @@ def __main__():
     parser.add_argument("--positionSegment", type=str)
     parser.add_argument("--frameSkip", type=int)
     parser.add_argument("--split_type", type=str)
+    parser.add_argument("--transferLearn", type=str, default='empty')
     args = parser.parse_args()
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')

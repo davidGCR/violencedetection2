@@ -10,8 +10,11 @@ from torch.utils.tensorboard import SummaryWriter
 from constants import DEVICE
 
 class Trainer:
-    def __init__(self, model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs, checkpoint_path):
+    def __init__(self, model, model_transfer, train_dataloader, val_dataloader, criterion, optimizer, num_epochs, checkpoint_path):
         self.model = model
+        if model_transfer is not None:
+            self.model.load_state_dict(torch.load(model_transfer), strict=True)
+        
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.optimizer = optimizer
@@ -129,5 +132,6 @@ class Trainer:
     def saveCheckpoint(self, epoch, flac):
         if flac:
             print('Saving model...',self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')
-            torch.save(self.model, self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')    
+            # torch.save(self.model, self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')    
+            torch.save(self.model.state_dict(), self._checkpoint_path+'-epoch-'+str(epoch)+'.pth')
 
