@@ -46,8 +46,8 @@ class Trainer:
         return self.model
 
     def train_epoch(self, epoch):
-        if self.model_transfer is not None:
-            self.optimizer = self.lr_scheduler(self.optimizer, epoch)
+        # if self.model_transfer is not None:
+        #     self.optimizer = self.lr_scheduler(self.optimizer, epoch)
         self.model.train()  # Set model to training mode
         
         running_loss = 0.0
@@ -78,6 +78,7 @@ class Trainer:
             # print('Train Lost: ', outputs, labels, loss.item())
             running_loss += loss.item() * batch_size
             running_corrects += torch.sum(preds == labels.data)
+
 
         epoch_loss = running_loss / len(self.train_dataloader.dataset)
         epoch_acc = running_corrects.double() / len(self.train_dataloader.dataset)

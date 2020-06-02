@@ -137,8 +137,8 @@ class ViolenceDataset(Dataset):
             segment_list = segment_list[0:self.numDynamicImagesPerVideo]
         return segment_list
     
-    def segmentPreprocessing(self, segment):
-        segment = []
+    def segmentPreprocessing(self, vid_name, segment):
+        frames = []
         for frame in segment:
             img_dir = str(vid_name) + "/" + frame
             if self.preprocess_images:
@@ -148,8 +148,8 @@ class ViolenceDataset(Dataset):
             else:   
                 img1 = Image.open(img_dir).convert("RGB")
             img = np.array(img1)
-            segment.append(img)
-        return segment
+            frames.append(img)
+        return frames
            
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
@@ -188,7 +188,7 @@ class ViolenceDataset(Dataset):
         video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         preprocessing_time = 0.0
         for seq in video_segments:
-            frames = self.segmentPreprocessing(seq)
+            frames = self.segmentPreprocessing(vid_name, seq)
             start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(frames)
             end_time = time.time()
