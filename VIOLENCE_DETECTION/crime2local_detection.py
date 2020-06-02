@@ -110,15 +110,15 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{}, TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},skipInitialFrames-{},fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{}, TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{}, fold-{}'.format(args.modelType,
                                                                                                                                         not args.featureExtract,
                                                                                                                                         args.transferModel is not None,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
                                                                                                                                         args.frameSkip,
                                                                                                                                         args.numEpochs,
-                                                                                                                                        args.split_type,
                                                                                                                                         args.skipInitialFrames,
+                                                                                                                                        args.split_type,
                                                                                                                                         i+1)
     
         

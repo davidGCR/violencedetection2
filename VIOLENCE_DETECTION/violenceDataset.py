@@ -1,5 +1,5 @@
 from torch.utils.data import Dataset
-from PIL import Image, ImageFile
+from PIL import Image, ImageFile, ImageFilter
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import numpy as np
 import os
@@ -10,10 +10,18 @@ import time
 import VIDEO_REPRESENTATION.dynamicImage as dynamicImage
 import random
 
-
 class ViolenceDataset(Dataset):
-    def __init__(self, dataset, labels, numFrames, spatial_transform, numDynamicImagesPerVideo,
-                                videoSegmentLength, positionSegment, overlaping, frame_skip, skipInitialFrames):
+    def __init__(self, dataset,
+                        labels,
+                        numFrames,
+                        spatial_transform,
+                        numDynamicImagesPerVideo,
+                        videoSegmentLength,
+                        positionSegment,
+                        overlaping,
+                        frame_skip,
+                        skipInitialFrames,
+                        preprocess_images):
         self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
@@ -24,7 +32,8 @@ class ViolenceDataset(Dataset):
         self.overlaping = overlaping
         self.frame_skip = frame_skip
         self.minSegmentLen = 5
-        self.skipInitialFrames = skipInitialFrames 
+        self.skipInitialFrames = skipInitialFrames
+        self.preprocess_images = preprocess_images
 
     def __len__(self):
         return len(self.videos)
@@ -126,8 +135,21 @@ class ViolenceDataset(Dataset):
                 segment_list.append(last_element)
         elif len(segment_list) > self.numDynamicImagesPerVideo:
             segment_list = segment_list[0:self.numDynamicImagesPerVideo]
-
         return segment_list
+    
+    def segmentPreprocessing(self, segment):
+        segment = []
+        for frame in segment:
+            img_dir = str(vid_name) + "/" + frame
+            if self.preprocess_images:
+                img1 = Image.open(img_dir)
+                img1 = img1.filter(ImageFilter.BoxBlur(3))
+                img1 = img1.convert("RGB")
+            else:   
+                img1 = Image.open(img_dir).convert("RGB")
+            img = np.array(img1)
+            segment.append(img)
+        return segment
            
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
@@ -166,14 +188,7 @@ class ViolenceDataset(Dataset):
         video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         preprocessing_time = 0.0
         for seq in video_segments:
-            # print(len(seq))
-            frames = []
-            # r_frames = []
-            for frame in seq:
-                img_dir = str(vid_name) + "/" + frame
-                img1 = Image.open(img_dir).convert("RGB")
-                img = np.array(img1)
-                frames.append(img)
+            frames = self.segmentPreprocessing(seq)
             start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(frames)
             end_time = time.time()
