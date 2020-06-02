@@ -11,6 +11,12 @@ import numpy as np
 
 from sklearn.model_selection import KFold
 
+def checkBalancedSplit(Y_train, Y_test):
+    positive = 0
+    posTrain = [1 for y in Y_train if y == 1]
+    print('Train-Positives samples={}, Negative samples={}'.format(len(posTrain), len(Y_train) - len(posTrain)))
+    posTest = [1 for y in Y_test if y == 1]
+    print('Test-Positives samples={}, Negative samples={}'.format(len(posTest), len(Y_test)-len(posTest)))
 
 def crime2localLoadData(min_frames):
     if not os.path.exists(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt')):

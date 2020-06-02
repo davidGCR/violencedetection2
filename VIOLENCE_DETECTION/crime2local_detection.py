@@ -15,7 +15,7 @@ from constants import DEVICE
 import constants
 from UTIL.chooseModel import initialize_model
 from UTIL.parameters import verifiParametersToTrain
-from datasetsPreprocessing import crime2localgGetSplit, crime2localLoadData
+from datasetsPreprocessing import crime2localgGetSplit, crime2localLoadData, checkBalancedSplit
 from violenceDataset import ViolenceDataset
 from UTIL.chooseModel import initialize_model
 from UTIL.trainer import Trainer
@@ -81,6 +81,7 @@ def __main__():
         test_y = list(itemgetter(*test_idx)(y))
         test_numFrames = list(itemgetter(*test_idx)(numFrames))
 
+        checkBalancedSplit(train_y, test_y)
         # print(test_x)
 
         image_datasets = {
