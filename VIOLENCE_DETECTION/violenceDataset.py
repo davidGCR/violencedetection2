@@ -143,7 +143,7 @@ class ViolenceDataset(Dataset):
             img_dir = str(vid_name) + "/" + frame
             if self.preprocess_images:
                 img1 = Image.open(img_dir)
-                img1 = img1.filter(ImageFilter.BoxBlur(3))
+                img1 = img1.filter(ImageFilter.BoxBlur(5))
                 img1 = img1.convert("RGB")
             else:   
                 img1 = Image.open(img_dir).convert("RGB")

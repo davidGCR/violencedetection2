@@ -154,7 +154,7 @@ def __main__():
         
         log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
         writer = SummaryWriter(log_dir)
-        print('Tensorboard logDir={}'.format(log_dir))
+        print('********** Tensorboard logDir={}'.format(log_dir))
         
         tr = Trainer(model=model,
                     model_transfer=args.transferModel,

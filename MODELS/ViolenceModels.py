@@ -137,3 +137,32 @@ class ResNet(nn.Module):
         # x = torch.flatten(x, 1)
         x = self.linear(x)
         return x
+
+class Densenet(nn.Module):  # ViolenceModel2
+    def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
+        super(Densenet, self).__init__()
+        self.numDiPerVideos = numDiPerVideos
+        self.joinType = joinType
+        self.num_classes = num_classes
+        self.model = models.densenet121(pretrained=True)
+        set_parameter_requires_grad(self.model, feature_extract)
+        self.num_ftrs = self.model.classifier.in_features
+        self.model.classifier = nn.Linear(self.num_ftrs, num_classes)
+        
+        # self.tmpPooling = nn.MaxPool2d((numDiPerVideos, 1))
+
+    def forward(self, x):
+        batch_size, timesteps, C, H, W = x.size()
+        c_in = x.view(batch_size * timesteps, C, H, W)
+        # print('cin: ', c_in.size())
+        c_out = self.model(c_in)
+        # print('cout: ', c_out.size())
+        x = torch.flatten(c_out, 1)
+        # print('flatten: ', x.size())
+        # Re-structure the data and then temporal max-pool.
+        x = x.view(batch_size, timesteps, self.num_ftrs)
+        # print('Re-structure: ', x.size())
+        x = x.max(dim=1).values
+        # print('maxpooling: ', x.size())
+        x = self.model.classifier(x)
+        return x
