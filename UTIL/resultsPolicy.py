@@ -8,7 +8,7 @@ class ResultPolicy():
         self.bestEpoch = 0
     
     def update(self, train_loss, train_acc, test_loss, test_acc, epoch):
-        flac = test_loss <= train_loss and test_acc > self.best_test_acc
+        flac = test_loss <= train_loss and test_acc >= self.best_test_acc
         if flac:
             self.best_test_acc = test_acc
             self.lowest_test_loss = test_loss

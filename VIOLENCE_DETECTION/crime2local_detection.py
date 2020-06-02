@@ -57,6 +57,7 @@ def __main__():
     parser.add_argument("--skipInitialFrames", type=int, default=0)
     parser.add_argument("--lrScheduler", type=str)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
     args = parser.parse_args()
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
@@ -93,7 +94,7 @@ def __main__():
                                     overlaping=args.overlapping,
                                     frame_skip=args.frameSkip,
                                     skipInitialFrames=args.skipInitialFrames,
-                                    preprocess_images=True),
+                                    preprocess_images=args.segmentPreprocessing),
             "test": ViolenceDataset(dataset=test_x,
                                     labels=test_y,
                                     numFrames=test_numFrames,
@@ -104,7 +105,7 @@ def __main__():
                                     overlaping=args.overlapping,
                                     frame_skip=args.frameSkip,
                                     skipInitialFrames=args.skipInitialFrames,
-                                    preprocess_images=True),
+                                    preprocess_images=args.segmentPreprocessing),
         }
         dataloaders_dict = {
             "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
@@ -113,7 +114,7 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},lrScheduler-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{}, fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},lrScheduler-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},segPreprocessing-{},split_type-{}, fold-{}'.format(args.modelType,
                                                                                                                                         not args.featureExtract,
                                                                                                                                         args.transferModel is not None,
                                                                                                                                         args.lrScheduler,
@@ -122,6 +123,7 @@ def __main__():
                                                                                                                                         args.frameSkip,
                                                                                                                                         args.numEpochs,
                                                                                                                                         args.skipInitialFrames,
+                                                                                                                                        args.segmentPreprocessing,
                                                                                                                                         args.split_type,
                                                                                                                                         i+1)
     
