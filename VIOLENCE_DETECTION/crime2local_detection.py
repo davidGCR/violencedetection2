@@ -24,6 +24,21 @@ from UTIL.parameters import verifiParametersToTrain
 from ucfcrime2local_transforms import createTransforms
 from UTIL.resultsPolicy import ResultPolicy
 
+BASE_LR = 0.001
+EPOCH_DECAY = 5 # number of epochs after which the Learning rate is decayed exponentially.
+DECAY_WEIGHT = 0.1  # factor by which the learning rate is reduced.
+def exp_lr_scheduler(optimizer, epoch, init_lr=BASE_LR, lr_decay_epoch=EPOCH_DECAY):
+    """Decay learning rate by a factor of DECAY_WEIGHT every lr_decay_epoch epochs."""
+    lr = init_lr * (DECAY_WEIGHT**(epoch // lr_decay_epoch))
+
+    if epoch % lr_decay_epoch == 0:
+        print('LR is set to {}'.format(lr))
+
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+    return optimizer
+
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType",type=str)
@@ -113,11 +128,20 @@ def __main__():
                                     joinType=args.joinType,
                                     use_pretrained=True)
         model.to(DEVICE)
+        if args.transferModel is not None:
+            if DEVICE == 'cuda:0':
+                model.load_state_dict(torch.load(args.transferModel), strict=False)
+            else:
+                model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
+
 
         params_to_update = verifiParametersToTrain(model, args.featureExtract)
-        optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         
+        optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+        
+        if args.transferModel is None:
+            exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+
         criterion = nn.CrossEntropyLoss()
         
         log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
@@ -130,6 +154,7 @@ def __main__():
                     val_dataloader=dataloaders_dict['test'],
                     criterion=criterion,
                     optimizer=optimizer,
+                    lr_scheduler=exp_lr_scheduler
                     num_epochs=args.numEpochs,
                     checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
         policy = ResultPolicy()

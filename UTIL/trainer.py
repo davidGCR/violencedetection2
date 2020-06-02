@@ -10,13 +10,13 @@ from torch.utils.tensorboard import SummaryWriter
 from constants import DEVICE
 
 class Trainer:
-    def __init__(self, model, model_transfer, train_dataloader, val_dataloader, criterion, optimizer, num_epochs, checkpoint_path):
+    def __init__(self, model, model_transfer, train_dataloader, val_dataloader, criterion, optimizer, lr_scheduler, num_epochs, checkpoint_path):
         self.model = model
-        if model_transfer is not None:
-            if DEVICE == 'cuda:0':
-                self.model.load_state_dict(torch.load(model_transfer), strict=False)
-            else:
-                self.model.load_state_dict(torch.load(model_transfer, map_location=DEVICE))
+        # if model_transfer is not None:
+        #     if DEVICE == 'cuda:0':
+        #         self.model.load_state_dict(torch.load(model_transfer), strict=False)
+        #     else:
+        #         self.model.load_state_dict(torch.load(model_transfer, map_location=DEVICE))
         
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
@@ -25,7 +25,8 @@ class Trainer:
 
         self.num_epochs = num_epochs
         self._checkpoint_path = checkpoint_path
-
+        self.lr_scheduler = lr_scheduler
+        self.model_transfer = model_transfer
     
     @property
     def checkpoint_path(self):
@@ -45,15 +46,12 @@ class Trainer:
         return self.model
 
     def train_epoch(self, epoch):
-        # self.scheduler.step(epoch)
+        if self.model_transfer is not None:
+            self.optimizer = self.lr_scheduler(self.optimizer, epoch)
         self.model.train()  # Set model to training mode
-        # is_inception = False
+        
         running_loss = 0.0
         running_corrects = 0
-        padding = 5
-        
-        # Iterate over data.
-        # for i, data in enumerate(tqdm(self.dataloaders["train"])):
         for i, data in enumerate(tqdm(self.train_dataloader)): #inputs, labels:  <class 'torch.Tensor'> torch.Size([64, 3, 224, 224]) <class 'torch.Tensor'> torch.Size([64])
             # print('inputs, labels: ',type(inputs),inputs.size(), type(labels), labels.size())
             # print('inputs trainer: ', inputs.size())
