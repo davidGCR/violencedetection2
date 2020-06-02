@@ -11,6 +11,7 @@ class ResultPolicy():
         flac = test_loss <= train_loss and test_acc >= self.best_test_acc
         if flac:
             self.best_test_acc = test_acc
+            # if test_acc == self.best_test_acc:
             self.lowest_test_loss = test_loss
             self.lowest_train_loss = train_loss
             self.bestEpoch = epoch

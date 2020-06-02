@@ -63,7 +63,8 @@ def __main__():
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
     parser.add_argument("--transferModel", type=str, default=None)
-
+    parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
 
     args = parser.parse_args()
     split_type = args.split_type
@@ -113,7 +114,9 @@ def __main__():
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
-                                    frame_skip=args.frameSkip),
+                                    frame_skip=args.frameSkip,
+                                    skipInitialFrames=0,
+                                    preprocess_images=args.segmentPreprocessing),
             "val": ViolenceDataset(dataset=test_x,
                                     labels=test_y,
                                     numFrames=test_numFrames,
@@ -122,7 +125,9 @@ def __main__():
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
-                                    frame_skip=args.frameSkip),
+                                    frame_skip=args.frameSkip,
+                                    skipInitialFrames=0,
+                                    preprocess_images=args.segmentPreprocessing),
         }
         dataloaders_dict = {
             "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
@@ -142,10 +147,11 @@ def __main__():
         
         criterion = nn.CrossEntropyLoss()
         # split_type = split_type+str(fold)
-        experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{}'.format(args.modelType,
+        experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},segmentPreprocessing-{},epochs-{},split_type-{}'.format(args.modelType,
                                                                                                                     args.videoSegmentLength,
                                                                                                                     args.numDynamicImagesPerVideo,
                                                                                                                     args.frameSkip,
+                                                                                                                    args.segmentPreprocessing,
                                                                                                                     args.numEpochs,
                                                                                                                     args.split_type)
         log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
@@ -158,7 +164,8 @@ def __main__():
                             criterion=criterion,
                             optimizer=optimizer,
                             num_epochs=args.numEpochs,
-                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig+ '.tar'))
+                            checkpoint_path=os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig + '.tar'),
+                            lr_scheduler=None)
         
         final_val_loss = 1000
         final_train_loss = 1000
@@ -219,7 +226,9 @@ def __main__():
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
-                                    frame_skip=args.frameSkip),
+                                    frame_skip=args.frameSkip,
+                                    skipInitialFrames=0,
+                                    preprocess_images=args.segmentPreprocessing),
             "val": ViolenceDataset(dataset=test_x,
                                     labels=test_y,
                                     numFrames=test_numFrames,
@@ -228,7 +237,9 @@ def __main__():
                                     videoSegmentLength=args.videoSegmentLength,
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
-                                    frame_skip=args.frameSkip),
+                                    frame_skip=args.frameSkip,
+                                    skipInitialFrames=0,
+                                    preprocess_images=args.segmentPreprocessing),
             }
             dataloaders_dict = {
                 "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
@@ -248,10 +259,11 @@ def __main__():
             
             criterion = nn.CrossEntropyLoss()
             # split_type = split_type+str(fold)
-            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
+            experimentConfig = 'HOCKEY-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},segmentPreprocessing-{},epochs-{},split_type-{},fold-{}'.format(args.modelType,
                                                                                                                                 args.videoSegmentLength,
                                                                                                                                 args.numDynamicImagesPerVideo,
                                                                                                                                 args.frameSkip,
+                                                                                                                                args.segmentPreprocessing,
                                                                                                                                 args.numEpochs,
                                                                                                                                 args.split_type,
                                                                                                                                 fold)
@@ -266,7 +278,8 @@ def __main__():
                             criterion=criterion,
                             optimizer=optimizer,
                             num_epochs=args.numEpochs,
-                            checkpoint_path=os.path.join(constants.PATH_RESULTS,'HOCKEY','checkpoints',experimentConfig))
+                            checkpoint_path=os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig),
+                            lr_scheduler=None)
             
             policy = ResultPolicy()
 

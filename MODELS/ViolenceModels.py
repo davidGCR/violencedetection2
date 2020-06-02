@@ -138,6 +138,7 @@ class ResNet(nn.Module):
         x = self.linear(x)
         return x
 
+
 class Densenet(nn.Module):  # ViolenceModel2
     def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
         super(Densenet, self).__init__()
@@ -147,11 +148,13 @@ class Densenet(nn.Module):  # ViolenceModel2
         self.model = models.densenet121(pretrained=True)
         set_parameter_requires_grad(self.model, feature_extract)
         self.num_ftrs = self.model.classifier.in_features
-        self.model.classifier = nn.Linear(self.num_ftrs, num_classes)
+        self.model.classifier = Identity()
+        self.linear= nn.Linear(self.num_ftrs, num_classes)
         
         # self.tmpPooling = nn.MaxPool2d((numDiPerVideos, 1))
 
     def forward(self, x):
+        # print(x.size())
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)
         # print('cin: ', c_in.size())
@@ -164,5 +167,5 @@ class Densenet(nn.Module):  # ViolenceModel2
         # print('Re-structure: ', x.size())
         x = x.max(dim=1).values
         # print('maxpooling: ', x.size())
-        x = self.model.classifier(x)
+        x = self.linear(x)
         return x
