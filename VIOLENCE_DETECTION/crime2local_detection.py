@@ -92,7 +92,8 @@ def __main__():
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
                                     frame_skip=args.frameSkip,
-                                    skipInitialFrames = args.skipInitialFrames),
+                                    skipInitialFrames=args.skipInitialFrames,
+                                    preprocess_images=True),
             "test": ViolenceDataset(dataset=test_x,
                                     labels=test_y,
                                     numFrames=test_numFrames,
@@ -102,7 +103,8 @@ def __main__():
                                     positionSegment=args.positionSegment,
                                     overlaping=args.overlapping,
                                     frame_skip=args.frameSkip,
-                                    skipInitialFrames = args.skipInitialFrames),
+                                    skipInitialFrames=args.skipInitialFrames,
+                                    preprocess_images=True),
         }
         dataloaders_dict = {
             "train": torch.utils.data.DataLoader(image_datasets["train"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers),
