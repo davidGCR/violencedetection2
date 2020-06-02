@@ -27,7 +27,7 @@ from UTIL.resultsPolicy import ResultPolicy
 BASE_LR = 0.001
 EPOCH_DECAY = 5 # number of epochs after which the Learning rate is decayed exponentially.
 DECAY_WEIGHT = 0.1  # factor by which the learning rate is reduced.
-def exp_lr_scheduler(optimizer, epoch, init_lr=BASE_LR, lr_decay_epoch=EPOCH_DECAY):
+def my_exp_lr_scheduler(optimizer, epoch, init_lr=BASE_LR, lr_decay_epoch=EPOCH_DECAY):
     """Decay learning rate by a factor of DECAY_WEIGHT every lr_decay_epoch epochs."""
     lr = init_lr * (DECAY_WEIGHT**(epoch // lr_decay_epoch))
 
@@ -110,7 +110,8 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},skipInitialFrames-{},fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{}, TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},split_type-{},skipInitialFrames-{},fold-{}'.format(args.modelType,
+                                                                                                                                        not args.featureExtract,
                                                                                                                                         args.transferModel is not None,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
@@ -154,7 +155,7 @@ def __main__():
                     val_dataloader=dataloaders_dict['test'],
                     criterion=criterion,
                     optimizer=optimizer,
-                    lr_scheduler=exp_lr_scheduler
+                    lr_scheduler=my_exp_lr_scheduler,
                     num_epochs=args.numEpochs,
                     checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
         policy = ResultPolicy()
@@ -164,7 +165,8 @@ def __main__():
             epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
             
-            exp_lr_scheduler.step()
+            if args.transferModel is None:
+                exp_lr_scheduler.step()
 
             flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
             # print(flac, type(flac))
