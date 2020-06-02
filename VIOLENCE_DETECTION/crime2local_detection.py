@@ -55,6 +55,7 @@ def __main__():
     parser.add_argument("--split_type", type=str)
     parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--skipInitialFrames", type=int, default=0)
+    parser.add_argument("--lrScheduler", type=str)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     args = parser.parse_args()
     # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
@@ -110,9 +111,10 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{}, TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{}, fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},lrScheduler-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{}, fold-{}'.format(args.modelType,
                                                                                                                                         not args.featureExtract,
                                                                                                                                         args.transferModel is not None,
+                                                                                                                                        args.lrScheduler,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
                                                                                                                                         args.frameSkip,
@@ -140,9 +142,9 @@ def __main__():
         
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         
-        if args.transferModel is None:
+        if args.lrScheduler == 'steplr':
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-
+            
         criterion = nn.CrossEntropyLoss()
         
         log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
@@ -165,7 +167,7 @@ def __main__():
             epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
             
-            if args.transferModel is None:
+            if args.lrScheduler == 'steplr':
                 exp_lr_scheduler.step()
 
             flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
