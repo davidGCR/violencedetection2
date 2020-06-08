@@ -9,9 +9,9 @@ class Dataloader():
         self.numFrames = numFrames
         self.transform = transform
         self.kargs = kargs
-        self.dataset, self.dataloader = self.getDataloader()
+        self.dataset, self.dataloader = self.buildDataloader()
     
-    def getDataloader(self):
+    def buildDataloader(self):
         dataset = ViolenceDataset(dataset=self.X,
                                         labels=self.y,
                                         numFrames=self.numFrames,
@@ -26,6 +26,9 @@ class Dataloader():
 
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.kargs['batchSize'], shuffle=self.kargs['shuffle'], num_workers=self.kargs['numWorkers'])
         return dataset, dataloader
+
+    def getDataloader(self):
+        return self.dataloader
     
     def getElement(self, name, label, savePath, seqLen, transform, preprocess):
         index, full_name = self.dataset.getindex(vid_name=name, label=label)

@@ -36,7 +36,7 @@ def getDynamicImage(frames, savePath=None):
     fw = np.zeros(seqLen)  
     for i in range(seqLen): #frame by frame
       fw[i] = np.sum(np.divide((2 * np.arange(i + 1, seqLen + 1) - seqLen - 1), np.arange(i + 1, seqLen + 1)))
-    print('Di coeff=',fw)
+    # print('Di coeff=',fw)
     fwr = fw.reshape(seqLen, 1, 1, 1)  #coeficiebts
     sm = frames*fwr
     sm = sm.sum(0)
