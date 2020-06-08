@@ -9,6 +9,7 @@ import glob
 import time
 import VIDEO_REPRESENTATION.dynamicImage as dynamicImage
 import random
+import torchvision.transforms as transforms
 
 class ViolenceDataset(Dataset):
     def __init__(self, dataset,
@@ -38,15 +39,16 @@ class ViolenceDataset(Dataset):
     def __len__(self):
         return len(self.videos)
     
-    def getindex(self, vid_name):
+    def getindex(self, vid_name, label=None):
         matching = [s for s in self.videos if vid_name in s]
-        
-        if len(matching)>0:
-            vid_name = matching[0]
-            index = self.videos.index(vid_name)
-            return index
-        else:
-            return None
+        # print('matching=',matching)
+        if len(matching) > 0:
+            for vid_name in matching:
+                index = self.videos.index(vid_name)
+                if label is not None and label == self.labels[index]:
+                    return index, self.videos[index]
+        print('Video: {} not found!!!'.format(vid_name))
+        return None, None
 
     def getTemporalSegment(self, frames_list, start):
         segments_block = []
@@ -161,7 +163,9 @@ class ViolenceDataset(Dataset):
         video_segments = []
         
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
+        
         seqLen = self.videoSegmentLength
+        # print('seqLen = ', seqLen)
         overlap_length = int(self.overlaping*seqLen)
         indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen-overlap_length)]
         # print('indices1: ', indices_segments)
@@ -202,7 +206,40 @@ class ViolenceDataset(Dataset):
         # if self.numDynamicImagesPerVideo == 1:
         #     dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
         return dinamycImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+    
+    def getOneItem(self, idx, transform, preprocess, savePath, seqLen):
+        vid_name = self.videos[idx]; print('idx={}, vid name={}'.format(idx,vid_name))
+        label = self.labels[idx]
+        dynamicImages = []
+        images = []
+        if seqLen is not None:
+            self.videoSegmentLength = seqLen
+        video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info 
+        
+        preprocessing_time = 0.0
+        for segment in video_segments:
+            frames = []
+            for frame in segment:
+                img_dir = str(vid_name) + "/" + frame
+                if preprocess:
+                    img1 = Image.open(img_dir)
+                    img1 = img1.filter(ImageFilter.BoxBlur(5))
+                    img1 = img1.convert("RGB")
+                else:   
+                    img1 = Image.open(img_dir)
+                    img1 = img1.convert("RGB")
+                img = np.array(img1)
+                frames.append(img)
+            imgPIL, img = dynamicImage.getDynamicImage(frames, savePath)
+            images.append(frames)
+            if transform:
+                imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            dynamicImages.append(imgPIL)
 
+            imgPIL = transforms.ToTensor()(imgPIL.convert("RGB"))
+            dynamicImages2 = torch.stack([imgPIL], dim=0)
+
+        return images, dynamicImages, dynamicImages2,  label
 
 
 

@@ -12,7 +12,7 @@ python3  VIOLENCE_DETECTION/hockey_detection.py \
 --overlapping 0 \
 --frameSkip 0 \
 --segmentPreprocessing false \
---split_type train-test-1
+--split_type cross-val
 
 # python3  main_violence.py \
 # --numEpochs 10 \

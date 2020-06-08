@@ -25,14 +25,18 @@ def computeDynamicImage(frames):
     imgPIL = Image.fromarray(np.uint8(img.numpy()))
     return imgPIL, img
 
-def getDynamicImage(frames):
+def getCoeffiecient(index, seqLen):
+  idx = np.sum(np.divide((2 * np.arange(index + 1, seqLen + 1) - seqLen - 1), np.arange(index + 1, seqLen + 1)))
+
+def getDynamicImage(frames, savePath=None):
     seqLen = len(frames)
     if seqLen < 2:
       print('No se puede crear DI con solo un frames ...', seqLen)
     frames = np.stack(frames, axis=0)
     fw = np.zeros(seqLen)  
     for i in range(seqLen): #frame by frame
-      fw[i] = np.sum( np.divide((2*np.arange(i+1,seqLen+1)-seqLen-1) , np.arange(i+1,seqLen+1)))
+      fw[i] = np.sum(np.divide((2 * np.arange(i + 1, seqLen + 1) - seqLen - 1), np.arange(i + 1, seqLen + 1)))
+    print('Di coeff=',fw)
     fwr = fw.reshape(seqLen, 1, 1, 1)  #coeficiebts
     sm = frames*fwr
     sm = sm.sum(0)
@@ -41,4 +45,6 @@ def getDynamicImage(frames):
     img = sm.astype(np.uint8)
     ##to PIL image
     imgPIL = Image.fromarray(np.uint8(img))
+    if savePath is not None:
+      imgPIL.save(savePath)
     return imgPIL, img

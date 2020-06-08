@@ -8,6 +8,7 @@ import constants
 import random
 import glob
 import numpy as np
+from operator import itemgetter
 
 from sklearn.model_selection import KFold
 
@@ -16,7 +17,41 @@ def checkBalancedSplit(Y_train, Y_test):
     posTrain = [1 for y in Y_train if y == 1]
     print('Train-Positives samples={}, Negative samples={}'.format(len(posTrain), len(Y_train) - len(posTrain)))
     posTest = [1 for y in Y_test if y == 1]
-    print('Test-Positives samples={}, Negative samples={}'.format(len(posTest), len(Y_test)-len(posTest)))
+    print('Test-Positives samples={}, Negative samples={}'.format(len(posTest), len(Y_test) - len(posTest)))
+
+###################################################################################################################
+############################################### HOCKEY FIGHTS #####################################################
+###################################################################################################################
+
+def hockeyLoadData():
+    path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
+    path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
+    if not os.path.exists(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv')):
+        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
+        all_data = zip(datasetAll, labelsAll, numFramesAll)
+        save_csvfile_multicolumn(all_data, os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+    else:
+        datasetAll, labelsAll, numFramesAll = read_csvfile_threecolumns(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+    return datasetAll, labelsAll, numFramesAll
+
+def hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll):
+    train_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_train.txt'.format(int(split_type[len(split_type)-1]))))
+    test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_test.txt'.format(int(split_type[len(split_type)-1]))))
+    train_idx = list(map(int, train_idx))
+    test_idx = list(map(int, test_idx))
+    
+    train_x = list(itemgetter(*train_idx)(datasetAll))
+    train_y = list(itemgetter(*train_idx)(labelsAll))
+    train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+    test_x = list(itemgetter(*test_idx)(datasetAll))
+    test_y = list(itemgetter(*test_idx)(labelsAll))
+    test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+
+    return train_x, train_y, train_numFrames, test_x, test_y, test_numFrames
+    
+###################################################################################################################
+############################################### UCFCRIME2LOCAL#####################################################
+###################################################################################################################
 
 def crime2localLoadData(min_frames):
     if not os.path.exists(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt')):

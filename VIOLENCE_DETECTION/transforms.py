@@ -2,7 +2,7 @@ import torchvision.transforms as transforms
 import numpy as np
 import torch
 
-def createTransforms(input_size):
+def hockeyTransforms(input_size):
     # Data augmentation and normalization for training
     # Just normalization for validation
     data_transforms = {

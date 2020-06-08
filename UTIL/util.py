@@ -24,6 +24,13 @@ def min_max_normalize_tensor(img):
     # print("min:", _min.item(), ", max:", _max.item())
     return (img - _min) / (_max - _min)
 
+def min_max_normalize_np(img):
+    # print("normalize:", img.size())
+    _min = np.amin(img)
+    _max = np.amax(img)
+    # print("min:", _min.item(), ", max:", _max.item())
+    return (img - _min) / (_max - _min)
+
 def createGifFromFrames(path):
   frames = os.listdir(path)
   frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
