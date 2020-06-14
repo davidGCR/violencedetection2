@@ -86,6 +86,17 @@ class AlexNetV2(nn.Module):  # ViolenceModel2
         x = self.classifier(x)
         return x
 
+class AlexNetConv(nn.Module):
+    def __init__(self, original_model):
+        super(AlexNetConv, self).__init__()
+        self.features = nn.Sequential(
+            # stop at conv4
+            *list(original_model.features.children())
+        )
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
 
 class ResNet(nn.Module):
     def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract, inference=False):

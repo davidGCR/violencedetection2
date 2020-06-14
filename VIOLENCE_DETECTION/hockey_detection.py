@@ -29,7 +29,7 @@ import copy
 
 import random
 from transforms import hockeyTransforms
-from UTIL.chooseModel import initialize_model
+from UTIL.chooseModel import initialize_model, initialize_FCNN
 from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
 import UTIL.tester as tester
@@ -75,7 +75,7 @@ def __main__():
     cv_test_losses = []
     cv_final_epochs = []
 
-    if args.split_type[:-2] == 'train-test':
+    if args.split_type[:-2] == 'fully-conv':
         train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(args.split_type, datasetAll, labelsAll, numFramesAll)
         train_dt_loader = Dataloader(X=train_x,
                                     y=train_y,
@@ -107,8 +107,60 @@ def __main__():
                                     batchSize=args.batchSize,
                                     shuffle=True,
                                     numWorkers=args.numWorkers,
+                                    pptype=None)
+        
+        model, _ = initialize_model(model_name=args.modelType,
+                                    num_classes=2,
+                                    feature_extract=args.featureExtract,
+                                    numDiPerVideos=args.numDynamicImagesPerVideo,
+                                    joinType=args.joinType,
+                                    use_pretrained=True)
+
+        if args.transferModel is not None:
+            if DEVICE == 'cuda:0':
+                model.load_state_dict(torch.load(args.transferModel), strict=False)
+            else:
+                model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
+        
+        model = initialize_FCNN(model_name=args.modelType, original_model=model)
+        for i, data in enumerate(tqdm(train_dt_loader)):
+            inputs, labels, _, _ = data
+            print('inputs=',inputs.size())
+
+    elif args.split_type[:-2] == 'train-test':
+        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(args.split_type, datasetAll, labelsAll, numFramesAll)
+        train_dt_loader = Dataloader(X=train_x,
+                                    y=train_y,
+                                    numFrames=train_numFrames,
+                                    transform=transforms['train'],
+                                    NDI=args.numDynamicImagesPerVideo,
+                                    videoSegmentLength=args.videoSegmentLength,
+                                    positionSegment=args.positionSegment,
+                                    overlapping=args.overlapping,
+                                    frameSkip=args.frameSkip,
+                                    skipInitialFrames=0,
+                                    segmentPreprocessing=args.segmentPreprocessing,
+                                    batchSize=args.batchSize,
+                                    shuffle=True,
+                                    numWorkers=args.numWorkers,
                                     pptype= None)
-            
+        
+        test_dt_loader = Dataloader(X=test_x,
+                                    y=test_y,
+                                    numFrames=test_numFrames,
+                                    transform=transforms['val'],
+                                    NDI=args.numDynamicImagesPerVideo,
+                                    videoSegmentLength=args.videoSegmentLength,
+                                    positionSegment=args.positionSegment,
+                                    overlapping=args.overlapping,
+                                    frameSkip=args.frameSkip,
+                                    skipInitialFrames=0,
+                                    segmentPreprocessing=args.segmentPreprocessing,
+                                    batchSize=args.batchSize,
+                                    shuffle=True,
+                                    numWorkers=args.numWorkers,
+                                    pptype=None)
+                                         
         model, _ = initialize_model(model_name=args.modelType,
                                     num_classes=2,
                                     feature_extract=args.featureExtract,
@@ -140,28 +192,19 @@ def __main__():
                             num_epochs=args.numEpochs,
                             checkpoint_path=os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig),
                             lr_scheduler=None)
-        
-        final_val_loss = 1000
-        final_train_loss = 1000
-        final_val_acc = 0
-        best_epoch = 0
         policy = ResultPolicy()
-
         for epoch in range(1, args.numEpochs + 1):
             print("----- Epoch {}/{}".format(epoch, args.numEpochs))
             epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
             exp_lr_scheduler.step()
-
             flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
             if args.saveCheckpoint:
                 tr.saveCheckpoint(epoch, flac)
-
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-
         cv_test_accs.append(policy.getFinalTestAcc())
         cv_test_losses.append(policy.getFinalTestLoss())
         cv_final_epochs.append(policy.getFinalEpoch())
