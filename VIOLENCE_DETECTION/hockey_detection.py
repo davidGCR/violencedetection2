@@ -90,7 +90,8 @@ def __main__():
                                     segmentPreprocessing=args.segmentPreprocessing,
                                     batchSize=args.batchSize,
                                     shuffle=True,
-                                    numWorkers=args.numWorkers)
+                                    numWorkers=args.numWorkers,
+                                    pptype= None)
         
         test_dt_loader = Dataloader(X=test_x,
                                     y=test_y,
@@ -105,7 +106,8 @@ def __main__():
                                     segmentPreprocessing=args.segmentPreprocessing,
                                     batchSize=args.batchSize,
                                     shuffle=True,
-                                    numWorkers=args.numWorkers)
+                                    numWorkers=args.numWorkers,
+                                    pptype= None)
             
         model, _ = initialize_model(model_name=args.modelType,
                                     num_classes=2,
@@ -190,7 +192,8 @@ def __main__():
                                         segmentPreprocessing=args.segmentPreprocessing,
                                         batchSize=args.batchSize,
                                         shuffle=True,
-                                        numWorkers=args.numWorkers)
+                                        numWorkers=args.numWorkers,
+                                        pptype=None)
         
             test_dt_loader = Dataloader(X=test_x,
                                         y=test_y,
@@ -205,7 +208,8 @@ def __main__():
                                         segmentPreprocessing=args.segmentPreprocessing,
                                         batchSize=args.batchSize,
                                         shuffle=True,
-                                        numWorkers=args.numWorkers)
+                                        numWorkers=args.numWorkers,
+                                        pptype=None)
             
             model, _ = initialize_model(model_name=args.modelType,
                                         num_classes=2,

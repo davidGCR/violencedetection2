@@ -9,7 +9,7 @@ class Dataloader():
         self.numFrames = numFrames
         self.transform = transform
         self.kargs = kargs
-        print(self.kargs)
+        # print(self.kargs)
         # self.dataset, self.dataloader = self.buildDataloader()
         self.dataset = ViolenceDataset(dataset=self.X,
                                 labels=self.y,
@@ -20,7 +20,8 @@ class Dataloader():
                                 positionSegment=self.kargs['positionSegment'],
                                 overlaping=self.kargs['overlapping'],
                                 frame_skip=self.kargs['frameSkip'],
-                                skipInitialFrames=self.kargs['skipInitialFrames'], ppType=self.kargs['pptype'])
+                                skipInitialFrames=self.kargs['skipInitialFrames'],
+                                ppType=self.kargs['pptype'])
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.kargs['batchSize'], shuffle=self.kargs['shuffle'], num_workers=self.kargs['numWorkers'])
     
     def buildDataloader(self):
