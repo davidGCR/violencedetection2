@@ -8,6 +8,7 @@ import torch
 import glob
 import time
 import VIDEO_REPRESENTATION.dynamicImage as dynamicImage
+from VIDEO_REPRESENTATION.preprocessor import Preprocessor
 import random
 import torchvision.transforms as transforms
 
@@ -22,7 +23,7 @@ class ViolenceDataset(Dataset):
                         overlaping,
                         frame_skip,
                         skipInitialFrames,
-                        preprocess_images):
+                        ppType):
         self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
@@ -34,14 +35,20 @@ class ViolenceDataset(Dataset):
         self.frame_skip = frame_skip
         self.minSegmentLen = 5
         self.skipInitialFrames = skipInitialFrames
-        self.preprocess_images = preprocess_images
+        self.ppType = ppType  #preprocessing
+        self.preprocessor = Preprocessor(ppType)
 
     def __len__(self):
         return len(self.videos)
     
     def getindex(self, vid_name, label=None):
-        matching = [s for s in self.videos if vid_name in s]
-        # print('matching=',matching)
+        matching = []
+        for vid in self.videos:
+            p, n = os.path.split(vid)
+            if n == vid_name:
+                matching.append(vid)
+        # matching = [s for s in self.videos if vid_name  s]
+        print('matching=',matching)
         if len(matching) > 0:
             for vid_name in matching:
                 index = self.videos.index(vid_name)
@@ -138,17 +145,13 @@ class ViolenceDataset(Dataset):
         elif len(segment_list) > self.numDynamicImagesPerVideo:
             segment_list = segment_list[0:self.numDynamicImagesPerVideo]
         return segment_list
-    
-    def segmentPreprocessing(self, vid_name, segment):
+
+    def loadFramesSeq(self, vid_name, sequence):
         frames = []
-        for frame in segment:
+        for frame in sequence:
             img_dir = str(vid_name) + "/" + frame
-            if self.preprocess_images:
-                img1 = Image.open(img_dir)
-                img1 = img1.filter(ImageFilter.BoxBlur(5))
-                img1 = img1.convert("RGB")
-            else:   
-                img1 = Image.open(img_dir).convert("RGB")
+            img1 = Image.open(img_dir)
+            img1 = img1.convert("RGB")
             img = np.array(img1)
             frames.append(img)
         return frames
@@ -188,52 +191,48 @@ class ViolenceDataset(Dataset):
         vid_name = self.videos[idx]
         # print(vid_name)
         label = self.labels[idx]
-        dinamycImages = []
-        video_segments = self.getVideoSegments(vid_name, idx) # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        dynamicImages = []
+        video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        for i, sequence in enumerate(video_segments):
+            video_segments[i] = self.loadFramesSeq(vid_name, sequence)
+
         preprocessing_time = 0.0
-        for seq in video_segments:
-            frames = self.segmentPreprocessing(vid_name, seq)
+        for sequence in video_segments:
             start_time = time.time()
-            imgPIL, img = dynamicImage.getDynamicImage(frames)
+            imgPIL, img = dynamicImage.getDynamicImage(sequence)
             end_time = time.time()
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            
             preprocessing_time += (end_time - start_time)
-            dinamycImages.append(imgPIL)
-        # print('Len: ', len(dinamycImages), vid_name)
-        dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-        # print(dinamycImages.size())
-        # if self.numDynamicImagesPerVideo == 1:
-        #     dinamycImages = dinamycImages.squeeze(dim=0) ## get normal pytorch tensor [bs, ch, h, w]
-        return dinamycImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+            dynamicImages.append(imgPIL)
+        dynamicImages = torch.stack(dynamicImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+        return dynamicImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
     
-    def getOneItem(self, idx, transform, preprocess, savePath, seqLen):
+    
+    def getOneItem(self, idx, transform, ptype, savePath, ndi, seqLen):
         vid_name = self.videos[idx]; print('idx={}, vid name={}'.format(idx,vid_name))
         label = self.labels[idx]
         dynamicImages = []
         images = []
+        self.numDynamicImagesPerVideo = ndi
         if seqLen is not None:
             self.videoSegmentLength = seqLen
         video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info 
         
-        preprocessing_time = 0.0
+        for i, sequence in enumerate(video_segments):
+            video_segments[i] = self.loadFramesSeq(vid_name, sequence)
+        
         for segment in video_segments:
-            frames = []
-            for frame in segment:
-                img_dir = str(vid_name) + "/" + frame
-                if preprocess:
-                    img1 = Image.open(img_dir)
-                    img1 = img1.filter(ImageFilter.BoxBlur(5))
-                    img1 = img1.convert("RGB")
-                else:   
-                    img1 = Image.open(img_dir)
-                    img1 = img1.convert("RGB")
-                img = np.array(img1)
-                frames.append(img)
-            imgPIL, img = dynamicImage.getDynamicImage(frames, savePath)
-            images.append(frames)
+            if ptype == 'blur':
+                segment = [Image.fromarray(frame) for frame in segment]
+                segment = self.preprocessor.blur(sequence=segment, k=2)
+                segment = [frame.convert("RGB") for frame in segment]
+                segment = [np.array(frame) for frame in segment]
+            images.append(segment)
+            imgPIL, img = dynamicImage.getDynamicImage(segment, savePath)
+            
             if transform:
                 imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            
             dynamicImages.append(imgPIL)
 
             imgPIL = transforms.ToTensor()(imgPIL.convert("RGB"))

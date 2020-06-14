@@ -40,7 +40,7 @@ from UTIL.resultsPolicy import ResultPolicy
 import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
-from datasetsPreprocessing import hockeyLoadData, hockeyTrainTestSplit
+from datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit
 from dataloader import Dataloader
 import csv
 from operator import itemgetter
