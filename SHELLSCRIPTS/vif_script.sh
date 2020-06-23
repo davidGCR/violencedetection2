@@ -9,8 +9,10 @@ python3  VIOLENCE_DETECTION/vif_detection.py \
 --videoSegmentLength 26 \
 --numDynamicImagesPerVideo 1 \
 --positionSegment begin \
---overlaping 0 \
+--overlapping 0 \
 --frameSkip 0 \
+--segmentPreprocessing false \
+--saveCheckpoint false \
 --splitType cross-val
 
 # python3  main_violence.py \

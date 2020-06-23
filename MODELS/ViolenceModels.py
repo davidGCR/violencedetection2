@@ -91,9 +91,11 @@ class AlexNetConv(nn.Module):
         super(AlexNetConv, self).__init__()
         self.features = nn.Sequential(
             # stop at conv4
-            *list(original_model.features.children())
+            *list(original_model.model.children())
         )
     def forward(self, x):
+        batch_size, timesteps, C, H, W = x.size()
+        x = x.view(batch_size * timesteps, C, H, W)
         x = self.features(x)
         return x
 

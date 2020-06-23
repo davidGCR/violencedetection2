@@ -2,9 +2,9 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dynamicImage import getDynamicImage
-from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData
-from VIOLENCE_DETECTION.dataloader import Dataloader
-from VIOLENCE_DETECTION.transforms import hockeyTransforms
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData, vifLoadData
+from VIOLENCE_DETECTION.dataloader import MyDataloader
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms
 from UTIL.util import min_max_normalize_np, min_max_normalize_tensor
 from VIDEO_REPRESENTATION.preprocessor import Preprocessor
 import cv2
@@ -58,8 +58,7 @@ def show(wait, **kwargs):
         # print(wsize)
         if cv2.waitKey(wait) & 0xFF == ord('q'):
             break
-
-def main():
+def hockey():
     split_type = 'train-test-1'
     datasetAll, labelsAll, numFramesAll = hockeyLoadData()
     # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll)
@@ -138,6 +137,59 @@ def main():
 
         diff1, diff2, thresh_binary, thresh_otsu = myPreprocesor.bakgroundFrameDifference(current=current, previous=previous)
         show(wait=800,video_frames=frames[0], dimage=dimages[0], previous=previous, current=current, diff1=diff1, diff2=diff2, thresh_binary=thresh_binary, thresh_otsu=thresh_otsu)
+
+def main():
+    # split_type = 'train-test-1'
+    datasetAll, labelsAll, numFramesAll = vifLoadData(constants.PATH_VIF_FRAMES)
+    # print(datasetAll[0:10])
+    args = {
+        'X': datasetAll,
+        'y': labelsAll,
+        'numFrames': numFramesAll,
+        'transform': None,
+        'NDI': 1,
+        'videoSegmentLength': 20,
+        'positionSegment': 'begin',
+        'overlapping': 0,
+        'frameSkip': 0,
+        'skipInitialFrames': 0,
+        'batchSize': 8,
+        'shuffle': False,
+        'numWorkers': 4,
+        'pptype': None, 
+    }
+    
+    dt_loader = MyDataloader(args)
+    video = 'crowd_violence__Crowd_Violence_Control_techniques__mackevster__wkva5YERsRg'
+    index, v_name = dt_loader.dataset.getindex(video)
+    # print(type(index))
+    print('index={}, name={}, label={}, numFrames={}'.format(index, datasetAll[index], labelsAll[index], type(numFramesAll[index])))
+    lens = [2, 5, 10, 15, 20, 25, 30]
+    # lens = [2, 5, 10]
+    myPreprocesor = Preprocessor(pType=None)
+    for segmentLen in lens:
+        dimagPath = os.path.join(constants.PATH_RESULTS, 'dimages', 'vd_{}_class({})_len({})_pp({}).png'.format(datasetAll[index], labelsAll[index], segmentLen, args['pptype']))
+        print(dimagPath)
+        frames, dimages, dimages2, label = dt_loader.dataset.getOneItem(int(index), transform=False, ptype=args['pptype'], savePath=None, ndi=args['NDI'], seqLen=segmentLen)
+        dimages = [min_max_normalize_np(np.array(img, dtype="float32")) for img in dimages]
+        # dimage2 = min_max_normalize_tensor(dimages2)
+        # dimage2 = dimage2.numpy()[0].transpose(1, 2, 0)
+        # frame = frames[0][0]
+        # cv2.imshow('ok', dimages[1])
+        # if cv2.waitKey(1000) & 0xFF == ord('q'):
+        #     break
+        
+        for i,frame in enumerate(frames[0]):
+            frames[0][i] = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        previous = frames[0][0]
+        current = frames[0][len(frames[0]) - 1]
+        # previous = dimages[0]
+        # current = dimages[len(dimages) - 1]
+        # print('Format dimage: ',type(dimages[0]), dimages[0].dtype)
+
+        diff1, diff2, thresh_binary, thresh_otsu = myPreprocesor.bakgroundFrameDifference(current=current, previous=previous)
+        show(wait=800,video_frames=frames[0], dimage=dimages[0], previous=previous, current=current)
 
 if __name__ == "__main__":
     main()

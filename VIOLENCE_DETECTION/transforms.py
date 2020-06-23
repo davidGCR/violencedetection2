@@ -38,15 +38,42 @@ def hockeyTransforms(input_size):
     }
     return data_transforms
 
+def vifTransforms(input_size, train_mean, train_std, test_mean, test_std):
+    # Data augmentation and normalization for training
+    # Just normalization for validation
+    data_transforms = {
+        "train": transforms.Compose(
+            [
+                # transforms.Resize(input_size),
+                # transforms.CenterCrop(input_size),
+                transforms.RandomResizedCrop(input_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=train_mean, std=train_std)
+                # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        ),
+         "val": transforms.Compose(
+            [
+                transforms.Resize(input_size),
+                transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=test_mean, std=test_std)
+                # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        ),
+    }
+    return data_transforms
+
 def compute_mean_std(dataloader):
     pop_mean = []
     pop_std0 = []
     pop_std1 = []
-    for i, data in tqdm(enumerate(dataloader, 0)):
-        # shape (batch_size, 3, height, width)
-        inputs, labels, _ = data
+    for i, data in enumerate(dataloader, 0):
+        inputs, labels, _, _ = data
+        inputs = torch.squeeze(inputs, dim=1)
         numpy_image = inputs.numpy()
-        
+        # print('shape: ', numpy_image.shape)
         # shape (3,)
         batch_mean = np.mean(numpy_image, axis=(0,2,3))
         batch_std0 = np.std(numpy_image, axis=(0,2,3))

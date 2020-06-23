@@ -26,6 +26,8 @@ import torchvision
 import time
 import argparse
 import copy
+from tqdm import tqdm
+import scipy.io as sio
 
 import random
 from transforms import hockeyTransforms
@@ -41,7 +43,7 @@ import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
 from datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit
-from dataloader import Dataloader
+from dataloader import MyDataloader
 import csv
 from operator import itemgetter
 
@@ -76,38 +78,31 @@ def __main__():
     cv_final_epochs = []
 
     if args.split_type[:-2] == 'fully-conv':
-        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(args.split_type, datasetAll, labelsAll, numFramesAll)
-        train_dt_loader = Dataloader(X=train_x,
-                                    y=train_y,
-                                    numFrames=train_numFrames,
-                                    transform=transforms['train'],
-                                    NDI=args.numDynamicImagesPerVideo,
-                                    videoSegmentLength=args.videoSegmentLength,
-                                    positionSegment=args.positionSegment,
-                                    overlapping=args.overlapping,
-                                    frameSkip=args.frameSkip,
-                                    skipInitialFrames=0,
-                                    segmentPreprocessing=args.segmentPreprocessing,
-                                    batchSize=args.batchSize,
-                                    shuffle=True,
-                                    numWorkers=args.numWorkers,
-                                    pptype= None)
         
-        test_dt_loader = Dataloader(X=test_x,
-                                    y=test_y,
-                                    numFrames=test_numFrames,
-                                    transform=transforms['val'],
-                                    NDI=args.numDynamicImagesPerVideo,
-                                    videoSegmentLength=args.videoSegmentLength,
-                                    positionSegment=args.positionSegment,
-                                    overlapping=args.overlapping,
-                                    frameSkip=args.frameSkip,
-                                    skipInitialFrames=0,
-                                    segmentPreprocessing=args.segmentPreprocessing,
-                                    batchSize=args.batchSize,
-                                    shuffle=True,
-                                    numWorkers=args.numWorkers,
-                                    pptype=None)
+        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(args.split_type, datasetAll, labelsAll, numFramesAll)
+        default_args = {
+            'X': train_x,
+            'y': train_y,
+            'numFrames': train_numFrames,
+            'transform': transforms['train'],
+            'NDI': 1,
+            'videoSegmentLength': 30,
+            'positionSegment': 'begin',
+            'overlapping': 0,
+            'frameSkip': 0,
+            'skipInitialFrames': 0,
+            'batchSize': 8,
+            'shuffle': False,
+            'numWorkers': 4,
+            'pptype': None,
+            'modelType': 'alexnetv2'
+        }
+        train_dt_loader = MyDataloader(default_args)
+        default_args['X'] = test_x
+        default_args['y'] = test_y
+        default_args['numFrames'] = test_numFrames
+        default_args['transform'] = transforms['test']
+        test_dt_loader = MyDataloader(default_args)
         
         model, _ = initialize_model(model_name=args.modelType,
                                     num_classes=2,
@@ -123,9 +118,40 @@ def __main__():
                 model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
         
         model = initialize_FCNN(model_name=args.modelType, original_model=model)
-        for i, data in enumerate(tqdm(train_dt_loader)):
-            inputs, labels, _, _ = data
-            print('inputs=',inputs.size())
+        print(model)
+        model.eval()
+        dataloaders = [train_dt_loader, test_dt_loader]
+        outs = []
+        labels = []
+        for i, dt_loader in enumerate(dataloaders):
+            for data in tqdm(dt_loader.dataloader):
+                inputs, y, _, _ = data
+                inputs = inputs.to(DEVICE)
+                y = y.to(DEVICE)
+                
+                with torch.no_grad():
+                    outputs = model(inputs)
+                    outs.append(outputs)
+                    labels.append(y)
+            print('outs_loader({})=shape {}, type {}'.format(i+1,len(outs), type(outs)))
+        outs = torch.stack(outs, dim=0)
+        it, bacth, C, H, W = outs.size()
+        outs = outs.view(it * bacth, C, H, W)
+        outs = outs.permute(0, 2, 3, 1)
+        # print('outs=', outs.size(), type(outs))
+        n, H, W, C = outs.size()
+        outs = outs.contiguous()
+        outs = outs.view(n * H * W, C)
+        # print('outs=', outs.size(), type(outs))
+        outs = outs.numpy()
+        # print('labels list=',len(labels))
+        labels = torch.cat(labels, dim=0)
+        labels = labels.numpy()
+        # print('labels=', labels.shape, type(labels))
+        # print(labels)
+        # print('conv5_train_test({})=shape {}, type {}'.format(i+1,outs.shape, type(outs)))
+        sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','conv5_train_test-finetuned=No.mat'),mdict={'alexnetv2_cvv':outs, 'labels':labels})
+        
 
     elif args.split_type[:-2] == 'train-test':
         train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(args.split_type, datasetAll, labelsAll, numFramesAll)

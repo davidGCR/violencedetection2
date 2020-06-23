@@ -18,6 +18,72 @@ def checkBalancedSplit(Y_train, Y_test):
     print('Train-Positives samples={}, Negative samples={}'.format(len(posTrain), len(Y_train) - len(posTrain)))
     posTest = [1 for y in Y_test if y == 1]
     print('Test-Positives samples={}, Negative samples={}'.format(len(posTest), len(Y_test) - len(posTest)))
+###################################################################################################################
+############################################### HOCKEY FIGHTS #####################################################
+###################################################################################################################
+def getFoldData(fold_path):
+    """
+    Load data from folder
+    """
+    # print('getFoldData: ',fold_path)
+    names = []
+    labels = []
+    num_frames = []
+
+    violence_path = os.path.join(fold_path, 'Violence')
+    non_violence_path = os.path.join(fold_path, 'NonViolence')
+    violence_videos = os.listdir(violence_path)
+    non_violence_videos = os.listdir(non_violence_path)
+    for video in violence_videos:
+        video_folder = os.path.join(violence_path, video)
+        num_frames.append(len(os.listdir(video_folder)))
+        names.append(video_folder)
+        labels.append(1)
+    for video in non_violence_videos:
+        video_folder = os.path.join(non_violence_path, video)
+        num_frames.append(len(os.listdir(video_folder)))
+        names.append(video_folder)
+        labels.append(0)
+
+    return names, labels, num_frames
+
+def vifLoadData(folds_dir):
+    names, labels, num_frames = [], [], []
+    for i in range(5):
+        x, y, num_f = getFoldData(os.path.join(folds_dir, str(i + 1)))
+        # print(x)
+        names = names + x
+        labels = labels + y
+        num_frames = num_frames + num_f
+    return  names, labels, num_frames
+
+def train_test_iteration(test_fold_path, shuffle):
+    """
+        Load Train and test data from pre-determined splits
+    """
+    test_names, test_labels, test_num_frames = getFoldData(test_fold_path)
+    folds_dir, fold_number = os.path.split(test_fold_path)
+    fold_number = int(fold_number)
+    train_names = []
+    train_labels = []
+    train_num_frames = []
+
+    for i in range(5):
+        if i + 1 != fold_number:
+            names, labels, num_frames = getFoldData(os.path.join(folds_dir, str(i + 1)))
+            train_names.extend(names)
+            train_labels.extend(labels)
+            train_num_frames.extend(num_frames)
+    if shuffle:
+        combined = list(zip(train_names, train_labels, train_num_frames))
+        random.shuffle(combined)
+        train_names[:], train_labels[:], train_num_frames[:] = zip(*combined)
+
+        combined = list(zip(test_names, test_labels, test_num_frames))
+        random.shuffle(combined)
+        test_names[:], test_labels[:], test_num_frames[:] = zip(*combined)
+
+    return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames
 
 ###################################################################################################################
 ############################################### HOCKEY FIGHTS #####################################################

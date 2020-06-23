@@ -24,7 +24,12 @@ class ViolenceDataset(Dataset):
                         frame_skip,
                         skipInitialFrames,
                         ppType):
-        self.spatial_transform = spatial_transform
+        if spatial_transform is None:
+            self.spatial_transform = transforms.Compose([
+                transforms.RandomResizedCrop(224),
+                transforms.ToTensor()])
+        else:    
+            self.spatial_transform = spatial_transform
         self.videos = dataset
         self.labels = labels
         self.numFrames = numFrames
@@ -40,6 +45,9 @@ class ViolenceDataset(Dataset):
 
     def __len__(self):
         return len(self.videos)
+
+    def setTransform(self, transform):
+        self.spatial_transform = transform
     
     def getindex(self, vid_name, label=None):
         matching = []
@@ -48,11 +56,13 @@ class ViolenceDataset(Dataset):
             if n == vid_name:
                 matching.append(vid)
         # matching = [s for s in self.videos if vid_name  s]
-        print('matching=',matching)
+        # print('matching=',matching)
         if len(matching) > 0:
             for vid_name in matching:
                 index = self.videos.index(vid_name)
                 if label is not None and label == self.labels[index]:
+                    return index, self.videos[index]
+                if label is None:
                     return index, self.videos[index]
         print('Video: {} not found!!!'.format(vid_name))
         return None, None
@@ -159,12 +169,12 @@ class ViolenceDataset(Dataset):
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        if self.skipInitialFrames < len(frames_list):
+        if self.skipInitialFrames > 0 and self.skipInitialFrames < len(frames_list):
             le = len(frames_list)
             frames_list = frames_list[self.skipInitialFrames:le]
             self.numFrames[idx] -= self.skipInitialFrames
         video_segments = []
-        
+        # print('self.numFrames = ', type(self.numFrames))
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
         
         seqLen = self.videoSegmentLength
@@ -201,6 +211,7 @@ class ViolenceDataset(Dataset):
             start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(sequence)
             end_time = time.time()
+            
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             preprocessing_time += (end_time - start_time)
             dynamicImages.append(imgPIL)

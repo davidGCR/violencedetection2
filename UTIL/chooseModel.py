@@ -52,6 +52,6 @@ def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, j
 
 def initialize_FCNN(model_name, original_model):
     model = None
-    if model_name == "alexnet":
+    if model_name == "alexnetv2":
         model = AlexNetConv(original_model=original_model)
     return model
