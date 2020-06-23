@@ -116,7 +116,7 @@ def __main__():
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
-    print(args.split_type)
+    
 
     
     if args.split_type == 'fully-conv':
@@ -187,6 +187,7 @@ def __main__():
         # print('conv5_train_test({})=shape {}, type {}'.format(i+1,outs.shape, type(outs)))
         sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','vif-alexnet-ft=Yes.mat'),mdict={'fmaps':outs, 'labels':labels})
     elif args.split_type == 'cross-val':
+        print(args.split_type)
         for fold in range(5):
             fold_path = os.path.join(constants.PATH_VIF_FRAMES,str(fold+1))
             train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = train_test_iteration(fold_path, shuffle=True)
@@ -217,14 +218,15 @@ def __main__():
             default_args['y'] = test_y
             default_args['numFrames'] = test_numFrames
             test_dt_loader = MyDataloader(default_args)
-            pop_mean, pop_std0, pop_std1 = compute_mean_std(train_dt_loader.dataloader)
+            # pop_mean, pop_std0, pop_std1 = compute_mean_std(train_dt_loader.dataloader)
             # print('Train-mean={}, std0={}, std1={}'.format(pop_mean, pop_std0, pop_std1))
-            pop_mean_test, pop_std0_test, pop_std1_test = compute_mean_std(test_dt_loader.dataloader)
+            # pop_mean_test, pop_std0_test, pop_std1_test = compute_mean_std(test_dt_loader.dataloader)
             # print('Test-mean={}, std0={}, std1={}'.format(pop_mean_test, pop_std0_test, pop_std1_test))
-            transforms = vifTransforms(input_size=224, train_mean=pop_mean, train_std=pop_std0, test_mean=pop_mean_test, test_std=pop_std0_test)
-            train_dt_loader.dataset.setTransform(transforms['train'])
-            test_dt_loader.dataset.setTransform(transforms['val'])
-            
+            transforms = vifTransforms(input_size=224, train_mean=[0.51311874, 0.5130452,  0.5135336 ], train_std=[0.11229729, 0.10967916, 0.10823903], test_mean=[0.51311874,0.5130452,  0.5135336 ], test_std=[0.11229729, 0.10967916, 0.10823903])
+            train_dt_loader.transform = transforms['train']
+            # print('Dataloader',train_dt_loader.dataloader)
+            test_dt_loader.transform = transforms['val']
+            # print('Dataloader',train_dt_loader.dataloader)
             model, _ = initialize_model(model_name=args.modelType,
                                         num_classes=2,
                                         feature_extract=args.featureExtract,
@@ -236,7 +238,7 @@ def __main__():
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
             criterion = nn.CrossEntropyLoss()
-            experimentConfig = 'VIF-Model-{}, segmentLen-{}, numDynIms-{}, frameSkip-{}, epochs-{}, splitType-{}, fold-{}'.format(args.modelType,
+            experimentConfig = 'VIF-Model-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},splitType-{},fold-{}'.format(args.modelType,
                                                                                                                             args.videoSegmentLength,
                                                                                                                             args.numDynamicImagesPerVideo,
                                                                                                                             args.frameSkip,

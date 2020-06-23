@@ -207,7 +207,9 @@ class ViolenceDataset(Dataset):
             video_segments[i] = self.loadFramesSeq(vid_name, sequence)
 
         preprocessing_time = 0.0
+        
         for sequence in video_segments:
+            # print(len(sequence))
             start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(sequence)
             end_time = time.time()
@@ -216,6 +218,7 @@ class ViolenceDataset(Dataset):
             preprocessing_time += (end_time - start_time)
             dynamicImages.append(imgPIL)
         dynamicImages = torch.stack(dynamicImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+        # print(dynamicImages.size())
         return dynamicImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
     
     

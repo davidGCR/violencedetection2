@@ -72,6 +72,7 @@ class AlexNetV2(nn.Module):  # ViolenceModel2
 
     def forward(self, x):
         batch_size, timesteps, C, H, W = x.size()
+        # print(batch_size, timesteps, C, H, W)
         c_in = x.view(batch_size * timesteps, C, H, W)
         # print('cin: ', c_in.size())
         c_out = self.model(c_in)

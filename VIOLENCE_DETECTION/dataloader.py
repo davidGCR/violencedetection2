@@ -12,16 +12,16 @@ class MyDataloader():
         # print(self.kargs)
         # self.dataset, self.dataloader = self.buildDataloader()
         self._dataset = ViolenceDataset(dataset=self.X,
-                                labels=self.y,
-                                numFrames=self.numFrames,
-                                spatial_transform=self.transform,
-                                numDynamicImagesPerVideo=self.kargs['NDI'],
-                                videoSegmentLength=self.kargs['videoSegmentLength'],
-                                positionSegment=self.kargs['positionSegment'],
-                                overlaping=self.kargs['overlapping'],
-                                frame_skip=self.kargs['frameSkip'],
-                                skipInitialFrames=self.kargs['skipInitialFrames'],
-                                ppType=self.kargs['pptype'])
+                                        labels=self.y,
+                                        numFrames=self.numFrames,
+                                        spatial_transform=self.transform,
+                                        numDynamicImagesPerVideo=self.kargs['NDI'],
+                                        videoSegmentLength=self.kargs['videoSegmentLength'],
+                                        positionSegment=self.kargs['positionSegment'],
+                                        overlaping=self.kargs['overlapping'],
+                                        frame_skip=self.kargs['frameSkip'],
+                                        skipInitialFrames=self.kargs['skipInitialFrames'],
+                                        ppType=self.kargs['pptype'])
         self._dataloader = None
     
     @property
@@ -34,6 +34,7 @@ class MyDataloader():
     @property
     def dataloader(self):
         if self._dataloader is None:
+            # print('hereeeeeeee...', self.kargs['batchSize'])
             self._dataloader = torch.utils.data.DataLoader(self._dataset, batch_size=self.kargs['batchSize'], shuffle=self.kargs['shuffle'], num_workers=self.kargs['numWorkers'])
         return self._dataloader
     @dataloader.setter
@@ -48,6 +49,7 @@ class MyDataloader():
         self._dataloader = None
         self._transform = x
         self._dataset.setTransform(self._transform)
+        print(self._dataloader)
     
     # def getElement(self, name, label, savePath, ndi, seqLen, transform, ptype):
     #     index, full_name = self.dataset.getindex(vid_name=name, label=label)
