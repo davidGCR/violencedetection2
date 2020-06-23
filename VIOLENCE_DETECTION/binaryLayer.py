@@ -4,12 +4,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 import numpy as np
 import scipy.io as sio
+import random
 import constants
 
 import matplotlib.pyplot as plt
 from sklearn import svm, metrics
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.model_selection import cross_val_score, GridSearchCV
+from sklearn.model_selection import cross_val_score, GridSearchCV, KFold
 
 def _load_data(path):
     mat_data = sio.loadmat(path)
@@ -24,7 +25,7 @@ def _load_data(path):
     # print('Y=', type(Y), Y.shape, Y[0,:], type(Y[0,0]))
     # print(R, type(R), R.shape)
     # R = torch.from_numpy(train_data).float()
-    return Y, labels
+    return Y, labels.tolist()
 
 def patterns2Numbers(data, h, w):
     samples_binary = []
@@ -59,13 +60,44 @@ def binaryToDecimal(pattern):
     # print(decimal)
     return decimal
 
+def getVifFold(data, labels, fold, shuffle):
+    lens = [50, 50, 50, 48, 48]
+    X = data[:fold]
+    X_train, y_train, X_test, y_test = [], [], [], []
+    for f in range(5):
+        n_samples = lens[f]
+        ff = f + 1
+        start = np.sum(lens[:ff]) - n_samples
+        end = np.sum(lens[:ff])
+        X = data[start:end]
+        y = labels[start:end]
+        # print(type(X), type(y))
+        if ff == fold:
+            X_test = X
+            y_test = y
+        else:
+            X_train = X_train + X
+            y_train = y_train + y
+    # X_train = np.concatenate((X_train), axis=0)
+    # y_train = np.concatenate((y_train), axis=0)
+    if shuffle:
+        combined = list(zip(X_train, y_train))
+        random.shuffle(combined)
+        X_train[:], y_train[:] = zip(*combined)
+        combined = list(zip(X_test, y_test))
+        random.shuffle(combined)
+        X_test[:], y_test[:] = zip(*combined)
+    return X_train, y_train, X_test, y_test
+
 def main():
     # data_binary, labels = _load_data(os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'ITQdata', 'ITQfeatures_out_iter=10.mat'))
-    path = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','ITQfeatures_ft=No_out_bits=7_iter=50.mat')
+    path = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','ITQ-vif_bits=7_iter=100.mat')
     data_binary, labels = _load_data(path)
     (nsamples, bits) = data_binary.shape
-    print('File: ',path,' Loaded data ',data_binary.shape,'labels ', len(labels))
+    print('File: ',path,' Loaded data ',data_binary.shape,'labels ', len(labels), type(labels))
     data_binary, data_decimal = patterns2Numbers(data_binary, h=6, w=6)
+    print('data_binary=', len(data_binary), len(data_decimal))
+    dataset = 'vif'
     # train_bits= data_binary[0:800]
     # test_bits = data_binary[800: len(data_binary)]
     # train_dec= data_decimal[0:800]
@@ -102,40 +134,51 @@ def main():
     for dec in data_decimal:
         (hist, _) = np.histogram(dec, bins=2**bits, range=(0,2**bits -1))
         X_hist.append(hist)
+    print('Histogram nsamples', len(X_hist))
     print('Histogram bins=', len(X_hist[3]))
-    X_train = X_hist[0:800]
-    X_test = X_hist[800: len(X_hist)]
-    y_train= labels[0:800]
-    y_test = labels[800:len(labels)]
-
-    param_grid = {'C': [0.1, 1, 10, 100, 1000],  
-                'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
-                'kernel': ['rbf']}
-    grid = GridSearchCV(svm.SVC(), param_grid, refit = True, verbose = 3) 
-    # fitting the model for grid search 
-    grid.fit(X_train, y_train)
-    # print best parameter after tuning 
-    print(grid.best_params_)
-    grid_predictions = grid.predict(X_test) 
-    # print classification report 
-    print(classification_report(y_test, grid_predictions)) 
+    # X_train = X_hist[0:800]
+    # X_test = X_hist[800: len(X_hist)]
+    # y_train= labels[0:800]
+    # y_test = labels[800:len(labels)]
+    # param_grid = {'C': [0.1, 1, 10, 100, 1000],  
+    #             'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
+    #             'kernel': ['rbf']}
+    # grid = GridSearchCV(svm.SVC(), param_grid, refit = True, verbose = 3)
+    # grid.fit(X_train, y_train)
+    # print(grid.best_params_)
+    # grid_predictions = grid.predict(X_test) 
+    # print(classification_report(y_test, grid_predictions)) 
     
     # kernels = ['linear', 'poly', 'rbf', 'sigmoid']
     kernels = ['rbf']
-    for kernel in kernels:
-        print('****** ',kernel)
-        #Create a svm Classifier
-        # clf = svm.SVC(kernel=kernel)  # Linear Kernel
-        clf = svm.SVC(C=10, gamma=0.0001, kernel=kernel)
-        scores = cross_val_score(clf, X_hist, labels, cv=5)
-        print(scores)
-        #Train the model using the training sets
-        # clf.fit(X_train, y_train)
-        #Predict the response for test dataset
-        # y_pred = clf.predict(X_test)
-        # Model Accuracy: how often is the classifier correct?
-        # print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
-        print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    if dataset == 'vif':
+        for kernel in kernels:
+            scores = []
+            for fold in range(5):
+                print('****** ', kernel)
+                X_train, y_train, X_test, y_test = getVifFold(X_hist, labels, fold + 1, shuffle=True)
+                print('Fold types: ', type(X_train), type(y_train), type(X_test), type(y_test))
+                print('Fold shapes: ', len(X_train), len(y_train), len(X_test), len(y_test))
+                # clf = svm.SVC(kernel=kernel)  # Linear Kernel
+                clf = svm.SVC(C=10, gamma=0.0001, kernel=kernel)
+                clf.fit(X_train, y_train)
+                y_pred = clf.predict(X_test)
+                scores.append(metrics.accuracy_score(y_test, y_pred))
+            print(scores)
+            scores = np.array(scores)
+            print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    elif dataset == 'hockey':
+        for kernel in kernels:
+            print('****** ',kernel)
+            #Create a svm Classifier
+            clf = svm.SVC(kernel=kernel)  # Linear Kernel
+            # clf = svm.SVC(C=10, gamma=0.0001, kernel=kernel)
+            scores = cross_val_score(clf, X_hist, labels, cv=5)
+            print(scores)
+            # clf.fit(X_train, y_train)
+            # y_pred = clf.predict(X_test)
+            # print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+            print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     
 
 if __name__ == "__main__":

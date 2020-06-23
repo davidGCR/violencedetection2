@@ -13,6 +13,8 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
+import scipy.io as sio
 
 from UTIL.util import video2Images2, sortListByStrNumbers, save_csvfile_multicolumn
 from UTIL.chooseModel import initialize_model, initialize_FCNN
@@ -20,10 +22,11 @@ from UTIL.parameters import verifiParametersToTrain
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 from VIOLENCE_DETECTION.transforms import vifTransforms, compute_mean_std
 
-from VIOLENCE_DETECTION.datasetsMemoryLoader import getFoldData, train_test_iteration
+from VIOLENCE_DETECTION.datasetsMemoryLoader import getFoldData, train_test_iteration, vifLoadData
 from UTIL.trainer import Trainer
 from dataloader import MyDataloader
 from UTIL.resultsPolicy import ResultPolicy
+from constants import DEVICE
 
 def preprocessing_dataset(dataset_path_videos, dataset_path_frames):
     folds = os.listdir(dataset_path_videos)
@@ -113,10 +116,12 @@ def __main__():
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
+    print(args.split_type)
 
     
     if args.split_type == 'fully-conv':
-        datasetAll, labelsAll, numFramesAll = vifLoadData(constants.PATH_VIF_FRAMES)
+        datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+        print('splitsLen=', splitsLen)
         default_args = {
                 'X': datasetAll,
                 'y': labelsAll,
@@ -129,7 +134,7 @@ def __main__():
                 'frameSkip': args.frameSkip,
                 'skipInitialFrames': 0,
                 'batchSize': args.batchSize,
-                'shuffle': True,
+                'shuffle': False,
                 'numWorkers': args.numWorkers,
                 'pptype': None,
                 'modelType': args.modelType
@@ -155,12 +160,14 @@ def __main__():
         for data in tqdm(dt_loader.dataloader):
             inputs, y, _, _ = data
             inputs = inputs.to(DEVICE)
+            # print(inputs.size())
             y = y.to(DEVICE)
             with torch.no_grad():
                 outputs = model(inputs)
+                # print(outputs.size())
                 outs.append(outputs)
                 labels.append(y)
-        print('outs_loader({})=shape {}, type {}'.format(i+1,len(outs), type(outs)))
+        print('outs_loader=shape {}, type {}'.format(len(outs), type(outs)))
         outs = torch.stack(outs, dim=0)
         it, bacth, C, H, W = outs.size()
         outs = outs.view(it * bacth, C, H, W)
@@ -175,9 +182,10 @@ def __main__():
         labels = torch.cat(labels, dim=0)
         labels = labels.numpy()
         # print('labels=', labels.shape, type(labels))
+        print('outs=', outs.shape, type(outs))
         # print(labels)
         # print('conv5_train_test({})=shape {}, type {}'.format(i+1,outs.shape, type(outs)))
-        # sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','conv5_train_test-finetuned=No.mat'),mdict={'alexnetv2_cvv':outs, 'labels':labels})
+        sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','vif-alexnet-ft=Yes.mat'),mdict={'fmaps':outs, 'labels':labels})
     elif args.split_type == 'cross-val':
         for fold in range(5):
             fold_path = os.path.join(constants.PATH_VIF_FRAMES,str(fold+1))

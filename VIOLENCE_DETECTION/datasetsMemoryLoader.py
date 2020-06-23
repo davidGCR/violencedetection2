@@ -49,13 +49,15 @@ def getFoldData(fold_path):
 
 def vifLoadData(folds_dir):
     names, labels, num_frames = [], [], []
+    splitsLen = []
     for i in range(5):
         x, y, num_f = getFoldData(os.path.join(folds_dir, str(i + 1)))
+        splitsLen.append(len(x))
         # print(x)
         names = names + x
         labels = labels + y
         num_frames = num_frames + num_f
-    return  names, labels, num_frames
+    return  names, labels, num_frames, splitsLen
 
 def train_test_iteration(test_fold_path, shuffle):
     """
