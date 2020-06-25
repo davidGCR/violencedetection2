@@ -169,10 +169,11 @@ def __main__():
                 labels.append(y)
         print('outs_loader=shape {}, type {}'.format(len(outs), type(outs)))
         outs = torch.stack(outs, dim=0)
+        print('outs=', outs.size(), type(outs))
         it, bacth, C, H, W = outs.size()
         outs = outs.view(it * bacth, C, H, W)
         outs = outs.permute(0, 2, 3, 1)
-        # print('outs=', outs.size(), type(outs))
+        
         n, H, W, C = outs.size()
         outs = outs.contiguous()
         outs = outs.view(n * H * W, C)
@@ -185,7 +186,7 @@ def __main__():
         print('outs=', outs.shape, type(outs))
         # print(labels)
         # print('conv5_train_test({})=shape {}, type {}'.format(i+1,outs.shape, type(outs)))
-        sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','vif-alexnet-ft=Yes.mat'),mdict={'fmaps':outs, 'labels':labels})
+        sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','vif-alexnet-ndi=3-ft=Yes.mat'),mdict={'fmaps':outs, 'labels':labels})
     elif args.split_type == 'cross-val':
         print(args.split_type)
         for fold in range(5):
@@ -233,7 +234,13 @@ def __main__():
                                         numDiPerVideos=args.numDynamicImagesPerVideo,
                                         joinType=args.joinType,
                                         use_pretrained=True)
-            model.to(constants.DEVICE)
+            model.to(DEVICE)
+            if args.transferModel is not None:
+            if DEVICE == 'cuda:0':
+                model.load_state_dict(torch.load(args.transferModel), strict=False)
+            else:
+                model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
+            
             params_to_update = verifiParametersToTrain(model, args.featureExtract)
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
@@ -277,6 +284,7 @@ def __main__():
         print('CV Accuracies=', cv_test_accs)
         print('CV Losses=', cv_test_losses)
         print('CV Epochs=', cv_final_epochs)
-        print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))                                                                                         
+        print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
+        print("Accuracy: %0.2f (+/- %0.2f), Losses: %0.2f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))                                                                                    
 
 __main__()

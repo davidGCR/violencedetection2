@@ -140,7 +140,7 @@ def hockey():
 
 def main():
     # split_type = 'train-test-1'
-    datasetAll, labelsAll, numFramesAll = vifLoadData(constants.PATH_VIF_FRAMES)
+    datasetAll, labelsAll, numFramesAll, _ = vifLoadData(constants.PATH_VIF_FRAMES)
     # print(datasetAll[0:10])
     args = {
         'X': datasetAll,
@@ -160,7 +160,7 @@ def main():
     }
     
     dt_loader = MyDataloader(args)
-    video = 'crowd_violence__Crowd_Violence_Control_techniques__mackevster__wkva5YERsRg'
+    video = 'football_crowds__HARRY_KEWELL_SCORES_CROWD_GO_NUTS__phillipstama__K7qlpU7tMhQ'
     index, v_name = dt_loader.dataset.getindex(video)
     # print(type(index))
     print('index={}, name={}, label={}, numFrames={}'.format(index, datasetAll[index], labelsAll[index], type(numFramesAll[index])))
@@ -169,7 +169,7 @@ def main():
     myPreprocesor = Preprocessor(pType=None)
     for segmentLen in lens:
         dimagPath = os.path.join(constants.PATH_RESULTS, 'dimages', 'vd_{}_class({})_len({})_pp({}).png'.format(datasetAll[index], labelsAll[index], segmentLen, args['pptype']))
-        print(dimagPath)
+        print('*'*10, segmentLen)
         frames, dimages, dimages2, label = dt_loader.dataset.getOneItem(int(index), transform=False, ptype=args['pptype'], savePath=None, ndi=args['NDI'], seqLen=segmentLen)
         dimages = [min_max_normalize_np(np.array(img, dtype="float32")) for img in dimages]
         # dimage2 = min_max_normalize_tensor(dimages2)

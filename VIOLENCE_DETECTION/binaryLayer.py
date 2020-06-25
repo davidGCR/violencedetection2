@@ -27,10 +27,10 @@ def _load_data(path):
     # R = torch.from_numpy(train_data).float()
     return Y, labels.tolist()
 
-def patterns2Numbers(data, h, w):
+def patterns2Numbers(data, h, w, ndi):
     samples_binary = []
     samples_decimal = []
-    l = h * w
+    l = h * w * ndi
     for i in range(0, data.shape[0], l):
         f_map = data[i:i+l,:] #36x8
         samples_binary.append(f_map)
@@ -91,12 +91,12 @@ def getVifFold(data, labels, fold, shuffle):
 
 def main():
     # data_binary, labels = _load_data(os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'ITQdata', 'ITQfeatures_out_iter=10.mat'))
-    path = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','ITQ-vif_bits=7_iter=100.mat')
+    path = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','ITQ-vif_ndi=3_bits=7_iter=50.mat')
     data_binary, labels = _load_data(path)
     (nsamples, bits) = data_binary.shape
     print('File: ',path,' Loaded data ',data_binary.shape,'labels ', len(labels), type(labels))
-    data_binary, data_decimal = patterns2Numbers(data_binary, h=6, w=6)
-    print('data_binary=', len(data_binary), len(data_decimal))
+    data_binary, data_decimal = patterns2Numbers(data_binary, h=6, w=6, ndi=3)
+    print('data_binary=', len(data_binary), len(data_binary[0]), len(data_decimal))
     dataset = 'vif'
     # train_bits= data_binary[0:800]
     # test_bits = data_binary[800: len(data_binary)]
@@ -132,6 +132,7 @@ def main():
     X_hist = []
     
     for dec in data_decimal:
+        print('dec=', len(dec))
         (hist, _) = np.histogram(dec, bins=2**bits, range=(0,2**bits -1))
         X_hist.append(hist)
     print('Histogram nsamples', len(X_hist))
@@ -150,35 +151,30 @@ def main():
     # print(classification_report(y_test, grid_predictions)) 
     
     # kernels = ['linear', 'poly', 'rbf', 'sigmoid']
-    kernels = ['rbf']
-    if dataset == 'vif':
-        for kernel in kernels:
-            scores = []
-            for fold in range(5):
-                print('****** ', kernel)
-                X_train, y_train, X_test, y_test = getVifFold(X_hist, labels, fold + 1, shuffle=True)
-                print('Fold types: ', type(X_train), type(y_train), type(X_test), type(y_test))
-                print('Fold shapes: ', len(X_train), len(y_train), len(X_test), len(y_test))
-                # clf = svm.SVC(kernel=kernel)  # Linear Kernel
-                clf = svm.SVC(C=10, gamma=0.0001, kernel=kernel)
-                clf.fit(X_train, y_train)
-                y_pred = clf.predict(X_test)
-                scores.append(metrics.accuracy_score(y_test, y_pred))
-            print(scores)
-            scores = np.array(scores)
-            print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
-    elif dataset == 'hockey':
-        for kernel in kernels:
-            print('****** ',kernel)
-            #Create a svm Classifier
-            clf = svm.SVC(kernel=kernel)  # Linear Kernel
-            # clf = svm.SVC(C=10, gamma=0.0001, kernel=kernel)
-            scores = cross_val_score(clf, X_hist, labels, cv=5)
-            print(scores)
-            # clf.fit(X_train, y_train)
-            # y_pred = clf.predict(X_test)
-            # print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
-            print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    # kernels = ['rbf']
+    # if dataset == 'vif':
+    #     for kernel in kernels:
+    #         scores = []
+    #         for fold in range(5):
+    #             print('****** ', kernel)
+    #             X_train, y_train, X_test, y_test = getVifFold(X_hist, labels, fold + 1, shuffle=True)
+    #             print('Fold types: ', type(X_train), type(y_train), type(X_test), type(y_test))
+    #             print('Fold shapes: ', len(X_train), len(y_train), len(X_test), len(y_test))
+    #             # clf = svm.SVC(kernel=kernel)  # Linear Kernel
+    #             clf = svm.SVC(C=10, gamma=0.0001, kernel=kernel)
+    #             clf.fit(X_train, y_train)
+    #             y_pred = clf.predict(X_test)
+    #             scores.append(metrics.accuracy_score(y_test, y_pred))
+    #         print(scores)
+    #         scores = np.array(scores)
+    #         print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    # elif dataset == 'hockey':
+    #     for kernel in kernels:
+    #         print('****** ',kernel)
+    #         clf = svm.SVC(kernel=kernel)  
+    #         scores = cross_val_score(clf, X_hist, labels, cv=5)
+    #         print(scores)
+    #         print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     
 
 if __name__ == "__main__":

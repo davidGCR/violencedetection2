@@ -193,6 +193,7 @@ def __main__():
                                     numDiPerVideos=args.numDynamicImagesPerVideo,
                                     joinType=args.joinType,
                                     use_pretrained=True)
+        
         model.to(DEVICE)
         params_to_update = verifiParametersToTrain(model, args.featureExtract)
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
