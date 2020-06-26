@@ -236,10 +236,10 @@ def __main__():
                                         use_pretrained=True)
             model.to(DEVICE)
             if args.transferModel is not None:
-            if DEVICE == 'cuda:0':
-                model.load_state_dict(torch.load(args.transferModel), strict=False)
-            else:
-                model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
+                if DEVICE == 'cuda:0':
+                    model.load_state_dict(torch.load(args.transferModel), strict=False)
+                else:
+                    model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
             
             params_to_update = verifiParametersToTrain(model, args.featureExtract)
             optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)

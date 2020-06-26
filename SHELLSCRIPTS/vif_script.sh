@@ -7,8 +7,8 @@ python3  VIOLENCE_DETECTION/vif_detection.py \
 --batchSize 8 \
 --featureExtract false \
 --joinType maxTempPool \
---videoSegmentLength 10 \
---numDynamicImagesPerVideo 3 \
+--videoSegmentLength 30 \
+--numDynamicImagesPerVideo 1 \
 --positionSegment begin \
 --overlapping 0 \
 --frameSkip 0 \
