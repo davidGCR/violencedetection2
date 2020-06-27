@@ -141,19 +141,21 @@ def __main__():
         }
         dt_loader = MyDataloader(default_args)
         model, _ = initialize_model(model_name=args.modelType,
-                                        num_classes=2,
-                                        feature_extract=args.featureExtract,
-                                        numDiPerVideos=args.numDynamicImagesPerVideo,
-                                        joinType=args.joinType,
-                                        use_pretrained=True)
+                                    num_classes=2,
+                                    feature_extract=args.featureExtract,
+                                    numDiPerVideos=args.numDynamicImagesPerVideo,
+                                    joinType=args.joinType,
+                                    use_pretrained=True)
+        tf_model = False
         if args.transferModel is not None:
+            tf_model = True
             if DEVICE == 'cuda:0':
                 model.load_state_dict(torch.load(args.transferModel), strict=False)
             else:
                 model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
         
         model = initialize_FCNN(model_name=args.modelType, original_model=model)
-        print(model)
+        # print(model)
         model.eval()
         outs = []
         labels = []
@@ -186,7 +188,8 @@ def __main__():
         print('outs=', outs.shape, type(outs))
         # print(labels)
         # print('conv5_train_test({})=shape {}, type {}'.format(i+1,outs.shape, type(outs)))
-        sio.savemat(file_name=os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','vif-alexnet-ndi=3-ft=Yes.mat'),mdict={'fmaps':outs, 'labels':labels})
+        name = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','vif-{}-ndi={}-len={}-tfModel={}.mat'.format(args.modelType,args.numDynamicImagesPerVideo,args.videoSegmentLength, tf_model))
+        sio.savemat(file_name=name,mdict={'fmaps':outs, 'labels':labels})
     elif args.split_type == 'cross-val':
         print(args.split_type)
         for fold in range(5):
@@ -223,7 +226,7 @@ def __main__():
             # print('Train-mean={}, std0={}, std1={}'.format(pop_mean, pop_std0, pop_std1))
             # pop_mean_test, pop_std0_test, pop_std1_test = compute_mean_std(test_dt_loader.dataloader)
             # print('Test-mean={}, std0={}, std1={}'.format(pop_mean_test, pop_std0_test, pop_std1_test))
-            transforms = vifTransforms(input_size=224, train_mean=[0.51311874, 0.5130452,  0.5135336 ], train_std=[0.11229729, 0.10967916, 0.10823903], test_mean=[0.51311874,0.5130452,  0.5135336 ], test_std=[0.11229729, 0.10967916, 0.10823903])
+            transforms = vifTransforms(input_size=224, train_mean=[0.5168978,  0.51586777, 0.5158742], train_std=[0.12358205, 0.11996705, 0.11759791], test_mean=[0.5168978,  0.51586777, 0.5158742], test_std=[0.12358205, 0.11996705, 0.11759791])
             train_dt_loader.transform = transforms['train']
             # print('Dataloader',train_dt_loader.dataloader)
             test_dt_loader.transform = transforms['val']
@@ -236,6 +239,7 @@ def __main__():
                                         use_pretrained=True)
             model.to(DEVICE)
             if args.transferModel is not None:
+                print('Transfering model ...')
                 if DEVICE == 'cuda:0':
                     model.load_state_dict(torch.load(args.transferModel), strict=False)
                 else:

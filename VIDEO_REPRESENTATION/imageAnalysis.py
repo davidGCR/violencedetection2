@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dynamicImage import getDynamicImage
 from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData, vifLoadData
 from VIOLENCE_DETECTION.dataloader import MyDataloader
-from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, compute_mean_std
 from UTIL.util import min_max_normalize_np, min_max_normalize_tensor
 from VIDEO_REPRESENTATION.preprocessor import Preprocessor
 import cv2
@@ -160,7 +160,9 @@ def main():
     }
     
     dt_loader = MyDataloader(args)
-    video = 'football_crowds__HARRY_KEWELL_SCORES_CROWD_GO_NUTS__phillipstama__K7qlpU7tMhQ'
+    pop_mean, pop_std0, pop_std1 = compute_mean_std(dt_loader.dataloader)
+    print('Train-mean={}, std0={}, std1={}'.format(pop_mean, pop_std0, pop_std1))
+    video = 'fans_violence__English_Hooligans_vs_Turkey_Ultras__Vandal83__J8S2-pGz8ao'
     index, v_name = dt_loader.dataset.getindex(video)
     # print(type(index))
     print('index={}, name={}, label={}, numFrames={}'.format(index, datasetAll[index], labelsAll[index], type(numFramesAll[index])))

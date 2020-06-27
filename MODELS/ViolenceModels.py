@@ -100,12 +100,23 @@ class AlexNetConv(nn.Module):
         x = self.features(x)
         return x
 
+class ResNetConv(nn.Module):
+    def __init__(self, original_model):
+        super(ResNetConv, self).__init__()
+        self.convLayers = nn.Sequential(
+            *list(original_model.convLayers.children())
+        )
+
+    def forward(self, x):
+        batch_size, timesteps, C, H, W = x.size()
+        x = x.view(batch_size * timesteps, C, H, W)
+        x = self.convLayers(x)
+        return x
 
 class ResNet(nn.Module):
-    def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract, inference=False):
+    def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract):
         super(ResNet, self).__init__()
         self.numDiPerVideos = numDiPerVideos
-        self.inference = inference
         self.num_classes = num_classes
         self.joinType = joinType
         self.model_ft = None
