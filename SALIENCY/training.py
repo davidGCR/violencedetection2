@@ -45,7 +45,7 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
         print("----- Epoch {}/{}".format(epoch+1, num_epochs))
         running_loss = 0.0
         running_loss_train = 0.0
-        for i, data in tqdm(enumerate(dataloader, 0)):
+        for data in tqdm(dataloader):
             # get the inputs
             # dynamicImages, label, vid_name, preprocessing_time
             inputs, labels, video_name, _ = data  #dataset load [bs,ndi,c,w,h]
