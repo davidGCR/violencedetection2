@@ -155,38 +155,29 @@ def __main__():
 
     elif args.split_type[:-2] == 'train-test':
         train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit(args.split_type, datasetAll, labelsAll, numFramesAll)
-        train_dt_loader = Dataloader(X=train_x,
-                                    y=train_y,
-                                    numFrames=train_numFrames,
-                                    transform=transforms['train'],
-                                    NDI=args.numDynamicImagesPerVideo,
-                                    videoSegmentLength=args.videoSegmentLength,
-                                    positionSegment=args.positionSegment,
-                                    overlapping=args.overlapping,
-                                    frameSkip=args.frameSkip,
-                                    skipInitialFrames=0,
-                                    segmentPreprocessing=args.segmentPreprocessing,
-                                    batchSize=args.batchSize,
-                                    shuffle=True,
-                                    numWorkers=args.numWorkers,
-                                    pptype= None)
-        
-        test_dt_loader = Dataloader(X=test_x,
-                                    y=test_y,
-                                    numFrames=test_numFrames,
-                                    transform=transforms['val'],
-                                    NDI=args.numDynamicImagesPerVideo,
-                                    videoSegmentLength=args.videoSegmentLength,
-                                    positionSegment=args.positionSegment,
-                                    overlapping=args.overlapping,
-                                    frameSkip=args.frameSkip,
-                                    skipInitialFrames=0,
-                                    segmentPreprocessing=args.segmentPreprocessing,
-                                    batchSize=args.batchSize,
-                                    shuffle=True,
-                                    numWorkers=args.numWorkers,
-                                    pptype=None)
-                                         
+        default_args = {
+            'X': train_x,
+            'y': train_y,
+            'numFrames': train_numFrames,
+            'transform': transforms['train'],
+            'NDI': args.numDynamicImagesPerVideo,
+            'videoSegmentLength': args.videoSegmentLength,
+            'positionSegment': args.positionSegment,
+            'overlapping': args.overlapping,
+            'frameSkip': args.frameSkip,
+            'skipInitialFrames': 0,
+            'batchSize': args.batchSize,
+            'shuffle': True,
+            'numWorkers': args.numWorkers,
+            'pptype': None,
+            'modelType': args.modelType
+        }
+        train_dt_loader = MyDataloader(default_args)
+        default_args['X'] = test_x
+        default_args['y'] = test_y
+        default_args['numFrames'] = test_numFrames
+        default_args['transform'] = transforms['val']
+        test_dt_loader = MyDataloader(default_args)
         model, _ = initialize_model(model_name=args.modelType,
                                     num_classes=2,
                                     feature_extract=args.featureExtract,
@@ -249,38 +240,30 @@ def __main__():
             test_x = list(itemgetter(*test_idx)(datasetAll))
             test_y = list(itemgetter(*test_idx)(labelsAll))
             test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-            train_dt_loader = Dataloader(X=train_x,
-                                        y=train_y,
-                                        numFrames=train_numFrames,
-                                        transform=transforms['train'],
-                                        NDI=args.numDynamicImagesPerVideo,
-                                        videoSegmentLength=args.videoSegmentLength,
-                                        positionSegment=args.positionSegment,
-                                        overlapping=args.overlapping,
-                                        frameSkip=args.frameSkip,
-                                        skipInitialFrames=0,
-                                        segmentPreprocessing=args.segmentPreprocessing,
-                                        batchSize=args.batchSize,
-                                        shuffle=True,
-                                        numWorkers=args.numWorkers,
-                                        pptype=None)
-        
-            test_dt_loader = Dataloader(X=test_x,
-                                        y=test_y,
-                                        numFrames=test_numFrames,
-                                        transform=transforms['val'],
-                                        NDI=args.numDynamicImagesPerVideo,
-                                        videoSegmentLength=args.videoSegmentLength,
-                                        positionSegment=args.positionSegment,
-                                        overlapping=args.overlapping,
-                                        frameSkip=args.frameSkip,
-                                        skipInitialFrames=0,
-                                        segmentPreprocessing=args.segmentPreprocessing,
-                                        batchSize=args.batchSize,
-                                        shuffle=True,
-                                        numWorkers=args.numWorkers,
-                                        pptype=None)
-            
+
+            default_args = {
+                'X': train_x,
+                'y': train_y,
+                'numFrames': train_numFrames,
+                'transform': transforms['train'],
+                'NDI': args.numDynamicImagesPerVideo,
+                'videoSegmentLength': args.videoSegmentLength,
+                'positionSegment': args.positionSegment,
+                'overlapping': args.overlapping,
+                'frameSkip': args.frameSkip,
+                'skipInitialFrames': 0,
+                'batchSize': args.batchSize,
+                'shuffle': True,
+                'numWorkers': args.numWorkers,
+                'pptype': None,
+                'modelType': args.modelType
+            }
+            train_dt_loader = MyDataloader(default_args)
+            default_args['X'] = test_x
+            default_args['y'] = test_y
+            default_args['numFrames'] = test_numFrames
+            default_args['transform'] = transforms['val']
+            test_dt_loader = MyDataloader(default_args)
             model, _ = initialize_model(model_name=args.modelType,
                                         num_classes=2,
                                         feature_extract=args.featureExtract,
@@ -306,8 +289,8 @@ def __main__():
             print('Tensorboard logDir={}'.format(log_dir))
             tr = trainer.Trainer(model=model,
                             model_transfer= args.transferModel,
-                            train_dataloader=train_dt_loader.getDataloader(),
-                            val_dataloader=test_dt_loader.getDataloader(),
+                            train_dataloader=train_dt_loader.dataloader,
+                            val_dataloader=test_dt_loader.dataloader,
                             criterion=criterion,
                             optimizer=optimizer,
                             num_epochs=args.numEpochs,

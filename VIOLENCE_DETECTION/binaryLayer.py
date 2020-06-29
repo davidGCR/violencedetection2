@@ -91,11 +91,13 @@ def getVifFold(data, labels, fold, shuffle):
 
 def main():
     # data_binary, labels = _load_data(os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'ITQdata', 'ITQfeatures_out_iter=10.mat'))
-    path = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','ITQ-vif-alexnet-ndi=5-len=10-tfModel=False-itqBits=8-itqEpochs=50.mat')
+    path = os.path.join('/Users/davidchoqueluqueroman/Google Drive/ITQData','ITQ-vif-resnet50-ndi=4-len=10-tfModel=False-itqBits=8-itqEpochs=50.mat')
     data_binary, labels = _load_data(path)
     (nsamples, bits) = data_binary.shape
-    print('File: ',path,' Loaded data ',data_binary.shape,'labels ', len(labels), type(labels))
-    data_binary, data_decimal = patterns2Numbers(data_binary, h=6, w=6, ndi=5)
+    print('File: ', path, ' Loaded data ', data_binary.shape, 'labels ', len(labels), type(labels))
+    h = 7
+    w = 7
+    data_binary, data_decimal = patterns2Numbers(data_binary, h=h, w=w, ndi=4)
     print('data_binary=', len(data_binary), len(data_binary[0]), len(data_decimal))
     dataset = 'vif'
     # train_bits= data_binary[0:800]
@@ -134,9 +136,9 @@ def main():
     for dec in data_decimal:
         # print('dec=', len(dec))
         l = []
-        for i in range(0, len(dec), 36):
+        for i in range(0, len(dec), h*w):
             # print('****', i)
-            feature = dec[i:i+36]
+            feature = dec[i:i+h*w]
             (hist, _) = np.histogram(feature, bins=2 ** bits, range=(0, 2 ** bits - 1))
             l.append(hist)
         # X_hist.append(np.concatenate(l, axis=0))

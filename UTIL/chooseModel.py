@@ -20,6 +20,7 @@ def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVi
 def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, joinType, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
+    print('feature_extract: ', feature_extract)
     model_ft = None
     input_size = 0
     if model_name == "alexnet" or model_name == "alexnetv2":

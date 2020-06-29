@@ -38,7 +38,11 @@ def hockeyTransforms(input_size):
     }
     return data_transforms
 
-def vifTransforms(input_size, train_mean, train_std, test_mean, test_std):
+def vifTransforms(input_size,
+                    train_mean=[0.5168978, 0.51586777, 0.5158742],
+                    train_std=[0.12358205, 0.11996705, 0.11759791],
+                    test_mean=[0.5168978, 0.51586777, 0.5158742],
+                    test_std=[0.12358205, 0.11996705, 0.1175979]):
     # Data augmentation and normalization for training
     # Just normalization for validation
     data_transforms = {

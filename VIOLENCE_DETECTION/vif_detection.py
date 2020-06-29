@@ -121,12 +121,13 @@ def __main__():
     
     if args.split_type == 'fully-conv':
         datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+        transforms = vifTransforms(input_size=224)
         print('splitsLen=', splitsLen)
         default_args = {
                 'X': datasetAll,
                 'y': labelsAll,
                 'numFrames': numFramesAll,
-                'transform': None,
+                'transform': transforms['val'],
                 'NDI': args.numDynamicImagesPerVideo,
                 'videoSegmentLength': args.videoSegmentLength,
                 'positionSegment': args.positionSegment,
