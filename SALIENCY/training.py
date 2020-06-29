@@ -38,7 +38,7 @@ def load_checkpoint(net,optimizer,filename='small.pth.tar'):
     optimizer.load_state_dict(checkpoint['optimizer'])
     return net,optimizer
 
-def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_epochs, dataloader, numDynamicImages):
+def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_epochs, dataloader, numDynamicImages, checkpoint_path):
     loss_func = Loss(num_classes=2, regularizers=regularizers, num_dynamic_images=numDynamicImages)
     best_loss = 1000.0
     for epoch in range(num_epochs):  # loop over the dataset multiple times
@@ -70,8 +70,10 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
         epoch_loss_train = running_loss_train / len(dataloader.dataset)
         print("{} RawLoss: {:.4f} Loss: {:.4f}".format('train', epoch_loss, epoch_loss_train))
 
-        # if epoch_loss < best_loss:
-        #     best_loss = epoch_loss
+        if checkpoint_path is not None and epoch_loss < best_loss:
+            best_loss = epoch_loss
+            print('Saving model...',checkpoint_path+'-epoch-'+str(epoch)+'.pth')
+            torch.save(mask_model.state_dict(), checkpoint_path+'-epoch-'+str(epoch)+'.pth')
         #     print('Saving entire saliency model...')
         #     save_checkpoint(saliency_m,checkpoint_path)
 
@@ -87,6 +89,7 @@ def __anomaly_main__():
     parser.add_argument("--preserverL", type=float, default=0.3)
     parser.add_argument("--areaPowerL", type=float, default=0.3)
     parser.add_argument("--numDiPerVideos", type=int)
+    parser.add_argument("--saveCheckpoint",type=lambda x: (str(x).lower() == 'true'), default=False)
     
     args = parser.parse_args()
     
@@ -142,6 +145,16 @@ def __anomaly_main__():
         classifier_model.load_state_dict(torch.load(args.classifier, map_location=DEVICE))
     classifier_model.to(DEVICE)
     classifier_model.eval()
+    checkpoint_path = None
+    if args.saveCheckpoint:
+        checkpoint_path = 'MaskModel_backnone={}_NDI={}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(args.modelType,
+                                                                                                                                args.numDiPerVideo,
+                                                                                                                                args.areaL,
+                                                                                                                                args.smoothL,
+                                                                                                                                args.preserverL,
+                                                                                                                                args.areaPowerL,
+                                                                                                                                args.numEpochs)
+        checkpoint_path = os.path.join(constants.PATH_RESULTS,'MASKING','checkpoints',checkpoint_path)                                                                                                                                
     train(mask_model=mask_model,
           criterion=criterion,
           optimizer=optimizer,
@@ -149,7 +162,8 @@ def __anomaly_main__():
           classifier_model=classifier_model,
           num_epochs=args.numEpochs,
           dataloader=train_dt_loader.dataloader,
-          numDynamicImages= args.numDiPerVideos)
+          numDynamicImages=args.numDiPerVideos,
+          checkpoint_path=checkpoint_path)
     # train(num_classes, args.num_epochs, regularizers, train_dt_loader, args.classifier, args.numDiPerVideos)
 
 __anomaly_main__()
