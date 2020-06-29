@@ -121,13 +121,6 @@ def __anomaly_main__():
             'modelType': args.modelType
     }
     train_dt_loader = MyDataloader(default_args)
-    # path_dataset = constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED
-    # train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
-    # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    # dataloaders_dict, test_names = anomaly_initializeDataset.initialize_final_anomaly_dataset(path_dataset, train_videos_path, test_videos_path,
-    #                                 batch_size, num_workers, numDiPerVideos, transforms_dataset, maxNumFramesOnVideo, videoSegmentLength, positionSegment, shuffle,0)
-    
-    # checkpoint_path = os.path.join(saliency_model_folder,'mask_model_'+str(videoSegmentLength)+'_frames_di_'+checkpoint_info + '_epochs-' + str(num_epochs) + '.tar')
     mask_model = build_saliency_model(num_classes)
     mask_model.to(DEVICE)
     criterion = nn.CrossEntropyLoss()
@@ -148,7 +141,7 @@ def __anomaly_main__():
     checkpoint_path = None
     if args.saveCheckpoint:
         checkpoint_path = 'MaskModel_backnone={}_NDI={}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(args.modelType,
-                                                                                                                                args.numDiPerVideo,
+                                                                                                                                args.numDiPerVideos,
                                                                                                                                 args.areaL,
                                                                                                                                 args.smoothL,
                                                                                                                                 args.preserverL,
