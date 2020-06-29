@@ -22,23 +22,17 @@ class Loss:
         self.area_loss_power = regularizers['area_loss_power']
     
     def get(self, masks, images, targets, black_box_func):
-        if self.num_dynamic_images > 1:
-            images_to_mask = images[0]
-            # images_to_mask = images_to_mask.unsqueeze(dim=0)
-            images_for_bbox = images
-            # print('images: {}, images_to_mask: {}'.format(images.size(),images_to_mask.size()))
-        else:
-            images_to_mask = images
-            images_for_bbox = images
+        batch_size, timesteps, C, H, W = images.size()
+        # images = images.view(batch_size * timesteps, C, H, W)
+
         one_hot_targets = self.one_hot(targets)
-        
         area_loss = self.area_loss(masks)
         smoothness_loss = self.smoothness_loss(masks)
-        destroyer_loss = self.destroyer_loss(images_to_mask, masks, one_hot_targets, black_box_func, images_for_bbox)
-        preserver_loss = self.preserver_loss(images_to_mask,masks,one_hot_targets,black_box_func, images_for_bbox)
+        # print('Images before destroyer_loss: ', images.size())
+        destroyer_loss = self.destroyer_loss(images, masks, one_hot_targets, black_box_func)
+        preserver_loss = self.preserver_loss(images, masks, one_hot_targets, black_box_func)
         
-        
-        return destroyer_loss + self.area_loss_coef*area_loss + self.smoothness_loss_coef*smoothness_loss + self.preserver_loss_coef*preserver_loss
+        return destroyer_loss + self.area_loss_coef * area_loss + self.smoothness_loss_coef * smoothness_loss + self.preserver_loss_coef * preserver_loss
         
     def one_hot(self,targets):
         depth = self.num_classes
@@ -69,28 +63,32 @@ class Loss:
             border = 0.
         return (x_loss + y_loss + border) / float(power * masks.size(0))  # watch out, normalised by the batch size!
   
-    def destroyer_loss(self,images_to_mask,masks,targets,black_box_func,images_for_bbox):
-        destroyed_images = self.apply_mask(images_to_mask, 1 - masks)
+    def destroyer_loss(self, images, masks, targets, black_box_func):
+        
+        destroyed_images = self.apply_mask(images, 1 - masks)
         # destroyed_images = torch.unsqueeze(destroyed_images, 0)
         # destroyed_images = destroyed_images.permute(1, 0, 2, 3, 4)
-        # print('====>destroyed_images: ', destroyed_images.size()) #torch.Size([8, 1, 3, 224, 224])
-        out = black_box_func(images_for_bbox)
+        # print('====>destroyed_images: ', images.size()) #torch.Size([8, 1, 3, 224, 224])
+        out = black_box_func(images)
         # print('out destroyer: ', out.size(), targets.size())
         
         return self.cw_loss(out, targets, targeted=False, t_conf=1., nt_conf=5)
   
-    def preserver_loss(self,images_to_mask,masks,targets,black_box_func, images_for_bbox):
-        preserved_images = self.apply_mask(images_to_mask, masks)
+    def preserver_loss(self, images, masks, targets, black_box_func):
+        preserved_images = self.apply_mask(images, masks)
         # preserved_images = torch.unsqueeze(preserved_images,0)
         #preserved_images = preserved_images.permute(1, 0, 2, 3, 4)
-        out = black_box_func(images_for_bbox)
+        out = black_box_func(images)
         
         return self.cw_loss(out, targets, targeted=True, t_conf=1., nt_conf=1)
   
-    def apply_mask(self,images, mask, noise=True, random_colors=True, blurred_version_prob=0.5, noise_std=0.11,
+    def apply_mask(self,imgs, mask, noise=True, random_colors=True, blurred_version_prob=0.5, noise_std=0.11,
                  color_range=0.66, blur_kernel_size=55, blur_sigma=11,
                  bypass=0., boolean=False, preserved_imgs_noise_std=0.03):
-        images = images.clone()
+        
+        images = imgs.clone()
+        batch_size, timesteps, C, H, W = images.size()
+        images = images.view(batch_size * timesteps, C, H, W)
         cuda = images.is_cuda
 
         if boolean:
@@ -98,7 +96,7 @@ class Loss:
             return (mask > 0.5).float() *images
 
         assert 0. <= bypass < 0.9
-        n, c, _, _ = images.size()
+        n, c, h, w = images.size()
 
         if preserved_imgs_noise_std > 0:
             images = images + Variable(self.tensor_like(images).normal_(std=preserved_imgs_noise_std) , requires_grad=False)
