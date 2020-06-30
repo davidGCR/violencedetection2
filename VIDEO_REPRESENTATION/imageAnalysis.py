@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dynamicImage import getDynamicImage
+from VIDEO_REPRESENTATION.dynamicImage import getDynamicImage
 from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData, vifLoadData
 from VIOLENCE_DETECTION.dataloader import MyDataloader
 from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, compute_mean_std

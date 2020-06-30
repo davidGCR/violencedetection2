@@ -1,4 +1,4 @@
-python3  VIOLENCE_DETECTION/crime2local_detection.py \
+python3  VIOLENCE_DETECTION/ucfcrime2local_detection.py \
 --modelType alexnetv2 \
 --numEpochs 2 \
 --numWorkers 4 \

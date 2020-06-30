@@ -14,4 +14,5 @@ python3 SALIENCY/training.py  \
 --numDiPerVideos 1 \
 --batchSize 8 \
 --numEpochs 10 \
---numWorkers 1  \
+--numWorkers 8  \
+--saveModel True

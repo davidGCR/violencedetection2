@@ -15,8 +15,9 @@ class Preprocessor():
             seq.append(frame)
         return seq
     
-    def binarize(self, grey):
-        ret2, thresh_binary = cv2.threshold(diff1,127,255,cv2.THRESH_BINARY)
+    def binarize(self, grey, thresh, maxval):
+        ret2, thresh_binary = cv2.threshold(grey, thresh, maxval, cv2.THRESH_BINARY)
+        return thresh_binary
 
     def bakgroundFrameDifference(self, current, previous):
         current = cv2.cvtColor(current, cv2.COLOR_BGR2GRAY)
