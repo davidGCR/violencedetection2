@@ -46,20 +46,14 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
         running_loss = 0.0
         running_loss_train = 0.0
         for data in tqdm(dataloader):
-            # get the inputs
-            # dynamicImages, label, vid_name, preprocessing_time
             inputs, labels, video_name, _ = data  #dataset load [bs,ndi,c,w,h]
             # print('Inputs=', inputs.size())
-            # print('dataset element: ',inputs_r.shape) #torch.Size([8, 1, 3, 224, 224])
-            # if numDynamicImages > 1:
-            #     inputs = inputs.permute(1, 0, 2, 3, 4)
-            #     inputs = torch.squeeze(inputs, 0)
             # wrap them in Variable
             inputs, labels = Variable(inputs.to(DEVICE)), Variable(labels.to(DEVICE))
             # zero the parameter gradients
             optimizer.zero_grad()
             mask, out = mask_model(inputs, labels)
-            print('MAsk passed=', mask.size())
+            # print('MAsk passed=', mask.size())
             loss = loss_func.get(mask, inputs, labels, classifier_model)
             # running_loss += loss.data[0]
             running_loss += loss.item()
@@ -73,8 +67,9 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
 
         if checkpoint_path is not None and epoch_loss < best_loss:
             best_loss = epoch_loss
-            print('Saving model...',checkpoint_path+'-epoch-'+str(epoch)+'.pth')
-            torch.save(mask_model.state_dict(), checkpoint_path+'-epoch-'+str(epoch)+'-loss='+str(epoch_loss)+'.pth')
+            name = '{}_epoch={}_loss={}.pth'.format(checkpoint_path, epoch, epoch_loss)
+            print('Saving model...', name)
+            torch.save(mask_model.state_dict(), name)
         #     print('Saving entire saliency model...')
         #     save_checkpoint(saliency_m,checkpoint_path)
 
@@ -90,6 +85,7 @@ def __anomaly_main__():
     parser.add_argument("--preserverL", type=float, default=0.3)
     parser.add_argument("--areaPowerL", type=float, default=0.3)
     parser.add_argument("--numDiPerVideos", type=int)
+    parser.add_argument("--segmentLen", type=int)
     parser.add_argument("--saveCheckpoint",type=lambda x: (str(x).lower() == 'true'), default=False)
     
     args = parser.parse_args()
@@ -110,7 +106,7 @@ def __anomaly_main__():
             'numFrames': train_numFrames,
             'transform': transforms['train'],
             'NDI': args.numDiPerVideos,
-            'videoSegmentLength': 20,
+            'videoSegmentLength': args.segmentLen,
             'positionSegment': 'begin',
             'overlapping': 0,
             'frameSkip': 0,
@@ -141,8 +137,9 @@ def __anomaly_main__():
     classifier_model.eval()
     checkpoint_path = None
     if args.saveCheckpoint:
-        checkpoint_path = 'MaskModel_backnone={}_NDI={}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(args.modelType,
+        checkpoint_path = 'MaskModel_backnone={}_NDI/len={}/{}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(args.modelType,
                                                                                                                                 args.numDiPerVideos,
+                                                                                                                                args.segmentLen,
                                                                                                                                 args.areaL,
                                                                                                                                 args.smoothL,
                                                                                                                                 args.preserverL,

@@ -321,5 +321,6 @@ def __main__():
     print('CV Losses=', cv_test_losses)
     print('CV Epochs=', cv_final_epochs)
     print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
+    print("Accuracy: %0.3f (+/- %0.3f), Losses: %0.3f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))
 
 __main__()
