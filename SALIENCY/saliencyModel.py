@@ -121,9 +121,38 @@ class SaliencyModel(nn.Module):
         # print('=> out relu:', out.size())
         
         scale1 = self.layer1(out)
+        imgNums1, c1, h1, w1 = scale1.size()  #torch.Size([16, 64, 224, 224])
+        scale1_cat = torch.flatten(scale1, 1)
+        scale1_cat = scale1_cat.view(batch_size, timesteps, c1 * h1 * w1)
+        scale1_cat = scale1_cat.max(dim=1).values
+        scale1_cat = scale1_cat.view(batch_size, c1, h1, w1) #torch.Size([8, 64, 224, 224])
+        # print('scale1Final=', scale1_cat.size())
+
         scale2 = self.layer2(scale1)
+        imgNums2, c2, h2, w2 = scale2.size()  # torch.Size([16, 128, 112, 112])
+        scale2_cat = torch.flatten(scale2, 1)
+        scale2_cat = scale2_cat.view(batch_size, timesteps, c2 * h2 * w2)
+        scale2_cat = scale2_cat.max(dim=1).values
+        scale2_cat = scale2_cat.view(batch_size, c2, h2, w2) #torch.Size([8, 128, 112, 112])
+        # print('scale2Final=', scale2_cat.size())
+        
         scale3 = self.layer3(scale2)
+        imgNums3, c3, h3, w3 = scale3.size()  # torch.Size([16, 256, 56, 56])
+        scale3_cat = torch.flatten(scale3, 1)
+        scale3_cat = scale3_cat.view(batch_size, timesteps, c3 * h3 * w3)
+        scale3_cat = scale3_cat.max(dim=1).values
+        scale3_cat = scale3_cat.view(batch_size, c3, h3, w3) # torch.Size([8, 256, 56, 56])
+        # print('scale3Final=', scale3_cat.size())
+        
         scale4 = self.layer4(scale3)
+        imgNums4, c4, h4, w4 = scale4.size() # torch.Size([16, 512, 28, 28])
+        scale4_cat = torch.flatten(scale4, 1)
+        scale4_cat = scale4_cat.view(batch_size, timesteps, c4 * h4 * w4)
+        scale4_cat = scale4_cat.max(dim=1).values
+        scale4_cat = scale4_cat.view(batch_size, c4, h4, w4) #torch.Size([8, 512, 28, 28])
+
+        scale4 = scale4_cat
+        # print('scale4Final=', scale4_cat.size())
         
         # feature filter
         em = torch.squeeze(self.embedding(labels.view(-1, 1)), 1)
@@ -131,6 +160,10 @@ class SaliencyModel(nn.Module):
         th = torch.sigmoid(act)
         scale4 = scale4 * th
         # print('=> out scale4:', scale4.size())
+
+        scale3 = scale3_cat
+        scale2 = scale2_cat
+        scale1 = scale1_cat
         
         upsample3 = self.uplayer4(scale4,scale3)
         upsample2 = self.uplayer3(upsample3,scale2)

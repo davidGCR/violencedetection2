@@ -59,6 +59,7 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
             # zero the parameter gradients
             optimizer.zero_grad()
             mask, out = mask_model(inputs, labels)
+            print('MAsk passed=', mask.size())
             loss = loss_func.get(mask, inputs, labels, classifier_model)
             # running_loss += loss.data[0]
             running_loss += loss.item()

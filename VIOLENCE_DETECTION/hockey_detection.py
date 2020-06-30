@@ -218,7 +218,7 @@ def __main__():
             exp_lr_scheduler.step()
             flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
             if args.saveCheckpoint:
-                tr.saveCheckpoint(epoch, flac)
+                tr.saveCheckpoint(epoch, flac, epoch_acc_val, epoch_loss_val)
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)

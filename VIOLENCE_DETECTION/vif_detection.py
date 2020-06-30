@@ -278,7 +278,7 @@ def __main__():
                 exp_lr_scheduler.step()
                 flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
                 if args.saveCheckpoint:
-                    tr.saveCheckpoint(epoch, flac)
+                    tr.saveCheckpoint(epoch, flac, epoch_acc_val, epoch_loss_val)
                 writer.add_scalar('training loss', epoch_loss_train, epoch)
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
@@ -290,6 +290,6 @@ def __main__():
         print('CV Losses=', cv_test_losses)
         print('CV Epochs=', cv_final_epochs)
         print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
-        print("Accuracy: %0.2f (+/- %0.2f), Losses: %0.2f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))                                                                                    
+        print("Accuracy: %0.2f (+/- %0.2f), Losses: %0.2f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))  
 
 __main__()

@@ -131,9 +131,9 @@ class Trainer:
 
         return epoch_loss, epoch_acc.item()
     
-    def saveCheckpoint(self, epoch, flac):
+    def saveCheckpoint(self, epoch, flac, acc, loss):
         if flac:
             print('Saving model...',self._checkpoint_path+'-epoch-'+str(epoch)+'.pth')
             # torch.save(self.model, self._checkpoint_path+'-epoch-'+str(epoch)+'.tar')    
-            torch.save(self.model.state_dict(), self._checkpoint_path+'-epoch-'+str(epoch)+'.pth')
+            torch.save(self.model.state_dict(), '{}_epoch={}_acc={}_loss={}.pth'.format(self._checkpoint_path,epoch, acc, loss))
 
