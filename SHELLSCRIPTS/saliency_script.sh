@@ -9,10 +9,11 @@
 
 # # SALIENCY: Train U-NET model
 python3 SALIENCY/training.py  \
---classifier RESULTS/HOCKEY/checkpoints/HOCKEY-Model-resnet50,segmentLen-20,numDynIms-1,frameSkip-0,segmentPreprocessing-False,epochs-25,split_type-cross-val,fold-2-epoch-24.pth \
---modelType resnet50 \
+--classifier RESULTS/HOCKEY/checkpoints/HOCKEY-Model-alexnetv2,segmentLen-30,numDynIms-1,frameSkip-0,segmentPreprocessing-False,epochs-25,split_type-train-test-1-epoch-16.pth \
+--modelType alexnetv2 \
 --numDiPerVideos 1 \
+--segmentLen 30 \
 --batchSize 8 \
 --numEpochs 10 \
 --numWorkers 8  \
---saveModel True
+--saveCheckpoint True

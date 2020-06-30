@@ -43,22 +43,27 @@ def vizualization():
     file = os.path.join(constants.PATH_RESULTS,
                         'MASKING/checkpoints',
                         'MaskModel_backnone=resnet50_NDI=1_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=30-epoch-29-loss=2.041108002662659.pth')
+    _, foldername = os.path.split(file)
+    foldername = os.path.join(constants.PATH_RESULTS, 'MASKING', 'images', foldername[:-4])
+    if not os.path.exists(foldername):
+        os.mkdir(foldername)
+
     if DEVICE == 'cuda:0':
         mask_model.load_state_dict(torch.load(file), strict=False)
     else:
         mask_model.load_state_dict(torch.load(file, map_location=DEVICE))
     mask_model.eval()
     preprocessor = Preprocessor(None)
-    for data in dt_loader.dataloader:
+    for i, data in enumerate(dt_loader.dataloader):
         inputs, labels, video_names, _ = data
-        print('inputs=', inputs.size())
-        print('Video: ', video_names, ', Label: ', labels)
+        print('inputs=', i, inputs.size())
+        print('Video: ', video_names[0], ', Label: ', labels)
         with torch.no_grad():
             masks, _ = mask_model(inputs, labels)
             mascara = masks.detach().cpu()  #(1, 1, 224, 224)
             
             mascara = torch.squeeze(mascara, 0)  #(1, 224, 224)
-            print('mascara=', mascara.size())
+            # print('mascara=', mascara.size())
             mascara = min_max_normalize_tensor(mascara)  #to 0-1
             mascara = mascara.numpy().transpose(1, 2, 0)
             bynary = preprocessor.binarize(mascara, thresh=0.1, maxval=1)
@@ -67,9 +72,17 @@ def vizualization():
             # dimages = dimages.view(batch_size * timesteps, C, H, W)
             # dimages = dimages[0]
             dimages = dimages.numpy()[0][0].transpose(1, 2, 0)
-            print('numpy images: ', dimages.shape)
+            # print('numpy images: ', dimages.shape)
             # dimages = [min_max_normalize_np(np.array(img, dtype="float32")) for img in inputs]
             show(wait=50, dimage=dimages, mask=mascara, binary=bynary)
+            if i < 10:
+                _, video_name = os.path.split(video_names[0])
+                filename = os.path.join(foldername, video_name + '-'+str(labels.item()) + '.jpg')
+                # print(filename)
+                cv2.imwrite(filename, 255 * mascara)
+                filename = os.path.join(foldername, video_name + '-'+str(labels.item()) + '-bin.jpg')
+                cv2.imwrite(filename, 255 * bynary)
+                
             # cv2.imshow('Mask Image', mascara)
             # if cv2.waitKey(50) & 0xFF == ord('q'):
             #     break
