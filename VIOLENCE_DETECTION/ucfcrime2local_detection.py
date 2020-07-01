@@ -21,7 +21,7 @@ from UTIL.chooseModel import initialize_model
 from UTIL.trainer import Trainer
 # from UTIL.tester import Tester
 from UTIL.parameters import verifiParametersToTrain
-from ucfcrime2local_transforms import createTransforms
+from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from UTIL.resultsPolicy import ResultPolicy
 
 BASE_LR = 0.001
@@ -63,7 +63,7 @@ def __main__():
     # test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
 
     input_size = 224
-    transforms = createTransforms(input_size)
+    transforms = ucf2CrimeTransforms(input_size)
     num_classes = 2
     shuffle = True
 

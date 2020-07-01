@@ -69,6 +69,41 @@ def vifTransforms(input_size,
     }
     return data_transforms
 
+def ucf2CrimeTransforms(input_size):
+    mean = [0.51002795, 0.5097461, 0.5097256]
+    std1 = [0.07351338, 0.07239371, 0.07159009]
+    std2 = [0.07351349, 0.07239381, 0.07159019]
+    data_transforms = {
+        "train": transforms.Compose(
+            [
+                # transforms.Resize(input_size),
+                # transforms.CenterCrop(input_size),
+                transforms.RandomResizedCrop(input_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std1) #All Train split
+            ]
+        ),
+        "val": transforms.Compose(
+            [
+                # transforms.Resize(input_size),
+                transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std1) #All Train split
+                
+            ]
+        ),
+        "test": transforms.Compose(
+            [
+                transforms.Resize(input_size),
+                # transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std1) #All Train split
+            ]
+        )
+    }
+    return data_transforms
+
 def compute_mean_std(dataloader):
     pop_mean = []
     pop_std0 = []
@@ -92,6 +127,32 @@ def compute_mean_std(dataloader):
     pop_std0 = np.array(pop_std0).mean(axis=0)
     pop_std1 = np.array(pop_std1).mean(axis=0)
     return pop_mean, pop_std0, pop_std1
+
+if __name__ == "__main__":
+    import os
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from VIOLENCE_DETECTION.datasetsMemoryLoader import crime2localLoadData
+    from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
+    import torch
+
+    X, y, numFrames = crime2localLoadData(min_frames=40)
+    dataset = ViolenceDataset(dataset=X,
+                            labels=y,
+                            numFrames=numFrames,
+                            spatial_transform=None,
+                            numDynamicImagesPerVideo=1,
+                            videoSegmentLength=10,
+                            positionSegment='begin',
+                            overlaping=0,
+                            frame_skip=0,
+                            skipInitialFrames=10,
+                            ppType=None)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=False, num_workers=4)
+    pop_mean, pop_std0, pop_std1 = compute_mean_std(dataloader)
+    print(pop_mean, pop_std0, pop_std1)
+
+    
 
 # def getDataLoaderAnomaly(x, y, numFrames, data_transform, numDiPerVideos, sequence_length, batch_size, num_workers, dataset_source, debugg_mode):
 #     dataset = anomaly_dataset.AnomalyDataset( dataset=x, labels=y, numFrames=train_num_frames, spatial_transform=transforms["train"], source=dataset_source,
