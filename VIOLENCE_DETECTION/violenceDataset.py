@@ -237,7 +237,7 @@ class ViolenceDataset(Dataset):
         video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info 
         
         for i, sequence in enumerate(video_segments):
-            video_segments[i] = self.loadFramesSeq(vid_name, sequence)
+            video_segments[i], _ = self.loadFramesSeq(vid_name, sequence)
         
         for segment in video_segments:
             if ptype == 'blur':

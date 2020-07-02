@@ -160,19 +160,19 @@ def main():
     }
     
     dt_loader = MyDataloader(args)
-    pop_mean, pop_std0, pop_std1 = compute_mean_std(dt_loader.dataloader)
-    print('Train-mean={}, std0={}, std1={}'.format(pop_mean, pop_std0, pop_std1))
-    video = 'fans_violence__English_Hooligans_vs_Turkey_Ultras__Vandal83__J8S2-pGz8ao'
+    # pop_mean, pop_std0, pop_std1 = compute_mean_std(dt_loader.dataloader)
+    # print('Train-mean={}, std0={}, std1={}'.format(pop_mean, pop_std0, pop_std1))
+    video = 'football_violence__Accidents_Fights_Violence_Tragedies_Hooligans_Football_Fights_HORRIBLE_THINGS__darkhero00__PgujG07PUq0'
     index, v_name = dt_loader.dataset.getindex(video)
     # print(type(index))
     print('index={}, name={}, label={}, numFrames={}'.format(index, datasetAll[index], labelsAll[index], type(numFramesAll[index])))
-    lens = [2, 5, 10, 15, 20, 25, 30]
+    lens = [10, 20, 30, 40, 50]
     # lens = [2, 5, 10]
     myPreprocesor = Preprocessor(pType=None)
     for segmentLen in lens:
-        dimagPath = os.path.join(constants.PATH_RESULTS, 'dimages', 'vd_{}_class({})_len({})_pp({}).png'.format(datasetAll[index], labelsAll[index], segmentLen, args['pptype']))
+        dimagPath = os.path.join(constants.PATH_RESULTS, 'dimages', 'vd_{}_class({})_len({})_pp({}).png'.format(video, labelsAll[index], segmentLen, args['pptype']))
         print('*'*10, segmentLen)
-        frames, dimages, dimages2, label = dt_loader.dataset.getOneItem(int(index), transform=False, ptype=args['pptype'], savePath=None, ndi=args['NDI'], seqLen=segmentLen)
+        frames, dimages, dimages2, label = dt_loader.dataset.getOneItem(int(index), transform=False, ptype=args['pptype'], savePath=dimagPath, ndi=args['NDI'], seqLen=segmentLen)
         dimages = [min_max_normalize_np(np.array(img, dtype="float32")) for img in dimages]
         # dimage2 = min_max_normalize_tensor(dimages2)
         # dimage2 = dimage2.numpy()[0].transpose(1, 2, 0)

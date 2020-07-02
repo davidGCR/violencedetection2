@@ -297,7 +297,7 @@ def __main__():
                             checkpoint_path=os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig),
                             lr_scheduler=None)
             
-            policy = ResultPolicy()
+            policy = ResultPolicy(patience=5, max_loss_difference=0.1)
 
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold,epoch, args.numEpochs))
@@ -305,14 +305,17 @@ def __main__():
                 epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
                 epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
                 exp_lr_scheduler.step()
-                flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
-                if args.saveCheckpoint:
-                    tr.saveCheckpoint(epoch, flac)
-
+                flac, stop = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+                
                 writer.add_scalar('training loss', epoch_loss_train, epoch)
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
                 writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+                if stop:
+                    break
+                if args.saveCheckpoint:
+                    tr.saveCheckpoint(epoch, flac)
+
             cv_test_accs.append(policy.getFinalTestAcc())
             cv_test_losses.append(policy.getFinalTestLoss())
             cv_final_epochs.append(policy.getFinalEpoch())

@@ -575,27 +575,6 @@ def binarize(mascara):
     mascara = (mascara > binary_threshold) * 255
     return mascara
 
-def computeBoundingBoxFromMask(mask):
-    """
-    *** mask: numpy[h, w]
-    *** return: [thresholding, morpho, contours, bboxes]
-    """
-    # if mask.shape[2] == 3:
-        # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-        # mask = mask[:,:,0]
-    # print('uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
-    mask = thresholding_cv2(mask) #(h,w)
-    # print(mask.shape)
-    img_process_mask = process_mask(mask) #(h,w)
-    # print(img_process_mask.shape)
-    img_contuors, contours, hierarchy = findContours(img_process_mask, remove_fathers=True) #(h,w,c)
-    # print(img_contuors.shape)
-
-    img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
-    # preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
-    preprocesing_reults = [mask, img_process_mask, img_contuors, img_bboxes]
-    return bboxes, preprocesing_reults, contours, hierarchy
-
 def process_mask(img):
     kernel_exp = np.ones((5, 5), np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel_exp)
@@ -623,8 +602,6 @@ def findContours(img, remove_fathers = True):
         cv2.drawContours(img, contours, i, (0, 255, 0), 2, cv2.LINE_8, hierarchy, 0)
     return img, contours, hierarchy
 
-
-
 def bboxes_from_contours(img, contours):
     contours_poly = [None]*len(contours)
     boundRect = [None] * len(contours)
@@ -642,6 +619,27 @@ def bboxes_from_contours(img, contours):
         # cv2.drawContours(drawing, contours_poly, i, color)
         cv2.rectangle(image, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), yellow, 2)
     return image, bboxes
+
+def computeBoundingBoxFromMask(mask):
+    """
+    *** mask: numpy[h, w]
+    *** return: [thresholding, morpho, contours, bboxes]
+    """
+    # if mask.shape[2] == 3:
+        # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        # mask = mask[:,:,0]
+    # print('uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
+    mask = thresholding_cv2(mask) #(h,w)
+    # print(mask.shape)
+    img_process_mask = process_mask(mask) #(h,w)
+    # print(img_process_mask.shape)
+    img_contuors, contours, hierarchy = findContours(img_process_mask, remove_fathers=True) #(h,w,c)
+    # print(img_contuors.shape)
+
+    img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
+    # preprocesing_reults = {'mask':mask, 'process_mask':img_process_mask, 'contours':img_contuors, 'boxes': img_bboxes}
+    preprocesing_reults = [mask, img_process_mask, img_contuors, img_bboxes]
+    return bboxes, preprocesing_reults, contours, hierarchy
 
 def cvRect2BoundingBox(cvRect):
     pmin = Point(cvRect[0], cvRect[1])
