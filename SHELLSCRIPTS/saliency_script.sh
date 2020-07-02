@@ -9,7 +9,7 @@
 
 # # SALIENCY: Train U-NET model
 python3 SALIENCY/training.py  \
---classifier RESULTS/HOCKEY/checkpoints/HOCKEY-Model-alexnetv2,segmentLen-30,numDynIms-1,frameSkip-0,segmentPreprocessing-False,epochs-25,split_type-train-test-1-epoch-16.pth \
+--classifier RESULTS/HOCKEY/checkpoints/MaskModel_backnone=resnet50_NDI=1_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=10-epoch-9.pth \
 --modelType alexnetv2 \
 --numDiPerVideos 1 \
 --segmentLen 30 \

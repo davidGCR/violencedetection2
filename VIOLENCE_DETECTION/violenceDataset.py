@@ -158,13 +158,15 @@ class ViolenceDataset(Dataset):
 
     def loadFramesSeq(self, vid_name, sequence):
         frames = []
+        frames_paths = []
         for frame in sequence:
             img_dir = str(vid_name) + "/" + frame
+            frames_paths.append(img_dir)
             img1 = Image.open(img_dir)
             img1 = img1.convert("RGB")
             img = np.array(img1)
             frames.append(img)
-        return frames
+        return frames, frames_paths
            
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
@@ -203,8 +205,10 @@ class ViolenceDataset(Dataset):
         label = self.labels[idx]
         dynamicImages = []
         video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        paths = []
         for i, sequence in enumerate(video_segments):
-            video_segments[i] = self.loadFramesSeq(vid_name, sequence)
+            video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
+            paths.append(pths)
 
         preprocessing_time = 0.0
         
@@ -219,7 +223,7 @@ class ViolenceDataset(Dataset):
             dynamicImages.append(imgPIL)
         dynamicImages = torch.stack(dynamicImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         # print(dynamicImages.size())
-        return dynamicImages, label, vid_name, preprocessing_time #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+        return dynamicImages, label, vid_name, preprocessing_time, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
     
     
     def getOneItem(self, idx, transform, ptype, savePath, ndi, seqLen):

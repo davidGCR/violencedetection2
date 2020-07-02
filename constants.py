@@ -89,5 +89,6 @@ blue = (255, 0, 0)
 yellow = (0, 255, 255)
 magenta = (255,50,255)
 
+
 YOLO = 'yolov3'
 MASKRCNN = 'maskrcnn'

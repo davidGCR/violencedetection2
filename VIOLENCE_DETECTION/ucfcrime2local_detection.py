@@ -165,7 +165,7 @@ def __main__():
                     lr_scheduler=my_exp_lr_scheduler,
                     num_epochs=args.numEpochs,
                     checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
-        policy = ResultPolicy()
+        policy = ResultPolicy(patience=5, max_loss_difference=0.1)
         for epoch in range(1, args.numEpochs + 1):
             print("Fold {} ----- Epoch {}/{}".format(i+1,epoch, args.numEpochs))
             # Train and evaluate
@@ -175,15 +175,17 @@ def __main__():
             if args.lrScheduler == 'steplr':
                 exp_lr_scheduler.step()
 
-            flac = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
-            # print(flac, type(flac))
-            if args.saveCheckpoint:
-                tr.saveCheckpoint(epoch, flac, epoch_acc_val, epoch_loss_val)
-
+            flac, stop = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
+            
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+            if stop:
+                break
+            if args.saveCheckpoint:
+                tr.saveCheckpoint(epoch, flac, epoch_acc_val, epoch_loss_val)
+
         cv_test_accs.append(policy.getFinalTestAcc())
         cv_test_losses.append(policy.getFinalTestLoss())
         cv_final_epochs.append(policy.getFinalEpoch())

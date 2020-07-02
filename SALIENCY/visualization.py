@@ -54,6 +54,7 @@ def vizualization():
         mask_model.load_state_dict(torch.load(file, map_location=DEVICE))
     mask_model.eval()
     preprocessor = Preprocessor(None)
+    
     for i, data in enumerate(dt_loader.dataloader):
         inputs, labels, video_names, _ = data
         print('inputs=', i, inputs.size())

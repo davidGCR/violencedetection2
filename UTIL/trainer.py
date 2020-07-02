@@ -57,7 +57,7 @@ class Trainer:
             # print('inputs trainer: ', inputs.size())
             # print(video_names, labels)
             
-            inputs, labels, _, _ = data
+            inputs, labels, _, _, _ = data
             # print(inputs.size())
             batch_size = inputs.size()[0]
             # if self.numDynamicImages > 1:
@@ -93,7 +93,7 @@ class Trainer:
         self.model.eval()
         
         # Iterate over data.
-        for inputs, labels, video_names, _ in self.val_dataloader:
+        for inputs, labels, video_names, _, _ in self.val_dataloader:
         # for inputs, labels  in self.dataloaders["val"]:
             batch_size = inputs.size()[0]
             # if self.numDynamicImages > 1:

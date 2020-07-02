@@ -151,7 +151,7 @@ class SaliencyModel(nn.Module):
         scale4_cat = scale4_cat.max(dim=1).values
         scale4_cat = scale4_cat.view(batch_size, c4, h4, w4) #torch.Size([8, 512, 28, 28])
 
-        scale4 = scale4_cat
+        # scale4 = scale4_cat
         # print('scale4Final=', scale4_cat.size())
         
         # feature filter
@@ -161,9 +161,9 @@ class SaliencyModel(nn.Module):
         scale4 = scale4 * th
         # print('=> out scale4:', scale4.size())
 
-        scale3 = scale3_cat
-        scale2 = scale2_cat
-        scale1 = scale1_cat
+        # scale3 = scale3_cat
+        # scale2 = scale2_cat
+        # scale1 = scale1_cat
         
         upsample3 = self.uplayer4(scale4,scale3)
         upsample2 = self.uplayer3(upsample3,scale2)
@@ -182,7 +182,9 @@ class SaliencyModel(nn.Module):
        
         a = torch.abs(saliency_chans[:,0,:,:])
         b = torch.abs(saliency_chans[:, 1,:,:])
-        mask = torch.unsqueeze(a/(a+b), dim=1)
+        mask = torch.unsqueeze(a / (a + b), dim=1)
+        
+        print(mask.size())
         
         return mask, out
 

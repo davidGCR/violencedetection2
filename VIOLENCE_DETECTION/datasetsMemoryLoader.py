@@ -190,6 +190,13 @@ def crime2localgGetSplit(X, y, numFrames, splits=5):
         test_idx = list(map(int, test_idx))
         yield train_idx, test_idx
 
+def get_Test_Data(fold):
+    # train_idx = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-{}-train.txt'.format(fold)))
+    test_idx = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-{}-test.txt'.format(fold)))
+    # train_idx = list(map(int, train_idx))
+    test_idx = list(map(int, test_idx))
+    return test_idx
+
 def getBBoxLabels(video):
     video_folder, video_name = os.path.split(video)
     video_name = video_name[:-8]
