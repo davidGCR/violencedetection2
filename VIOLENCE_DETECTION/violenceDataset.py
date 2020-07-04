@@ -26,7 +26,8 @@ class ViolenceDataset(Dataset):
                         ppType):
         if spatial_transform is None:
             self.spatial_transform = transforms.Compose([
-                transforms.RandomResizedCrop(224),
+                # transforms.RandomResizedCrop(224),
+                # transforms.CenterCrop(224),
                 transforms.ToTensor()])
         else:    
             self.spatial_transform = spatial_transform

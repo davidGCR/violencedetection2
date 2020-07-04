@@ -23,6 +23,7 @@ from UTIL.trainer import Trainer
 from UTIL.parameters import verifiParametersToTrain
 from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from UTIL.resultsPolicy import ResultPolicy
+from UTIL.earlyStop import EarlyStopping
 
 BASE_LR = 0.001
 EPOCH_DECAY = 5 # number of epochs after which the Learning rate is decayed exponentially.
@@ -115,16 +116,14 @@ def __main__():
 
 
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},lrScheduler-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},segPreprocessing-{},split_type-{}, fold-{}'.format(args.modelType,
+        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{},fold-{}'.format(args.modelType,
                                                                                                                                         not args.featureExtract,
-                                                                                                                                        args.transferModel is not None,
                                                                                                                                         args.lrScheduler,
                                                                                                                                         args.videoSegmentLength,
                                                                                                                                         args.numDynamicImagesPerVideo,
                                                                                                                                         args.frameSkip,
                                                                                                                                         args.numEpochs,
                                                                                                                                         args.skipInitialFrames,
-                                                                                                                                        args.segmentPreprocessing,
                                                                                                                                         args.split_type,
                                                                                                                                         i+1)
     
@@ -154,7 +153,7 @@ def __main__():
         
         log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
         writer = SummaryWriter(log_dir)
-        print('********** Tensorboard logDir={}'.format(log_dir))
+        # print('********** Tensorboard logDir={}'.format(log_dir))
         
         tr = Trainer(model=model,
                     model_transfer=args.transferModel,
@@ -164,31 +163,34 @@ def __main__():
                     optimizer=optimizer,
                     lr_scheduler=my_exp_lr_scheduler,
                     num_epochs=args.numEpochs,
-                    checkpoint_path=os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig))
-        policy = ResultPolicy(patience=5, max_loss_difference=0.1)
+                    checkpoint_path=None)
+        # policy = ResultPolicy(patience=5, max_loss_difference=0.1)
+        path = os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig)
+        # initialize the early_stopping object
+        early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
         for epoch in range(1, args.numEpochs + 1):
             print("Fold {} ----- Epoch {}/{}".format(i+1,epoch, args.numEpochs))
             # Train and evaluate
             epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
-            epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
-            
             if args.lrScheduler == 'steplr':
                 exp_lr_scheduler.step()
+            epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
 
-            flac, stop = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
-            
+            # early_stopping needs the validation loss to check if it has decresed, 
+            # and if it has, it will make a checkpoint of the current model
+            early_stopping(epoch_loss_val, epoch_acc_val, epoch, tr.getModel())
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
             writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-            if stop:
-                break
-            if args.saveCheckpoint:
-                tr.saveCheckpoint(epoch, flac, epoch_acc_val, epoch_loss_val)
 
-        cv_test_accs.append(policy.getFinalTestAcc())
-        cv_test_losses.append(policy.getFinalTestLoss())
-        cv_final_epochs.append(policy.getFinalEpoch())
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
+        cv_test_accs.append(early_stopping.best_acc)
+        cv_test_losses.append(early_stopping.val_loss_min)
+        cv_final_epochs.append(early_stopping.best_epoch)
+        
     
     print('CV Accuracies=', cv_test_accs)
     print('CV Losses=', cv_test_losses)

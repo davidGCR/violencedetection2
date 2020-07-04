@@ -1,17 +1,17 @@
 python3  VIOLENCE_DETECTION/ucfcrime2local_detection.py \
---modelType resnet50 \
---numEpochs 10 \
+--modelType alexnetv2 \
+--numEpochs 25 \
 --numWorkers 4 \
 --batchSize 8 \
 --featureExtract false \
 --joinType maxTempPool \
---videoSegmentLength 10 \
---numDynamicImagesPerVideo 4 \
+--videoSegmentLength 40 \
+--numDynamicImagesPerVideo 1 \
 --segmentPreprocessing False \
 --positionSegment begin \
 --overlapping 0 \
 --frameSkip 0 \
 --skipInitialFrames 10 \
---saveCheckpoint False \
+--saveCheckpoint True \
 --lrScheduler steplr \
 --split_type cross-val

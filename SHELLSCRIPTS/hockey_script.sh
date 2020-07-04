@@ -6,7 +6,7 @@ python3  VIOLENCE_DETECTION/hockey_detection.py \
 --batchSize 8 \
 --featureExtract false \
 --joinType maxTempPool \
---videoSegmentLength 30 \
+--videoSegmentLength 10 \
 --numDynamicImagesPerVideo 1 \
 --positionSegment begin \
 --overlapping 0 \
