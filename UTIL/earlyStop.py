@@ -24,7 +24,7 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
-        self.path = path+'.pt'
+        self.path = path+'.pt' if path is not None
         self.train_loss = None
 
     def __call__(self, val_loss, val_acc, train_loss, epoch, fold, model):
