@@ -68,7 +68,7 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
 
         if checkpoint_path is not None and epoch_loss < best_loss:
             best_loss = epoch_loss
-            name = '{}_epoch={}_loss={}.pth'.format(checkpoint_path, epoch, epoch_loss)
+            name = '{}_epoch={}_loss={:.4f}.pth'.format(checkpoint_path, epoch, epoch_loss)
             print('Saving model...', name)
             torch.save(mask_model.state_dict(), name)
         #     print('Saving entire saliency model...')
