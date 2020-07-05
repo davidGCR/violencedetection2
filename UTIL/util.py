@@ -1,5 +1,7 @@
-import pickle
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import pickle
 import glob
 import cv2
 import numpy as np
@@ -7,6 +9,21 @@ import torch
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 import csv
+from constants import DEVICE
+import torch
+
+def load_torch_checkpoint(path, model):
+  checkpoint = torch.load(path, map_location=DEVICE)
+  model.load_state_dict(checkpoint['model_state_dict'])
+  # if DEVICE == 'cuda:0':
+  #     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+  # else:
+  #     model.load_state_dict(checkpoint['model_state_dict'], map_location=DEVICE))
+  epoch = checkpoint['epoch']
+  val_acc = checkpoint['val_acc']
+  val_loss = checkpoint['val_loss']
+
+  return model, epoch, val_acc, val_loss
 
 def load_model_inference(file, device):
     if str(device) == 'cpu':

@@ -24,6 +24,7 @@ from UTIL.parameters import verifiParametersToTrain
 from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from UTIL.resultsPolicy import ResultPolicy
 from UTIL.earlyStop import EarlyStopping
+from UTIL.util import load_torch_checkpoint
 
 BASE_LR = 0.001
 EPOCH_DECAY = 5 # number of epochs after which the Learning rate is decayed exponentially.
@@ -136,16 +137,9 @@ def __main__():
                                     use_pretrained=True)
         model.to(DEVICE)
         if args.transferModel is not None:
-            if DEVICE == 'cuda:0':
-                model.load_state_dict(torch.load(args.transferModel), strict=False)
-            else:
-                model.load_state_dict(torch.load(args.transferModel, map_location=DEVICE))
-
-
+            model, _, _, _ = load_torch_checkpoint(path=args.transferModel, model=model)
         params_to_update = verifiParametersToTrain(model, args.featureExtract)
-        
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-        
         if args.lrScheduler == 'steplr':
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
             
@@ -178,7 +172,7 @@ def __main__():
 
             # early_stopping needs the validation loss to check if it has decresed, 
             # and if it has, it will make a checkpoint of the current model
-            early_stopping(epoch_loss_val, epoch_acc_val, epoch, tr.getModel())
+            early_stopping(epoch_loss_val, epoch_acc_val, epoch_loss_train, epoch, tr.getModel())
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)
