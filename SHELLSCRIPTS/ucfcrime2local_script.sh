@@ -1,5 +1,5 @@
 python3  VIOLENCE_DETECTION/ucfcrime2local_detection.py \
---modelType alexnetv2 \
+--modelType resnet50 \
 --numEpochs 25 \
 --numWorkers 4 \
 --batchSize 8 \

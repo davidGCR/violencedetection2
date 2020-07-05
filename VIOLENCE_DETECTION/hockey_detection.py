@@ -298,8 +298,11 @@ def __main__():
                             checkpoint_path=None,
                             lr_scheduler=None)
             
-            # policy = ResultPolicy(patience=5, max_loss_difference=0.1)
-            early_stopping = EarlyStopping(patience=5, verbose=True, path= os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig))
+            if args.saveCheckpoint:
+                path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig)
+            else:
+                path = None
+            early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold,epoch, args.numEpochs))
                 # Train and evaluate
@@ -313,9 +316,7 @@ def __main__():
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
                 writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-                if early_stopping.early_stop:
-                    print("Early stopping")
-                    break
+                
             cv_test_accs.append(early_stopping.best_acc)
             cv_test_losses.append(early_stopping.val_loss_min)
             cv_final_epochs.append(early_stopping.best_epoch)

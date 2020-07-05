@@ -270,7 +270,11 @@ def __main__():
                         checkpoint_path=None,
                         lr_scheduler=None)
             
-            early_stopping = EarlyStopping(patience=5, verbose=True, path= os.path.join(constants.PATH_RESULTS, 'VIF', 'checkpoints', experimentConfig))
+            if args.saveCheckpoint:
+                path = os.path.join(constants.PATH_RESULTS, 'VIF', 'checkpoints', experimentConfig)
+            else:
+                path = None
+            early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold+1,epoch, args.numEpochs))
                 # Train and evaluate

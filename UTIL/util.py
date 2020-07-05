@@ -20,10 +20,11 @@ def load_torch_checkpoint(path, model):
   # else:
   #     model.load_state_dict(checkpoint['model_state_dict'], map_location=DEVICE))
   epoch = checkpoint['epoch']
+  fold = checkpoint['fold']
   val_acc = checkpoint['val_acc']
   val_loss = checkpoint['val_loss']
 
-  return model, epoch, val_acc, val_loss
+  return model, epoch, val_acc, val_loss, fold
 
 def load_model_inference(file, device):
     if str(device) == 'cpu':

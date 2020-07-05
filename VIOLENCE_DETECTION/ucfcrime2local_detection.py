@@ -158,8 +158,10 @@ def __main__():
                     lr_scheduler=my_exp_lr_scheduler,
                     num_epochs=args.numEpochs,
                     checkpoint_path=None)
-        # policy = ResultPolicy(patience=5, max_loss_difference=0.1)
-        path = os.path.join(constants.PATH_RESULTS,'UCFCRIME2LOCAL','checkpoints',experimentConfig)
+        if args.saveCheckpoint:
+            path = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'checkpoints', experimentConfig)
+        else:
+            path = None
         # initialize the early_stopping object
         early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
         for epoch in range(1, args.numEpochs + 1):

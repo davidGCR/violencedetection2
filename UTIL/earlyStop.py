@@ -27,7 +27,7 @@ class EarlyStopping:
         self.path = path+'.pt'
         self.train_loss = None
 
-    def __call__(self, val_loss, val_acc, train_loss, epoch, model):
+    def __call__(self, val_loss, val_acc, train_loss, epoch, fold, model):
 
         score = -val_loss
 
@@ -35,7 +35,7 @@ class EarlyStopping:
             self.best_score = score
             # self.best_loss = val_loss
             # self.best_epoch = epoch
-            self.save_checkpoint(val_loss, val_acc, epoch, model)
+            self.save_checkpoint(val_loss, val_acc, epoch, fold, model)
         elif score < self.best_score + self.delta or score < -train_loss:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
@@ -45,20 +45,22 @@ class EarlyStopping:
             self.best_score = score
             # self.best_loss = val_loss
             # self.best_epoch = epoch
-            self.save_checkpoint(val_loss, val_acc, epoch, model)
+            self.save_checkpoint(val_loss, val_acc, epoch, fold, model)
             self.counter = 0
 
-    def save_checkpoint(self, val_loss, val_acc, epoch, model):
+    def save_checkpoint(self, val_loss, val_acc, epoch, fold, model):
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}), Validation accuracy ({self.best_acc:.6f} --> {val_acc:.6f}).  Saving model ...')
         # torch.save(model.state_dict(), self.path)
-        torch.save({
-            'epoch': epoch,
-            'val_acc': val_acc,
-            'val_loss': val_loss,
-            'model_state_dict': model.state_dict()
-            }, self.path)
+        if self.path is not None:
+            torch.save({
+                'epoch': epoch,
+                'fold': fold,
+                'val_acc': val_acc,
+                'val_loss': val_loss,
+                'model_state_dict': model.state_dict()
+                }, self.path)
         self.val_loss_min = val_loss
         self.best_acc = val_acc
         self.best_epoch = epoch
