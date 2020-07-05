@@ -12,20 +12,21 @@ import csv
 from constants import DEVICE
 import torch
 
-def load_torch_checkpoint(path, model):
+def load_torch_checkpoint(path, model=None):
   checkpoint = torch.load(path, map_location=DEVICE)
-  model.load_state_dict(checkpoint['model_state_dict'])
+  # model.load_state_dict(checkpoint['model_state_dict'])
   # if DEVICE == 'cuda:0':
   #     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
   # else:
   #     model.load_state_dict(checkpoint['model_state_dict'], map_location=DEVICE))
-  epoch = checkpoint['epoch']
-  fold = checkpoint['fold']
-  val_acc = checkpoint['val_acc']
-  val_loss = checkpoint['val_loss']
-  model_config = checkpoint['model_config']
+  # epoch = checkpoint['epoch']
+  # fold = checkpoint['fold']
+  # val_acc = checkpoint['val_acc']
+  # val_loss = checkpoint['val_loss']
+  # model_config = checkpoint['model_config']
 
-  return model, model_config, epoch, val_acc, val_loss, fold
+  # return model_config, epoch, val_acc, val_loss, fold
+  return checkpoint
 
 def experimentConfig(**kwargs):
   dict_ = {

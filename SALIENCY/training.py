@@ -25,6 +25,7 @@ from constants import DEVICE
 from VIOLENCE_DETECTION.transforms import hockeyTransforms
 from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit
 from UTIL.chooseModel import initialize_model
+from UTIL.util import load_torch_checkpoint
 from VIOLENCE_DETECTION.dataloader import MyDataloader
 # from Models import AlexNet
 
@@ -46,7 +47,7 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
         running_loss = 0.0
         running_loss_train = 0.0
         for data in tqdm(dataloader):
-            inputs, labels, video_name, _ = data  #dataset load [bs,ndi,c,w,h]
+            inputs, labels, video_name, _, _ = data  #dataset load [bs,ndi,c,w,h]
             # print('Inputs=', inputs.size())
             # wrap them in Variable
             inputs, labels = Variable(inputs.to(DEVICE)), Variable(labels.to(DEVICE))
@@ -76,7 +77,7 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
 def __anomaly_main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--classifier", type=str)
-    parser.add_argument("--modelType", type=str)
+    # parser.add_argument("--modelType", type=str)
     parser.add_argument("--batchSize", type=int, default=8)
     parser.add_argument("--numEpochs", type=int, default=10)
     parser.add_argument("--numWorkers", type=int, default=4)
@@ -84,8 +85,8 @@ def __anomaly_main__():
     parser.add_argument("--smoothL", type=float, default=0.5)
     parser.add_argument("--preserverL", type=float, default=0.3)
     parser.add_argument("--areaPowerL", type=float, default=0.3)
-    parser.add_argument("--numDiPerVideos", type=int)
-    parser.add_argument("--segmentLen", type=int)
+    # parser.add_argument("--numDiPerVideos", type=int)
+    # parser.add_argument("--segmentLen", type=int)
     parser.add_argument("--saveCheckpoint",type=lambda x: (str(x).lower() == 'true'), default=False)
     
     args = parser.parse_args()
@@ -93,6 +94,9 @@ def __anomaly_main__():
     input_size = 224
     transforms = hockeyTransforms(input_size)
     num_classes = 2
+
+    class_checkpoint = load_torch_checkpoint(args.classifier)
+    print(class_checkpoint['model_config'])
     
     regularizers = {'area_loss_coef': args.areaL,
                     'smoothness_loss_coef': args.smoothL,
@@ -105,17 +109,17 @@ def __anomaly_main__():
             'y': train_y,
             'numFrames': train_numFrames,
             'transform': transforms['train'],
-            'NDI': args.numDiPerVideos,
-            'videoSegmentLength': args.segmentLen,
+            'NDI': class_checkpoint['model_config']['numDynamicImages'],
+            'videoSegmentLength': class_checkpoint['model_config']['segmentLength'],
             'positionSegment': 'begin',
-            'overlapping': 0,
+            'overlapping': class_checkpoint['model_config']['overlap'],
             'frameSkip': 0,
-            'skipInitialFrames': 0,
+            'skipInitialFrames': class_checkpoint['model_config']['skipInitialFrames'],
             'batchSize': args.batchSize,
             'shuffle': True,
             'numWorkers': args.numWorkers,
             'pptype': None,
-            'modelType': args.modelType
+            'modelType': class_checkpoint['model_config']['modelType']
     }
     train_dt_loader = MyDataloader(default_args)
     mask_model = build_saliency_model(num_classes)
@@ -123,23 +127,24 @@ def __anomaly_main__():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(mask_model.parameters())           
     # classifier = torch.load(black_box_model)
-    classifier_model, _ = initialize_model(model_name=args.modelType,
+    classifier_model, _ = initialize_model(model_name=class_checkpoint['model_config']['modelType'],
                                             num_classes=2,
                                             feature_extract=False,
-                                            numDiPerVideos=args.numDiPerVideos,
-                                            joinType='maxTempPool',
+                                            numDiPerVideos=class_checkpoint['model_config']['numDynamicImages'],
+                                            joinType=class_checkpoint['model_config']['joinType'],
                                             use_pretrained=True)
-    if DEVICE == 'cuda:0':
-        classifier_model.load_state_dict(torch.load(args.classifier), strict=False)
-    else:
-        classifier_model.load_state_dict(torch.load(args.classifier, map_location=DEVICE))
+    # if DEVICE == 'cuda:0':
+    #     classifier_model.load_state_dict(checkpoint['model_state_dict'])
+    # else:
+    #     classifier_model.load_state_dict(torch.load(args.classifier, map_location=DEVICE))
+    classifier_model.load_state_dict(class_checkpoint['model_state_dict'])
     classifier_model.to(DEVICE)
     classifier_model.eval()
     checkpoint_path = None
     if args.saveCheckpoint:
-        checkpoint_path = 'MaskModel_backnone={}_NDI/len={}/{}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(args.modelType,
-                                                                                                                                args.numDiPerVideos,
-                                                                                                                                args.segmentLen,
+        checkpoint_path = 'MaskModel_backnone={}_NDI/len={}/{}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(class_checkpoint['model_config']['modelType'],
+                                                                                                                                class_checkpoint['model_config']['numDynamicImages'],
+                                                                                                                                class_checkpoint['model_config']['segmentLength'],
                                                                                                                                 args.areaL,
                                                                                                                                 args.smoothL,
                                                                                                                                 args.preserverL,
@@ -153,7 +158,7 @@ def __anomaly_main__():
           classifier_model=classifier_model,
           num_epochs=args.numEpochs,
           dataloader=train_dt_loader.dataloader,
-          numDynamicImages=args.numDiPerVideos,
+          numDynamicImages=class_checkpoint['model_config']['numDynamicImages'],
           checkpoint_path=checkpoint_path)
     # train(num_classes, args.num_epochs, regularizers, train_dt_loader, args.classifier, args.numDiPerVideos)
 
