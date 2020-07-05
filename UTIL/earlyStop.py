@@ -3,7 +3,7 @@ import torch
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt'):
+    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', model_config):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -26,6 +26,8 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.train_loss = None
+        self.model_config = model_config
+        
 
     def __call__(self, val_loss, val_acc, train_loss, epoch, fold, model):
 
@@ -59,7 +61,8 @@ class EarlyStopping:
                 'fold': fold,
                 'val_acc': val_acc,
                 'val_loss': val_loss,
-                'model_state_dict': model.state_dict()
+                'model_state_dict': model.state_dict(),
+                'model_config': self.model_config
                 }, self.path+'.pt')
         self.val_loss_min = val_loss
         self.best_acc = val_acc

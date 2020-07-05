@@ -24,7 +24,7 @@ from UTIL.parameters import verifiParametersToTrain
 from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from UTIL.resultsPolicy import ResultPolicy
 from UTIL.earlyStop import EarlyStopping
-from UTIL.util import load_torch_checkpoint
+from UTIL.util import load_torch_checkpoint, experimentConfig
 
 BASE_LR = 0.001
 EPOCH_DECAY = 5 # number of epochs after which the Learning rate is decayed exponentially.
@@ -115,7 +115,15 @@ def __main__():
             "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers)
         }
 
-
+        config = experimentConfig(dataset='UCFCRIME2LOCAL',
+                                    modelType=args.modelType,
+                                    featureExtract=args.featureExtract,
+                                    numDynamicImages=args.numDynamicImagesPerVideo,
+                                    segmentLen=args.videoSegmentLength,
+                                    frameSkip=args.frameSkip,
+                                    skipInitialFrames=args.skipInitialFrames,
+                                    overlap=args.overlapping,
+                                    )
     
         experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{},fold-{}'.format(args.modelType,
                                                                                                                                         not args.featureExtract,
@@ -142,13 +150,9 @@ def __main__():
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         if args.lrScheduler == 'steplr':
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-            
         criterion = nn.CrossEntropyLoss()
-        
         log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
         writer = SummaryWriter(log_dir)
-        # print('********** Tensorboard logDir={}'.format(log_dir))
-        
         tr = Trainer(model=model,
                     model_transfer=args.transferModel,
                     train_dataloader=dataloaders_dict['train'],
@@ -163,7 +167,7 @@ def __main__():
         else:
             path = None
         # initialize the early_stopping object
-        early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
+        early_stopping = EarlyStopping(patience=5, verbose=True, path= path, model_config=config)
         for epoch in range(1, args.numEpochs + 1):
             print("Fold {} ----- Epoch {}/{}".format(i+1,epoch, args.numEpochs))
             # Train and evaluate

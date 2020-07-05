@@ -23,8 +23,21 @@ def load_torch_checkpoint(path, model):
   fold = checkpoint['fold']
   val_acc = checkpoint['val_acc']
   val_loss = checkpoint['val_loss']
+  model_config = checkpoint['model_config']
 
-  return model, epoch, val_acc, val_loss, fold
+  return model, model_config, epoch, val_acc, val_loss, fold
+
+def experimentConfig(**kwargs):
+  dict_ = {
+    'modelType': kwargs['modelType'],
+    'numDynamicImages': kwargs['numDynamicImages'],
+    'segmentLength': kwargs['segmentLength'],
+    'joinType': kwargs['joinType'],
+    'featureExtract': kwargs['featureExtract'],
+    'overlap': kwargs['overlap'],
+    'skipInitialFrames': kwargs['skipInitialFrames'],
+  }
+  return dict_
 
 def load_model_inference(file, device):
     if str(device) == 'cpu':
