@@ -24,7 +24,7 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
-        self.path = path+'.pt' if path is not None
+        self.path = path
         self.train_loss = None
 
     def __call__(self, val_loss, val_acc, train_loss, epoch, fold, model):
@@ -60,7 +60,7 @@ class EarlyStopping:
                 'val_acc': val_acc,
                 'val_loss': val_loss,
                 'model_state_dict': model.state_dict()
-                }, self.path)
+                }, self.path+'.pt')
         self.val_loss_min = val_loss
         self.best_acc = val_acc
         self.best_epoch = epoch
