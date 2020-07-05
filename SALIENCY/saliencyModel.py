@@ -184,7 +184,7 @@ class SaliencyModel(nn.Module):
         b = torch.abs(saliency_chans[:, 1,:,:])
         mask = torch.unsqueeze(a / (a + b), dim=1)
         
-        print(mask.size())
+        # print(mask.size())
         
         return mask, out
 
