@@ -119,13 +119,13 @@ def __main__():
                                     modelType=args.modelType,
                                     featureExtract=args.featureExtract,
                                     numDynamicImages=args.numDynamicImagesPerVideo,
-                                    segmentLen=args.videoSegmentLength,
+                                    segmentLength=args.videoSegmentLength,
                                     frameSkip=args.frameSkip,
                                     skipInitialFrames=args.skipInitialFrames,
                                     overlap=args.overlapping,
-                                    )
+                                    joinType=args.joinType)
     
-        experimentConfig = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{},fold-{}'.format(args.modelType,
+        experimentConfig_str = 'UCFCRIME2LOCAL-Model-{},trainAllModel-{},TransferModel-{},segmentLen-{},numDynIms-{},frameSkip-{},epochs-{},skipInitialFrames-{},split_type-{},fold-{}'.format(args.modelType,
                                                                                                                                         not args.featureExtract,
                                                                                                                                         args.lrScheduler,
                                                                                                                                         args.videoSegmentLength,
@@ -151,7 +151,7 @@ def __main__():
         if args.lrScheduler == 'steplr':
             exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         criterion = nn.CrossEntropyLoss()
-        log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig)
+        log_dir = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'tensorboard-runs', experimentConfig_str)
         writer = SummaryWriter(log_dir)
         tr = Trainer(model=model,
                     model_transfer=args.transferModel,
@@ -163,7 +163,7 @@ def __main__():
                     num_epochs=args.numEpochs,
                     checkpoint_path=None)
         if args.saveCheckpoint:
-            path = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'checkpoints', experimentConfig)
+            path = os.path.join(constants.PATH_RESULTS, 'UCFCRIME2LOCAL', 'checkpoints', experimentConfig_str)
         else:
             path = None
         # initialize the early_stopping object

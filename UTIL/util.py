@@ -29,6 +29,7 @@ def load_torch_checkpoint(path, model):
 
 def experimentConfig(**kwargs):
   dict_ = {
+    'dataset':kwargs['dataset'],
     'modelType': kwargs['modelType'],
     'numDynamicImages': kwargs['numDynamicImages'],
     'segmentLength': kwargs['segmentLength'],
