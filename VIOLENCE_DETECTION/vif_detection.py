@@ -25,7 +25,8 @@ from VIOLENCE_DETECTION.transforms import vifTransforms, compute_mean_std
 from VIOLENCE_DETECTION.datasetsMemoryLoader import getFoldData, train_test_iteration, vifLoadData
 from UTIL.trainer import Trainer
 from dataloader import MyDataloader
-from UTIL.resultsPolicy import ResultPolicy
+# from UTIL.resultsPolicy import ResultPolicy
+from UTIL.earlyStop import EarlyStopping
 from constants import DEVICE
 
 def preprocessing_dataset(dataset_path_videos, dataset_path_frames):
@@ -266,29 +267,28 @@ def __main__():
                         criterion=criterion,
                         optimizer=optimizer,
                         num_epochs=args.numEpochs,
-                        checkpoint_path=os.path.join(constants.PATH_RESULTS, 'VIF', 'checkpoints', experimentConfig+'.tar'),
+                        checkpoint_path=None,
                         lr_scheduler=None)
             
-            policy = ResultPolicy(patience=5, max_loss_difference=0.1)
+            early_stopping = EarlyStopping(patience=5, verbose=True, path= os.path.join(constants.PATH_RESULTS, 'VIF', 'checkpoints', experimentConfig))
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold+1,epoch, args.numEpochs))
                 # Train and evaluate
                 epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
-                epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
                 exp_lr_scheduler.step()
-                flac, stop = policy.update(epoch_loss_train, epoch_acc_train, epoch_loss_val, epoch_acc_val, epoch)
-                
+                epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
+                early_stopping(epoch_loss_val, epoch_acc_val, epoch_loss_train, epoch, tr.getModel())
                 writer.add_scalar('training loss', epoch_loss_train, epoch)
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
                 writer.add_scalar('validation Acc', epoch_acc_val, epoch)
-                if stop:
+                if early_stopping.early_stop:
+                    print("Early stopping")
                     break
-                if args.saveCheckpoint:
-                    tr.saveCheckpoint(epoch, flac, epoch_acc_val, epoch_loss_val)
-            cv_test_accs.append(policy.getFinalTestAcc())
-            cv_test_losses.append(policy.getFinalTestLoss())
-            cv_final_epochs.append(policy.getFinalEpoch())
+            cv_test_accs.append(early_stopping.best_acc)
+            cv_test_losses.append(early_stopping.val_loss_min)
+            cv_final_epochs.append(early_stopping.best_epoch)
+            
         print('CV Accuracies=', cv_test_accs)
         print('CV Losses=', cv_test_losses)
         print('CV Epochs=', cv_final_epochs)
