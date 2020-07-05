@@ -25,17 +25,18 @@ class EarlyStopping:
         self.val_loss_min = np.Inf
         self.delta = delta
         self.path = path
+        self.train_loss = None
 
-    def __call__(self, val_loss, val_acc, epoch, model):
+    def __call__(self, val_loss, val_acc, train_loss, epoch, model):
 
         score = -val_loss
 
         if self.best_score is None:
             self.best_score = score
             # self.best_loss = val_loss
-            self.best_epoch = epoch
+            # self.best_epoch = epoch
             self.save_checkpoint(val_loss, val_acc, epoch, model)
-        elif score < self.best_score + self.delta:
+        elif score < self.best_score + self.delta or score < -train_loss:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
