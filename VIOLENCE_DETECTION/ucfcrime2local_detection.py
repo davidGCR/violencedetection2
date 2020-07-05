@@ -171,10 +171,7 @@ def __main__():
             if args.lrScheduler == 'steplr':
                 exp_lr_scheduler.step()
             epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
-
-            # early_stopping needs the validation loss to check if it has decresed, 
-            # and if it has, it will make a checkpoint of the current model
-            early_stopping(epoch_loss_val, epoch_acc_val, epoch_loss_train, epoch, tr.getModel())
+            early_stopping(epoch_loss_val, epoch_acc_val, epoch_loss_train, epoch, i+1, tr.getModel())
             writer.add_scalar('training loss', epoch_loss_train, epoch)
             writer.add_scalar('validation loss', epoch_loss_val, epoch)
             writer.add_scalar('training Acc', epoch_acc_train, epoch)

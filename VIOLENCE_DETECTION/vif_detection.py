@@ -281,7 +281,7 @@ def __main__():
                 epoch_loss_train, epoch_acc_train = tr.train_epoch(epoch)
                 exp_lr_scheduler.step()
                 epoch_loss_val, epoch_acc_val = tr.val_epoch(epoch)
-                early_stopping(epoch_loss_val, epoch_acc_val, epoch_loss_train, epoch, tr.getModel())
+                early_stopping(epoch_loss_val, epoch_acc_val, epoch_loss_train, epoch, fold+1, tr.getModel())
                 writer.add_scalar('training loss', epoch_loss_train, epoch)
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
