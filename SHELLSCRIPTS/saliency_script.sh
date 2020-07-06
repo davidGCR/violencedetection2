@@ -9,10 +9,7 @@
 
 # # SALIENCY: Train U-NET model
 python3 SALIENCY/training.py  \
---classifier RESULTS/HOCKEY/checkpoints/MaskModel_backnone=resnet50_NDI=1_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=10-epoch-9.pth \
---modelType alexnetv2 \
---numDiPerVideos 1 \
---segmentLen 30 \
+--classifier RESULTS/UCFCRIME2LOCAL/checkpoints/UCFCRIME2LOCAL-Model-resnet50,trainAllModel-True,TransferModel-steplr,segmentLen-40,numDynIms-1,frameSkip-0,epochs-25,skipInitialFrames-10,split_type-cross-val,fold-1.pt \
 --batchSize 8 \
 --numEpochs 10 \
 --numWorkers 8  \
