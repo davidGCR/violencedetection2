@@ -24,7 +24,7 @@ from UTIL.parameters import verifiParametersToTrain
 from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from UTIL.resultsPolicy import ResultPolicy
 from UTIL.earlyStop import EarlyStopping
-from UTIL.util import load_torch_checkpoint, experimentConfig
+from UTIL.util import load_torch_checkpoint, expConfig
 
 BASE_LR = 0.001
 EPOCH_DECAY = 5 # number of epochs after which the Learning rate is decayed exponentially.
@@ -115,7 +115,7 @@ def __main__():
             "test": torch.utils.data.DataLoader( image_datasets["test"], batch_size=args.batchSize, shuffle=shuffle, num_workers=args.numWorkers)
         }
 
-        config = experimentConfig(dataset='UCFCRIME2LOCAL',
+        config = expConfig(dataset='UCFCRIME2LOCAL',
                                     modelType=args.modelType,
                                     featureExtract=args.featureExtract,
                                     numDynamicImages=args.numDynamicImagesPerVideo,

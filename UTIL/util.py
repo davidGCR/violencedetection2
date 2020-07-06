@@ -28,7 +28,7 @@ def load_torch_checkpoint(path, model=None):
   # return model_config, epoch, val_acc, val_loss, fold
   return checkpoint
 
-def experimentConfig(**kwargs):
+def expConfig(**kwargs):
   dict_ = {
     'dataset':kwargs['dataset'],
     'modelType': kwargs['modelType'],

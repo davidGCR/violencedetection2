@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import scipy.io as sio
 
-from UTIL.util import video2Images2, sortListByStrNumbers, save_csvfile_multicolumn
+from UTIL.util import video2Images2, sortListByStrNumbers, save_csvfile_multicolumn, expConfig
 from UTIL.chooseModel import initialize_model, initialize_FCNN
 from UTIL.parameters import verifiParametersToTrain
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
@@ -258,6 +258,15 @@ def __main__():
                                                                                                                             args.numEpochs,
                                                                                                                             args.splitType,
                                                                                                                             str(fold+1))        
+            config = expConfig(dataset='VIF',
+                                    modelType=args.modelType,
+                                    featureExtract=args.featureExtract,
+                                    numDynamicImages=args.numDynamicImagesPerVideo,
+                                    segmentLength=args.videoSegmentLength,
+                                    frameSkip=args.frameSkip,
+                                    skipInitialFrames=args.skipInitialFrames,
+                                    overlap=args.overlapping,
+                                    joinType=args.joinType)
             log_dir = os.path.join(constants.PATH_RESULTS, 'VIF', 'tensorboard-runs', experimentConfig)
             writer = SummaryWriter(log_dir)
             tr = Trainer(model=model,
@@ -274,7 +283,7 @@ def __main__():
                 path = os.path.join(constants.PATH_RESULTS, 'VIF', 'checkpoints', experimentConfig)
             else:
                 path = None
-            early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
+            early_stopping = EarlyStopping(patience=5, verbose=True, path= path, model_config=config)
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold+1,epoch, args.numEpochs))
                 # Train and evaluate

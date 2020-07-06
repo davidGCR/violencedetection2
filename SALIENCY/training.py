@@ -151,7 +151,7 @@ def __anomaly_main__():
     classifier_model.eval()
     checkpoint_path = None
     if args.saveCheckpoint:
-        checkpoint_path = 'MaskModel_backnone={}_NDI/len={}/{}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(class_checkpoint['model_config']['modelType'],
+        checkpoint_path = 'MaskModel_backnone={}_NDI-len={}-{}_AreaLoss={}_SmoothLoss={}_PreservLoss={}_AreaLoss2={}_epochs={}'.format(class_checkpoint['model_config']['modelType'],
                                                                                                                                 class_checkpoint['model_config']['numDynamicImages'],
                                                                                                                                 class_checkpoint['model_config']['segmentLength'],
                                                                                                                                 args.areaL,

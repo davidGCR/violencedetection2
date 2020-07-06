@@ -36,7 +36,7 @@ from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
 import UTIL.tester as tester
 from UTIL.kfolds import k_folds
-from UTIL.util import  read_file
+from UTIL.util import  read_file, expConfig
 from constants import DEVICE
 # from UTIL.resultsPolicy import ResultPolicy
 from UTIL.earlyStop import EarlyStopping
@@ -199,9 +199,10 @@ def __main__():
                                                                                                                     args.segmentPreprocessing,
                                                                                                                     args.numEpochs,
                                                                                                                     args.split_type)
+                                                                                       
         log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
         writer = SummaryWriter(log_dir)
-        print('Tensorboard logDir={}'.format(log_dir))
+        # print('Tensorboard logDir={}'.format(log_dir))
         tr = trainer.Trainer(model=model,
                             model_transfer= args.transferModel,
                             train_dataloader=train_dt_loader.getDataloader(),
@@ -284,10 +285,18 @@ def __main__():
                                                                                                                                 args.numEpochs,
                                                                                                                                 args.split_type,
                                                                                                                                 fold)
-            
+            config = expConfig(dataset='HOCKEY',
+                                    modelType=args.modelType,
+                                    featureExtract=args.featureExtract,
+                                    numDynamicImages=args.numDynamicImagesPerVideo,
+                                    segmentLength=args.videoSegmentLength,
+                                    frameSkip=args.frameSkip,
+                                    skipInitialFrames=args.skipInitialFrames,
+                                    overlap=args.overlapping,
+                                    joinType=args.joinType)
             log_dir = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'tensorboard-runs', experimentConfig)
             writer = SummaryWriter(log_dir)
-            print('Tensorboard logDir={}'.format(log_dir))
+            # print('Tensorboard logDir={}'.format(log_dir))
             tr = trainer.Trainer(model=model,
                             model_transfer= args.transferModel,
                             train_dataloader=train_dt_loader.dataloader,
@@ -302,7 +311,7 @@ def __main__():
                 path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig)
             else:
                 path = None
-            early_stopping = EarlyStopping(patience=5, verbose=True, path= path)
+            early_stopping = EarlyStopping(patience=5, verbose=True, path=path, model_config=config)
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold,epoch, args.numEpochs))
                 # Train and evaluate
