@@ -38,7 +38,7 @@ class EarlyStopping:
             # self.best_loss = val_loss
             # self.best_epoch = epoch
             self.save_checkpoint(val_loss, val_acc, epoch, fold, model)
-        elif score < self.best_score + self.delta or score < -train_loss:
+        elif (score < self.best_score + self.delta) or score < -train_loss:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:

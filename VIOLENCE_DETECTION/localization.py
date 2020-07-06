@@ -11,6 +11,7 @@ from VIDEO_REPRESENTATION.imageAnalysis import show
 from YOLOv3.yolo_inference import initializeYoloV3
 from LOCALIZATION.bounding_box import BoundingBox
 from LOCALIZATION.point import Point
+from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from constants import DEVICE
 import constants
 
@@ -69,7 +70,7 @@ def localization():
     mask_model.to(DEVICE)
     file = os.path.join(constants.PATH_RESULTS,
                         'MASKING/checkpoints',
-                        'MaskModel_backnone=resnet50_NDI=1_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=10-epoch-9.pth')
+                        'MaskModel_backnone=resnet50_NDI-len=1-40_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=10_epoch=8_loss=7.0934.pth')
 
     if DEVICE == 'cuda:0':
         mask_model.load_state_dict(torch.load(file), strict=False)
@@ -80,10 +81,16 @@ def localization():
     test_x = list(itemgetter(*test_idx)(X))
     test_y = list(itemgetter(*test_idx)(y))
     test_numFrames = list(itemgetter(*test_idx)(numFrames))
+    # transf = transforms.Compose(
+    #         [
+    #             transforms.CenterCrop(224),
+    #             transforms.ToTensor()   
+    #         ])
+    transf = ucf2CrimeTransforms(224)
     dataset = ViolenceDataset(dataset=test_x,
                                 labels=test_y,
                                 numFrames=test_numFrames,
-                                spatial_transform=None,
+                                spatial_transform=transf['val'],
                                 numDynamicImagesPerVideo=1,
                                 videoSegmentLength=10,
                                 positionSegment='begin',
@@ -98,9 +105,11 @@ def localization():
     yolo_detector, classes = yolo()
     img_size = 416
     conf_thres = 0.8
+    
     nms_thres = 0.4
     for i, data in enumerate(dataloader):
-        inputs, labels, video_names, _, paths = data  
+        inputs, labels, video_names, _, paths = data
+        print('Inputs: ', inputs.size())
         batch_size, timesteps, C, H, W = inputs.size() # (1, 1, 3, 224, 224)
         dimages = inputs.view(batch_size * timesteps, C, H, W)
         dimages = dimages.cpu().numpy()
@@ -111,7 +120,6 @@ def localization():
         if labels.item() == 1:
             mascaras = []
             with torch.no_grad():
-                # inputs = transforms.CenterCrop(224)(inputs)
                 masks, _ = mask_model(inputs, labels)
                 numMask, c, hh, ww = masks.size()
             for i in range(numMask):
@@ -122,7 +130,7 @@ def localization():
                 mascara = mascara.numpy().transpose(1, 2, 0)
                 mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
                 saliency_bboxes, preprocesing_outs, contours, hierarchy = computeBoundingBoxFromMask(mascara)
-                bynary = preprocessor.binarize(mascara, thresh=0.1, maxval=1)
+                bynary = preprocessor.binarize(mascara, thresh=0.5, maxval=1)
                 
                 
                 

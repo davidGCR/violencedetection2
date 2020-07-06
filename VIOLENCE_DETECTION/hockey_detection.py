@@ -65,6 +65,7 @@ def __main__():
     parser.add_argument("--split_type", type=str)
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
+    parser.add_argument("--skipInitialFrames", type=int, default=0)
     parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
@@ -325,6 +326,9 @@ def __main__():
                 writer.add_scalar('validation loss', epoch_loss_val, epoch)
                 writer.add_scalar('training Acc', epoch_acc_train, epoch)
                 writer.add_scalar('validation Acc', epoch_acc_val, epoch)
+                if early_stopping.early_stop:
+                    print("Early stopping")
+                    break
                 
             cv_test_accs.append(early_stopping.best_acc)
             cv_test_losses.append(early_stopping.val_loss_min)
