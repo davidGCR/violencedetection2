@@ -29,15 +29,15 @@ from UTIL.util import load_torch_checkpoint
 from VIOLENCE_DETECTION.dataloader import MyDataloader
 # from Models import AlexNet
 
-def save_checkpoint(state, filename='sal.pth.tar'):
-    print('save in: ',filename)
-    torch.save(state, filename)
+# def save_checkpoint(state, filename='sal.pth.tar'):
+#     print('save in: ',filename)
+#     torch.save(state, filename)
 
-def load_checkpoint(net,optimizer,filename='small.pth.tar'):
-    checkpoint = torch.load(filename)
-    net.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    return net,optimizer
+# def load_checkpoint(net,optimizer,filename='small.pth.tar'):
+#     checkpoint = torch.load(filename)
+#     net.load_state_dict(checkpoint['state_dict'])
+#     optimizer.load_state_dict(checkpoint['optimizer'])
+#     return net,optimizer
 
 def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_epochs, dataloader, numDynamicImages, checkpoint_path):
     loss_func = Loss(num_classes=2, regularizers=regularizers, num_dynamic_images=numDynamicImages)
@@ -68,11 +68,28 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
 
         if checkpoint_path is not None and epoch_loss < best_loss:
             best_loss = epoch_loss
-            name = '{}_epoch={}_loss={:.4f}.pth'.format(checkpoint_path, epoch, epoch_loss)
+            name = '{}_epoch={}.pth'.format(checkpoint_path, epoch)
             print('Saving model...', name)
             torch.save(mask_model.state_dict(), name)
         #     print('Saving entire saliency model...')
         #     save_checkpoint(saliency_m,checkpoint_path)
+
+def base_dataset(dataset, fold):
+    if dataset == 'UCFCRIME2LOCAL':
+        mytransfroms = ucf2CrimeTransforms(224)
+        X, y, numFrames = crime2localLoadData(min_frames=40)
+        train_idx, test_idx = get_Fold_Data(fold)
+        train_x = list(itemgetter(*train_idx)(X))
+        train_y = list(itemgetter(*train_idx)(y))
+        train_numFrames = list(itemgetter(*train_idx)(numFrames))
+        test_x = list(itemgetter(*test_idx)(X))
+        test_y = list(itemgetter(*test_idx)(y))
+        test_numFrames = list(itemgetter(*test_idx)(numFrames))
+    elif dataset == 'HOCKEY':
+        mytransfroms = hockeyTransforms(224)
+        datasetAll, labelsAll, numFramesAll = hockeyLoadData()
+        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-' + str(fold), datasetAll, labelsAll, numFramesAll)
+    return train_x, train_y, train_numFrames, mytransfroms
 
 def __anomaly_main__():
     parser = argparse.ArgumentParser()
@@ -90,29 +107,16 @@ def __anomaly_main__():
     parser.add_argument("--saveCheckpoint",type=lambda x: (str(x).lower() == 'true'), default=False)
     
     args = parser.parse_args()
-    
-    input_size = 224
-    # transforms = hockeyTransforms(input_size)
-    mytransfroms = ucf2CrimeTransforms(224)
     num_classes = 2
 
     class_checkpoint = load_torch_checkpoint(args.classifier)
+    train_x, train_y, train_numFrames = base_dataset(class_checkpoint['model_config']['dataset'], fold=1)
     print(class_checkpoint['model_config'])
     
     regularizers = {'area_loss_coef': args.areaL,
                     'smoothness_loss_coef': args.smoothL,
                     'preserver_loss_coef': args.preserverL,
                     'area_loss_power': args.areaPowerL}
-    # datasetAll, labelsAll, numFramesAll = hockeyLoadData()
-    # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-1', datasetAll, labelsAll, numFramesAll)
-    X, y, numFrames = crime2localLoadData(min_frames=40)
-    train_idx, test_idx = get_Fold_Data(1)
-    train_x = list(itemgetter(*train_idx)(X))
-    train_y = list(itemgetter(*train_idx)(y))
-    train_numFrames = list(itemgetter(*train_idx)(numFrames))
-    test_x = list(itemgetter(*test_idx)(X))
-    test_y = list(itemgetter(*test_idx)(y))
-    test_numFrames = list(itemgetter(*test_idx)(numFrames))
     default_args = {
             'X': train_x,
             'y': train_y,
@@ -122,7 +126,7 @@ def __anomaly_main__():
             'videoSegmentLength': class_checkpoint['model_config']['segmentLength'],
             'positionSegment': 'begin',
             'overlapping': class_checkpoint['model_config']['overlap'],
-            'frameSkip': 0,
+            'frameSkip': class_checkpoint['model_config']['frameSkip'],
             'skipInitialFrames': class_checkpoint['model_config']['skipInitialFrames'],
             'batchSize': args.batchSize,
             'shuffle': True,
@@ -142,10 +146,7 @@ def __anomaly_main__():
                                             numDiPerVideos=class_checkpoint['model_config']['numDynamicImages'],
                                             joinType=class_checkpoint['model_config']['joinType'],
                                             use_pretrained=True)
-    # if DEVICE == 'cuda:0':
-    #     classifier_model.load_state_dict(checkpoint['model_state_dict'])
-    # else:
-    #     classifier_model.load_state_dict(torch.load(args.classifier, map_location=DEVICE))
+    
     classifier_model.load_state_dict(class_checkpoint['model_state_dict'])
     classifier_model.to(DEVICE)
     classifier_model.eval()

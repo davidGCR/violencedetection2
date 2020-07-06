@@ -70,7 +70,7 @@ def localization():
     mask_model.to(DEVICE)
     file = os.path.join(constants.PATH_RESULTS,
                         'MASKING/checkpoints',
-                        'MaskModel_backnone=resnet50_NDI-len=1-40_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=10_epoch=8_loss=7.0934.pth')
+                        'MaskModel_backnone=resnet50_NDI-len=1-40_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=25_epoch=23_loss=2.1115.pth')
 
     if DEVICE == 'cuda:0':
         mask_model.load_state_dict(torch.load(file), strict=False)
@@ -92,7 +92,7 @@ def localization():
                                 numFrames=test_numFrames,
                                 spatial_transform=transf['val'],
                                 numDynamicImagesPerVideo=1,
-                                videoSegmentLength=10,
+                                videoSegmentLength=40,
                                 positionSegment='begin',
                                 overlaping=0,
                                 frame_skip=0,
