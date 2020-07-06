@@ -22,8 +22,8 @@ from constants import DEVICE
 # import ANOMALYCRIME.transforms_anomaly as transforms_anomaly
 
 # import ANOMALYCRIME.anomalyInitializeDataset as anomaly_initializeDataset
-from VIOLENCE_DETECTION.transforms import hockeyTransforms
-from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, ucf2CrimeTransforms
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData, get_Fold_Data
 from UTIL.chooseModel import initialize_model
 from UTIL.util import load_torch_checkpoint
 from VIOLENCE_DETECTION.dataloader import MyDataloader
@@ -92,7 +92,8 @@ def __anomaly_main__():
     args = parser.parse_args()
     
     input_size = 224
-    transforms = hockeyTransforms(input_size)
+    # transforms = hockeyTransforms(input_size)
+    mytransfroms = ucf2CrimeTransforms(224)
     num_classes = 2
 
     class_checkpoint = load_torch_checkpoint(args.classifier)
@@ -102,13 +103,21 @@ def __anomaly_main__():
                     'smoothness_loss_coef': args.smoothL,
                     'preserver_loss_coef': args.preserverL,
                     'area_loss_power': args.areaPowerL}
-    datasetAll, labelsAll, numFramesAll = hockeyLoadData()
-    train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-1', datasetAll, labelsAll, numFramesAll)
+    # datasetAll, labelsAll, numFramesAll = hockeyLoadData()
+    # train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-1', datasetAll, labelsAll, numFramesAll)
+    X, y, numFrames = crime2localLoadData(min_frames=40)
+    train_idx, test_idx = get_Fold_Data(1)
+    train_x = list(itemgetter(*train_idx)(X))
+    train_y = list(itemgetter(*train_idx)(y))
+    train_numFrames = list(itemgetter(*train_idx)(numFrames))
+    test_x = list(itemgetter(*test_idx)(X))
+    test_y = list(itemgetter(*test_idx)(y))
+    test_numFrames = list(itemgetter(*test_idx)(numFrames))
     default_args = {
             'X': train_x,
             'y': train_y,
             'numFrames': train_numFrames,
-            'transform': transforms['train'],
+            'transform': mytransfroms['train'],
             'NDI': class_checkpoint['model_config']['numDynamicImages'],
             'videoSegmentLength': class_checkpoint['model_config']['segmentLength'],
             'positionSegment': 'begin',
