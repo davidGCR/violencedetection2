@@ -105,6 +105,7 @@ def __main__():
     parser.add_argument("--splitType", type=str)
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
+    parser.add_argument("--skipInitialFrames", type=int, default=0)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--split_type", type=str)
@@ -134,7 +135,7 @@ def __main__():
                 'positionSegment': args.positionSegment,
                 'overlapping': args.overlapping,
                 'frameSkip': args.frameSkip,
-                'skipInitialFrames': 0,
+                'skipInitialFrames': args.skipInitialFrames,
                 'batchSize': args.batchSize,
                 'shuffle': False,
                 'numWorkers': args.numWorkers,
@@ -212,7 +213,7 @@ def __main__():
                 'positionSegment': args.positionSegment,
                 'overlapping': args.overlapping,
                 'frameSkip': args.frameSkip,
-                'skipInitialFrames': 0,
+                'skipInitialFrames': args.skipInitialFrames,
                 'batchSize': args.batchSize,
                 'shuffle': True,
                 'numWorkers': args.numWorkers,
