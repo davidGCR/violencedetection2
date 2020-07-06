@@ -35,7 +35,7 @@ def expConfig(**kwargs):
     'numDynamicImages': kwargs['numDynamicImages'],
     'segmentLength': kwargs['segmentLength'],
     'joinType': kwargs['joinType'],
-    'skipFrames': kwargs['skipFrames'],
+    'frameSkip': kwargs['frameSkip'],
     'featureExtract': kwargs['featureExtract'],
     'overlap': kwargs['overlap'],
     'skipInitialFrames': kwargs['skipInitialFrames'],
