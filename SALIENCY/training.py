@@ -23,7 +23,7 @@ from constants import DEVICE
 
 # import ANOMALYCRIME.anomalyInitializeDataset as anomaly_initializeDataset
 from VIOLENCE_DETECTION.transforms import hockeyTransforms, ucf2CrimeTransforms
-from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData, get_Fold_Data
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, crime2localLoadData, get_Fold_Data, train_test_iteration
 from UTIL.chooseModel import initialize_model
 from UTIL.util import load_torch_checkpoint
 from VIOLENCE_DETECTION.dataloader import MyDataloader
@@ -94,6 +94,9 @@ def base_dataset(dataset, fold):
         mytransfroms = hockeyTransforms(224)
         datasetAll, labelsAll, numFramesAll = hockeyLoadData()
         train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-' + str(fold), datasetAll, labelsAll, numFramesAll)
+    elif dataset == 'VIF':
+        fold_path = os.path.join(constants.PATH_VIF_FRAMES,str(fold))
+        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = train_test_iteration(fold_path, shuffle=False)
     return train_x, train_y, train_numFrames, mytransfroms
 
 def __anomaly_main__():
