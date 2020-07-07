@@ -70,7 +70,12 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
             best_loss = epoch_loss
             name = '{}_epoch={}.pth'.format(checkpoint_path, epoch)
             print('Saving model...', name)
-            torch.save(mask_model.state_dict(), name)
+            torch.save({
+                'epoch': epoch,
+                'loss': epoch_loss,
+                'model_state_dict': mask_model.state_dict(),
+                }, checkpoint_path)
+            # torch.save(mask_model.state_dict(), name)
         #     print('Saving entire saliency model...')
         #     save_checkpoint(saliency_m,checkpoint_path)
 

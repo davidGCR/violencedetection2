@@ -111,7 +111,7 @@ class SaliencyModel(nn.Module):
     def forward(self, x, labels):
         batch_size, timesteps, C, H, W = x.size()
         xx = x.view(batch_size * timesteps, C, H, W)
-        print('=> SaliencyModel input:', xx.size())
+        # print('=> SaliencyModel input:', xx.size())
         out = self.conv1(xx)
         # print('=> out conv1:', out.size())
         out = self.bn1(out)
