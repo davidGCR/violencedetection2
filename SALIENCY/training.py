@@ -68,8 +68,8 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
 
         if checkpoint_path is not None and epoch_loss < best_loss:
             best_loss = epoch_loss
-            name = '{}_epoch={}.pth'.format(checkpoint_path, epoch)
-            print('Saving model...', name)
+            # name = '{}_epoch={}.pth'.format(checkpoint_path)
+            print('Saving model...', checkpoint_path)
             torch.save({
                 'epoch': epoch,
                 'loss': epoch_loss,
@@ -116,7 +116,11 @@ def __anomaly_main__():
 
     class_checkpoint = load_torch_checkpoint(args.classifier)
     train_x, train_y, train_numFrames, mytransfroms = base_dataset(class_checkpoint['model_config']['dataset'], fold=1)
-    print(class_checkpoint['model_config'])
+    print(class_checkpoint['model_config'],
+        '_epoch=', class_checkpoint['epoch'],
+        '_fold=', class_checkpoint['fold'],
+        '_val_acc=', class_checkpoint['val_acc'],
+        '_val_loss=', class_checkpoint['val_loss'])
     
     regularizers = {'area_loss_coef': args.areaL,
                     'smoothness_loss_coef': args.smoothL,
@@ -131,7 +135,7 @@ def __anomaly_main__():
             'videoSegmentLength': class_checkpoint['model_config']['segmentLength'],
             'positionSegment': 'begin',
             'overlapping': class_checkpoint['model_config']['overlap'],
-            'frameSkip': class_checkpoint['model_config']['frameSkip'],
+            'frameSkip': 0, #class_checkpoint['model_config']['frameSkip']
             'skipInitialFrames': class_checkpoint['model_config']['skipInitialFrames'],
             'batchSize': args.batchSize,
             'shuffle': True,

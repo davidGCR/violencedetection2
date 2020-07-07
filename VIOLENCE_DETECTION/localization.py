@@ -50,7 +50,7 @@ def load_localization_ground_truth(paths):
         splits = re.split('(\d+)', frame_name)
         frame_number = int(splits[1])
         frame_data = data[frame_number]
-        print('video={}, frame={}, frame_number={}, gt={}'.format(video_name, frame_name, frame_number, frame_data))
+        # print('video={}, frame={}, frame_number={}, gt={}'.format(video_name, frame_name, frame_number, frame_data))
         if frame_number != int(frame_data[5]):
             print('=========*********** Error en Ground Truth!!!!!!!!!')
             break
@@ -79,6 +79,7 @@ def localization():
     #     mask_model.load_state_dict(torch.load(file, map_location=DEVICE))
     checkpoint = load_torch_checkpoint(file)
     mask_model.load_state_dict(checkpoint['model_state_dict'])
+    # print(checkpoint['model_config'])
 
     X, y, numFrames = crime2localLoadData(min_frames=0)
     test_idx = get_Test_Data(fold=1)
@@ -113,13 +114,13 @@ def localization():
     nms_thres = 0.4
     for i, data in enumerate(dataloader):
         inputs, labels, video_names, _, paths = data
-        print('Inputs: ', inputs.size())
+        # print('Inputs: ', inputs.size())
         batch_size, timesteps, C, H, W = inputs.size() # (1, 1, 3, 224, 224)
         dimages = inputs.view(batch_size * timesteps, C, H, W)
         dimages = dimages.cpu().numpy()
         dimages = [min_max_normalize_np(img).transpose(1, 2, 0)for img in dimages]
         
-        print('==========, Label: ', labels, type(labels))
+        # print('==========, Label: ', labels, type(labels))
         # print('paths=', i, len(paths), len(paths[0]), paths)
         if labels.item() == 1:
             mascaras = []
