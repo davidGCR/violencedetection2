@@ -119,8 +119,6 @@ def __main__():
     cv_test_losses = []
     cv_final_epochs = []
     
-
-    
     if args.split_type == 'fully-conv':
         datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
         transforms = vifTransforms(input_size=224)

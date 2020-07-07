@@ -11,6 +11,7 @@ from VIDEO_REPRESENTATION.imageAnalysis import show
 from YOLOv3.yolo_inference import initializeYoloV3
 from LOCALIZATION.bounding_box import BoundingBox
 from LOCALIZATION.point import Point
+from LOCALIZATION.localization_utils import findContours, bboxes_from_contours
 from VIOLENCE_DETECTION.transforms import ucf2CrimeTransforms
 from constants import DEVICE
 import constants
@@ -70,7 +71,7 @@ def localization():
     mask_model.to(DEVICE)
     file = os.path.join(constants.PATH_RESULTS,
                         'MASKING/checkpoints',
-                        'MaskModel_backnone=resnet50_NDI-len=1-40_AreaLoss=8_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=25_epoch=23_loss=2.1115.pth')
+                        'MaskModel_backnone=resnet50_NDI-len=1-40_AreaLoss=8.0_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=30_epoch=27_loss=1.3169.pth')
 
     if DEVICE == 'cuda:0':
         mask_model.load_state_dict(torch.load(file), strict=False)
@@ -92,7 +93,7 @@ def localization():
                                 numFrames=test_numFrames,
                                 spatial_transform=transf['val'],
                                 numDynamicImagesPerVideo=1,
-                                videoSegmentLength=40,
+                                videoSegmentLength=10,
                                 positionSegment='begin',
                                 overlaping=0,
                                 frame_skip=0,
@@ -129,22 +130,25 @@ def localization():
                 mascara = min_max_normalize_tensor(mascara)  #to 0-1
                 mascara = mascara.numpy().transpose(1, 2, 0)
                 mascara = cv2.resize(mascara, dsize=(w, h), interpolation=cv2.INTER_CUBIC)
-                saliency_bboxes, preprocesing_outs, contours, hierarchy = computeBoundingBoxFromMask(mascara)
+                # saliency_bboxes, preprocesing_outs, contours, hierarchy = computeBoundingBoxFromMask(mascara)
                 bynary = preprocessor.binarize(mascara, thresh=0.5, maxval=1)
                 
+                img_contuors, contours, hierarchy = findContours(bynary.astype(np.uint8), remove_fathers=True)
+                img_bboxes, bboxes = bboxes_from_contours(img_contuors, contours)
                 
-                
-                show(wait=50, dimage=dimages[i], mask=mascara, binary=bynary)
+                dimages_gray = cv2.cvtColor(dimages[i], cv2.COLOR_BGR2GRAY);
+                dimages_gray_bynary = preprocessor.binarize(dimages_gray, thresh=0.5, maxval=1)
+                show(wait=50, dimage=dimages[i], dimages_gray=dimages_gray, dimages_gray_bynary=dimages_gray_bynary, mask=mascara, binary=bynary, bb=img_bboxes)
                 frames = load_dynamic_image_frames(paths[i])
                 gt_bboxes = load_localization_ground_truth(paths[i])
                 if len(frames) != len(gt_bboxes):
                     print('---------FRames y gt no coinciden...{}/{}'.format(len(frames), len(gt_bboxes)))
                 for k, fr in enumerate(frames):
-                #     persons_in_frame, person_detection_time = personDetectionInFrameYolo(yolo_detector, img_size, conf_thres,nms_thres, classes, fr, DEVICE)
+                    persons_in_frame, person_detection_time = personDetectionInFrameYolo(yolo_detector, img_size, conf_thres,nms_thres, classes, fr, DEVICE)
                 #     for s_bbox in saliency_bboxes:
                 #         cv2.rectangle(fr, (int(s_bbox.pmin.x), int(s_bbox.pmin.y)), (int(s_bbox.pmax.x), int(s_bbox.pmax.y)), constants.yellow, 2)
-                #     for person in persons_in_frame:
-                #         cv2.rectangle(fr, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), constants.green, 2)
+                    for person in persons_in_frame:
+                        cv2.rectangle(fr, (int(person.pmin.x), int(person.pmin.y)), (int(person.pmax.x), int(person.pmax.y)), constants.green, 2)
                     cv2.rectangle(fr, (gt_bboxes[k].pmin.x, int(gt_bboxes[k].pmin.y)), (int(gt_bboxes[k].pmax.x), int(gt_bboxes[k].pmax.y)), constants.red, 2)
                     cv2.imshow('image', fr)
                     # cv2.imshow('dimage', dimages[0])

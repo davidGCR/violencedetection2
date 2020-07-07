@@ -110,7 +110,7 @@ def __anomaly_main__():
     num_classes = 2
 
     class_checkpoint = load_torch_checkpoint(args.classifier)
-    train_x, train_y, train_numFrames = base_dataset(class_checkpoint['model_config']['dataset'], fold=1)
+    train_x, train_y, train_numFrames, mytransfroms = base_dataset(class_checkpoint['model_config']['dataset'], fold=1)
     print(class_checkpoint['model_config'])
     
     regularizers = {'area_loss_coef': args.areaL,
