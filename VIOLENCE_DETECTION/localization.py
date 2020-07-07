@@ -5,7 +5,7 @@ from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 from VIOLENCE_DETECTION.datasetsMemoryLoader import crime2localLoadData, get_Test_Data
 from SALIENCY.saliencyModel import build_saliency_model
 from LOCALIZATION.localization_utils import computeBoundingBoxFromMask, personDetectionInFrameYolo
-from UTIL.util import min_max_normalize_tensor, min_max_normalize_np
+from UTIL.util import min_max_normalize_tensor, min_max_normalize_np, load_torch_checkpoint
 from VIDEO_REPRESENTATION.preprocessor import Preprocessor
 from VIDEO_REPRESENTATION.imageAnalysis import show
 from YOLOv3.yolo_inference import initializeYoloV3
@@ -73,10 +73,13 @@ def localization():
                         'MASKING/checkpoints',
                         'MaskModel_backnone=resnet50_NDI-len=1-40_AreaLoss=8.0_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=30_epoch=27_loss=1.3169.pth')
 
-    if DEVICE == 'cuda:0':
-        mask_model.load_state_dict(torch.load(file), strict=False)
-    else:
-        mask_model.load_state_dict(torch.load(file, map_location=DEVICE))
+    # if DEVICE == 'cuda:0':
+    #     mask_model.load_state_dict(torch.load(file), strict=False)
+    # else:
+    #     mask_model.load_state_dict(torch.load(file, map_location=DEVICE))
+    checkpoint = load_torch_checkpoint(file)
+    mask_model.load_state_dict(checkpoint['model_state_dict'])
+
     X, y, numFrames = crime2localLoadData(min_frames=0)
     test_idx = get_Test_Data(fold=1)
     test_x = list(itemgetter(*test_idx)(X))
