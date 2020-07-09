@@ -7,7 +7,7 @@ from torchvision import datasets, models, transforms
 # from MODELS.AlexNet import AlexNet
 # import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg
-from MODELS.ViolenceModels import AlexNet, AlexNetV2, ResNet, Densenet, AlexNetConv, ResNetConv
+from MODELS.ViolenceModels import AlexNet, AlexNetV2, ResNet, Densenet, AlexNetConv, ResNetConv, MyEfficientNet
 
 def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
     # if model_name == "resnet18" or model_name == "resnet34":
@@ -40,10 +40,8 @@ def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, j
         model_ft = Densenet(num_classes, numDiPerVideos, joinType, feature_extract)
         
         input_size = 224
-    elif model_name == "vgg":
-        """ VGG11_bn
-        """
-        model_ft = vgg.ViolenceModelVGG(numDiPerVideos, model_name, joinType, feature_extract)
+     elif model_name == "efficientnet":
+        model_ft = MyEfficientNet(num_classes, numDiPerVideos, joinType, feature_extract)
         input_size = 224
     else:
         print("Invalid model name...")

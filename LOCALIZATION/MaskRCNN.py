@@ -1,5 +1,6 @@
+import os
 import sys
-sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torchvision.transforms as T
 import torchvision
 from PIL import Image
@@ -11,8 +12,8 @@ import torch
 import numpy as np
 import cv2
 import random
-from point import Point
-from bounding_box import BoundingBox
+from LOCALIZATION.point import Point
+from LOCALIZATION.bounding_box import BoundingBox
 import time
 
 # model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)

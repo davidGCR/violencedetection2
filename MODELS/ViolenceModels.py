@@ -194,3 +194,78 @@ class Densenet(nn.Module):  # ViolenceModel2
         # print('maxpooling: ', x.size())
         x = self.linear(x)
         return x
+
+class Inception(nn.Module):  # ViolenceModel2
+    def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
+        super(Inception, self).__init__()
+        self.numDiPerVideos = numDiPerVideos
+        self.joinType = joinType
+        self.num_classes = num_classes
+        self.model = models.inception_v3(pretrained=True)
+        set_parameter_requires_grad(self.model, feature_extract)
+         # Handle the auxilary net
+        num_ftrs = self.model.AuxLogits.fc.in_features
+        self.model.AuxLogits.fc = nn.Linear(num_ftrs, num_classes)
+        # Handle the primary net
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_ftrs, num_classes)
+        
+        # self.num_ftrs = self.model.classifier.in_features
+        # self.model.classifier = Identity()
+        # self.linear= nn.Linear(self.num_ftrs, num_classes)
+        
+
+    def forward(self, x):
+        # print(x.size())
+        batch_size, timesteps, C, H, W = x.size()
+        c_in = x.view(batch_size * timesteps, C, H, W)
+        # print('cin: ', c_in.size())
+        c_out = self.model(c_in)
+        # print('cout: ', c_out.size())
+        x = torch.flatten(c_out, 1)
+        # print('flatten: ', x.size())
+        # Re-structure the data and then temporal max-pool.
+        x = x.view(batch_size, timesteps, self.num_ftrs)
+        # print('Re-structure: ', x.size())
+        x = x.max(dim=1).values
+        # print('maxpooling: ', x.size())
+        x = self.linear(x)
+        return x
+
+from efficientnet_pytorch import EfficientNet
+
+class MyEfficientNet(nn.Module):  # ViolenceModel2
+    def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
+        super(MyEfficientNet, self).__init__()
+        self.numDiPerVideos = numDiPerVideos
+        self.joinType = joinType
+        self.num_classes = num_classes
+        self.model = EfficientNet.from_name('efficientnet-b1')
+        set_parameter_requires_grad(self.model, feature_extract)
+        self.num_ftrs = self.model._fc.in_features
+
+        self.model._fc=Identity()
+        # self.convLayers = nn.Sequential(*list(self.model.children())[:-5])
+        # self._avg_pooling = nn.AdaptiveAvgPool2d(1)
+        # self._dropout = nn.Dropout(p=0.2, inplace=False)
+        self.linear = nn.Linear(self.num_ftrs, 2)  
+        
+
+    def forward(self, x):
+        # print(x.size())
+        batch_size, timesteps, C, H, W = x.size()
+        c_in = x.view(batch_size * timesteps, C, H, W)
+        # print('cin: ', c_in.size())
+
+        x = self.model(c_in)
+
+        x = torch.flatten(x, 1)
+        x = x.view(batch_size, timesteps, self.num_ftrs)
+        x = x.max(dim=1).values
+
+        # x = self._avg_pooling(x)
+        # x = x.view(bs, -1)
+        # x = self._dropout(x)
+        x = self.linear(x)
+
+        return x
