@@ -40,7 +40,7 @@ def initialize_model(model_name, num_classes, feature_extract, numDiPerVideos, j
         model_ft = Densenet(num_classes, numDiPerVideos, joinType, feature_extract)
         
         input_size = 224
-     elif model_name == "efficientnet":
+    elif model_name == "efficientnet":
         model_ft = MyEfficientNet(num_classes, numDiPerVideos, joinType, feature_extract)
         input_size = 224
     else:
