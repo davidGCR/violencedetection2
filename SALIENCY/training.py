@@ -39,7 +39,7 @@ from VIOLENCE_DETECTION.dataloader import MyDataloader
 #     optimizer.load_state_dict(checkpoint['optimizer'])
 #     return net,optimizer
 
-def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_epochs, dataloader, numDynamicImages, checkpoint_path):
+def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_epochs, dataloader, numDynamicImages, checkpoint_path,fold):
     loss_func = Loss(num_classes=2, regularizers=regularizers, num_dynamic_images=numDynamicImages)
     best_loss = 1000.0
     for epoch in range(num_epochs):  # loop over the dataset multiple times
@@ -71,6 +71,7 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
             # name = '{}_epoch={}.pth'.format(checkpoint_path)
             print('Saving model...', checkpoint_path)
             torch.save({
+                'fold': fold,
                 'epoch': epoch,
                 'loss': epoch_loss,
                 'model_state_dict': mask_model.state_dict(),
@@ -183,7 +184,8 @@ def __anomaly_main__():
           num_epochs=args.numEpochs,
           dataloader=train_dt_loader.dataloader,
           numDynamicImages=class_checkpoint['model_config']['numDynamicImages'],
-          checkpoint_path=checkpoint_path)
+          checkpoint_path=checkpoint_path,
+          fold=class_checkpoint['fold'])
     # train(num_classes, args.num_epochs, regularizers, train_dt_loader, args.classifier, args.numDiPerVideos)
 
 __anomaly_main__()

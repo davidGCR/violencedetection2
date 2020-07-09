@@ -65,6 +65,7 @@ def __main__():
     parser.add_argument("--split_type", type=str)
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
+    parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--skipInitialFrames", type=int, default=0)
     parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
@@ -312,7 +313,7 @@ def __main__():
                 path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', experimentConfig)
             else:
                 path = None
-            early_stopping = EarlyStopping(patience=5, verbose=True, path=path, model_config=config)
+            early_stopping = EarlyStopping(patience=args.patience, verbose=True, path=path, model_config=config)
             for epoch in range(1, args.numEpochs + 1):
                 print("Fold {} ----- Epoch {}/{}".format(fold,epoch, args.numEpochs))
                 # Train and evaluate
