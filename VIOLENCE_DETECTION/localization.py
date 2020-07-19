@@ -28,6 +28,7 @@ import re
 from LOCALIZATION.localization_utils import findContours, bboxes_from_contours, process_mask, filterClosePersonsInFrame, joinBBoxes, IOU, joinBBoxes, intersetionArea
 from LOCALIZATION.MaskRCNN import personDetectionInFrameMaskRCNN
 import itertools
+import copy
 
 
 
@@ -151,14 +152,22 @@ def base_dataset(dataset, fold):
 def localization():
     mask_model = build_saliency_model(num_classes=2)
     mask_model.to(DEVICE)
+    model_path = 'MaskModel_bbone=alexnetv2_Dts=UCFCRIME2LOCAL_NDI-len=1-40_AreaLoss=8.0_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=30'
     file = os.path.join(constants.PATH_RESULTS,
                         'MASKING/checkpoints',
-                        'MaskModel_bbone=alexnetv2_Dts=UCFCRIME2LOCAL_NDI-len=1-40_AreaLoss=8.0_SmoothLoss=0.5_PreservLoss=0.3_AreaLoss2=0.3_epochs=30')
+                        model_path)
 
     checkpoint = load_torch_checkpoint(file)
     mask_model.load_state_dict(checkpoint['model_state_dict'])
     folds = [1,2,3,4,5]
     folds_lerrors = []
+    save = False
+
+    #Save images
+    save_folder = os.path.join(constants.PATH_RESULTS, 'MASKING', 'images', model_path)
+    if not os.path.exists(save_folder):
+        os.mkdir(save_folder)
+
     for fold in folds:
         test_x, test_y, test_numFrames, mytransfroms = base_dataset('UCFCRIME2LOCAL', fold=fold)
         transf = ucf2CrimeTransforms(224)
@@ -171,7 +180,7 @@ def localization():
                                     positionSegment='begin',
                                     overlaping=0,
                                     frame_skip=0,
-                                    skipInitialFrames=10,
+                                    skipInitialFrames=20,
                                     ppType=None)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=4)
         w = 320
@@ -189,7 +198,7 @@ def localization():
 
         for i, data in enumerate(dataloader):
             inputs, labels, video_names, _, paths = data
-            # print('video: ', video_names)
+            # print('video: ', video_names[0])
             batch_size, timesteps, C, H, W = inputs.size() # (1, 1, 3, 224, 224)
             dimages = inputs.view(batch_size * timesteps, C, H, W)
             dimages = dimages.cpu().numpy()
@@ -246,7 +255,8 @@ def localization():
                     #         persons_in_frame, person_detection_time = personDetectionInFrameYolo(yolo_detector, img_size, conf_thres, nms_thres, classes, fr, DEVICE)
                             # mask_rcnn_threshold = 0.4
                             # persons_in_frame, person_detection_time = personDetectionInFrameMaskRCNN(maskRcnnDetector, fr, mask_rcnn_threshold)
-
+                    results_imgs = []
+                    frames_raw = copy.deepcopy(frames)
                     for k, fr in enumerate(frames):
                         if len(saliency_bboxes) > 0:
                             s_bbox = saliency_bboxes[0]
@@ -268,6 +278,15 @@ def localization():
                         cv2.imshow('image', fr)
                         if cv2.waitKey(50) & 0xFF == ord('q'):
                             break
+                        results_imgs.append(fr)
+                    if save:
+                        _, nname = os.path.split(video_names[0])
+                        cv2.imwrite(os.path.join(save_folder, nname + '(in).png'), frames_raw[int(len(frames_raw) / 2)])
+                        cv2.imwrite(os.path.join(save_folder, nname + '(out).png'), results_imgs[int(len(results_imgs) / 2)])
+                        cv2.imwrite(os.path.join(save_folder, nname + '(sm-raw).png'), 255 * bynary)
+                        cv2.imwrite(os.path.join(save_folder, nname + '(sm-final).png'), 255*bynary_morph)
+                        cv2.imwrite(os.path.join(save_folder, nname + '(bm).png'), 255*dimages_gray_bynary)
+                        cv2.imwrite(os.path.join(save_folder, nname + '(di).png'), 255*dimages[i])
         ious, c, t, lerror = localization_error_iou(predictions, y, threshold=0.5)
         folds_lerrors.append(lerror)
         print('Fold={}-Localization error({}/{})={}, \n--->ious={}'.format(fold, c, t, lerror, ious))
