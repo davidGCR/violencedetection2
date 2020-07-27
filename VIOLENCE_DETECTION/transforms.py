@@ -2,9 +2,11 @@ import torchvision.transforms as transforms
 import numpy as np
 import torch
 
-def hockeyTransforms(input_size):
-    # Data augmentation and normalization for training
-    # Just normalization for validation
+def hockeyTransforms(input_size, mean=None, std=None):
+
+    if mean is None:
+        mean = [0.4770381, 0.4767955, 0.4773611] #For dynamic images
+        std = [0.11147115, 0.11427314, 0.11617025]
     data_transforms = {
         "train": transforms.Compose(
             [
@@ -13,7 +15,7 @@ def hockeyTransforms(input_size):
                 transforms.RandomResizedCrop(input_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize([0.4770381, 0.4767955, 0.4773611], [0.11147115, 0.11427314, 0.11617025])
+                transforms.Normalize(mean=mean, std=std)
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
@@ -22,7 +24,7 @@ def hockeyTransforms(input_size):
                 transforms.Resize(input_size),
                 transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
-                transforms.Normalize([0.4770381, 0.4767955, 0.4773611], [0.11147115, 0.11427314, 0.11617025])
+                transforms.Normalize(mean=mean, std=std)
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
@@ -31,7 +33,7 @@ def hockeyTransforms(input_size):
                 transforms.Resize(input_size),
                 transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
-                transforms.Normalize([0.4770381, 0.4767955, 0.4773611], [0.11147115, 0.11427314, 0.11617025])
+                transforms.Normalize(mean=mean, std=std)
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),

@@ -163,6 +163,26 @@ class ResNet(nn.Module):
         x = self.linear(x)
         return x
 
+class ResNetRGB(nn.Module):
+    def __init__(self, num_classes, model_name,feature_extract):
+        super(ResNetRGB, self).__init__()
+        self.num_classes = num_classes
+        if model_name == 'resnet18':
+            self.model_ft = models.resnet18(pretrained=True)
+        elif model_name == 'resnet34':
+            self.model_ft = models.resnet34(pretrained=True)
+        elif model_name == 'resnet50':
+            self.model_ft = models.resnet50(pretrained=True)
+        self.num_ftrs = self.model_ft.fc.in_features
+        set_parameter_requires_grad(self.model_ft, feature_extract)
+        self.model_ft.fc = nn.Linear(self.num_ftrs, self.num_classes)
+
+    def build_model(self):
+        return self.model_ft
+        # if model_name == 'resnet18' or model_name == 'resnet34':
+        #     self.linear = nn.Linear(512, self.num_classes)
+        # elif model_name == 'resnet50':
+        #     self.linear = nn.Linear(2048, self.num_classes)
 
 class Densenet(nn.Module):  # ViolenceModel2
     def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
