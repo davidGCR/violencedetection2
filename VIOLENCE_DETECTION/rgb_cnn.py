@@ -11,6 +11,7 @@ from VIOLENCE_DETECTION.rgbDataset import RGBDataset
 from MODELS.ViolenceModels import ResNetRGB
 from UTIL.parameters import verifiParametersToTrain
 from UTIL.earlyStop import EarlyStopping
+from UTIL.args import Arguments
 import torch
 from torch.optim import lr_scheduler
 import torch.nn as nn
@@ -18,16 +19,16 @@ import torch.optim as optim
 from tqdm import tqdm
 import time
 import numpy as np
+import argparse
 
 
-
-def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold, path, model_config):
     since = time.time()
     val_acc_history = []
     # best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
     
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=None, model_config=None)
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=path, model_config=model_config)
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -52,6 +53,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
                 labels = labels.to(DEVICE)
                 # zero the parameter gradients
                 optimizer.zero_grad()
+                batch_size = inputs.size()[0]
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
@@ -99,21 +101,36 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--model", type=str, default='resnet50')
+    parser.add_argument("--frameIdx", type=int, default=14)
+    parser.add_argument("--numEpochs", type=int, default=25)
+    parser.add_argument("--numWorkers", type=int, default=4)
+    parser.add_argument("--batchSize", type=int, default=8)
+    parser.add_argument("--featureExtract", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
+    args = parser.parse_args()
+
     folds_number = 5
     fold = 0
-    frame_idx = 14
+    # frame_idx = 14
     input_size = 224
-    batch_size = 8
-    num_workers = 4
-    numEpochs = 25
-    datasetAll, labelsAll, numFramesAll = hockeyLoadData()
-    transforms = hockeyTransforms(input_size, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    feature_extract = False
-    model_name = 'resnet50'
+    # batch_size = 8
+    # num_workers = 4
+    # numEpochs = 25
+    if args.dataset == 'hockey':
+        datasetAll, labelsAll, numFramesAll = hockeyLoadData()
+        transforms = hockeyTransforms(input_size, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # feature_extract = False
+    # model_name = 'resnet50'
     patience = 5
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
+    checkpoint_path = None
+    config = None
+
     
     for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll), splits_folder=constants.PATH_HOCKEY_README):
         fold = fold + 1
@@ -130,30 +147,49 @@ def main():
                                 labels=train_y,
                                 numFrames=train_numFrames,
                                 spatial_transform=transforms['train'],
-                                frame_idx=frame_idx)
-        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+                                frame_idx=args.frameIdx)
+        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
 
         test_dataset = RGBDataset(dataset=test_x,
                                 labels=test_y,
                                 numFrames=test_numFrames,
                                 spatial_transform=transforms['test'],
-                                frame_idx=frame_idx)
-        test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+                                frame_idx=args.frameIdx)
+        test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
 
-        model = ResNetRGB(num_classes=2, model_name=model_name, feature_extract=feature_extract)
+        model = ResNetRGB(num_classes=2, model_name=args.model, feature_extract=args.featureExtract)
         model = model.build_model()
-        model.to(constants.DEVICE)
-        params_to_update = verifiParametersToTrain(model, feature_extract)
+        model.to(DEVICE)
+        params_to_update = verifiParametersToTrain(model, args.featureExtract)
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         criterion = nn.CrossEntropyLoss()
 
-        dataloaders = {'train': train_dataloader, 'val': test_dataloader }
+        dataloaders = {'train': train_dataloader, 'val': test_dataloader}
+        if args.saveCheckpoint:
+            config = {
+                'dataset':args.dataset,
+                'model': args.model,
+                'frameIdx': args.frameIdx,
+                'numEpochs': args.numEpochs,
+                'featureExtract': args.featureExtract
+            }
+            ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
+            # print(ss)
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', 'RGBCNN-'+ss)
 
-        model, best_acc, val_loss_min, best_epoch = train_model(model, dataloaders, criterion, optimizer, num_epochs=numEpochs, patience=patience, fold=fold)
-        cv_test_accs.append(best_acc)
-        cv_test_losses.append(val_loss_min)
-        cv_final_epochs.append(best_epoch)
+        model, best_acc, val_loss_min, best_epoch = train_model(model,
+                                                                dataloaders,
+                                                                criterion,
+                                                                optimizer,
+                                                                num_epochs=args.numEpochs,
+                                                                patience=patience,
+                                                                fold=fold,
+                                                                path=checkpoint_path,
+                                                                model_config=config)
+        cv_test_accs.append(best_acc.item())
+        cv_test_losses.append(val_loss_min.item())
+        cv_final_epochs.append(best_epoch.item())
     print('CV Accuracies=', cv_test_accs)
     print('CV Losses=', cv_test_losses)
     print('CV Epochs=', cv_final_epochs)
