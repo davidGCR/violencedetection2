@@ -11,7 +11,7 @@ from VIOLENCE_DETECTION.rgbDataset import RGBDataset
 from MODELS.ViolenceModels import ResNetRGB
 from UTIL.parameters import verifiParametersToTrain
 from UTIL.earlyStop import EarlyStopping
-from UTIL.args import Arguments
+# from UTIL.args import Arguments
 import torch
 from torch.optim import lr_scheduler
 import torch.nn as nn
@@ -175,6 +175,7 @@ def main():
                 'featureExtract': args.featureExtract
             }
             ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
+            ss = ss+'_fold='str(fold)
             # print(ss)
             checkpoint_path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', 'RGBCNN-'+ss)
 
@@ -188,8 +189,8 @@ def main():
                                                                 path=checkpoint_path,
                                                                 model_config=config)
         cv_test_accs.append(best_acc.item())
-        cv_test_losses.append(val_loss_min.item())
-        cv_final_epochs.append(best_epoch.item())
+        cv_test_losses.append(val_loss_min)
+        cv_final_epochs.append(best_epoch)
     print('CV Accuracies=', cv_test_accs)
     print('CV Losses=', cv_test_losses)
     print('CV Epochs=', cv_final_epochs)
