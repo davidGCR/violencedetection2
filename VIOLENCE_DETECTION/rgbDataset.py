@@ -32,4 +32,4 @@ class RGBDataset(Dataset):
         # frame = np.array(frame)
         frame = self.spatial_transform(frame)
         
-        return frame, label
+        return vid_name, frame, label

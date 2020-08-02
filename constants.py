@@ -12,6 +12,7 @@ PATH_HOCKEY_README = root + '/DATASETS/HockeyFightsDATASET/readme'
 
 PATH_VIF_VIDEOS = root + '/DATASETS/violentflows/movies'
 PATH_VIF_FRAMES = root + '/DATASETS/violentflows/frames'
+PATH_VIF_README = root + '/DATASETS/violentflows/readme'
 
 
 

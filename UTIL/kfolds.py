@@ -2,6 +2,7 @@ import numpy as np
 import os
 import torch
 from UTIL.util import save_file, read_file
+# import constants
 
 def partitions(number, k):
     """
@@ -66,6 +67,8 @@ def k_folds(n_splits, subjects, splits_folder):
                 test_idx = list(map(int, test_idx))
                 yield train_idx, test_idx
             
+
+
 
 def train_test_split(s1, s2, len_indices):
     indices = np.arange(len_indices).astype(int)

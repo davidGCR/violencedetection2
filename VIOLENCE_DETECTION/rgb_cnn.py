@@ -92,13 +92,30 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
+    # print('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
     # model.load_state_dict(best_model_wts)
     
     return model, early_stopping.best_acc, early_stopping.val_loss_min, early_stopping.best_epoch
 
+def base_dataset(dataset, fold):
+    if dataset == 'UCFCRIME2LOCAL':
+        mytransfroms = ucf2CrimeTransforms(224)
+        X, y, numFrames = crime2localLoadData(min_frames=40)
+        train_idx, test_idx = get_Fold_Data(fold)
+        train_x = list(itemgetter(*train_idx)(X))
+        train_y = list(itemgetter(*train_idx)(y))
+        train_numFrames = list(itemgetter(*train_idx)(numFrames))
+        test_x = list(itemgetter(*test_idx)(X))
+        test_y = list(itemgetter(*test_idx)(y))
+        test_numFrames = list(itemgetter(*test_idx)(numFrames))
+    elif dataset == 'VIF':
+    elif dataset == 'HOCKEY':
+        mytransfroms = hockeyTransforms(224)
+        datasetAll, labelsAll, numFramesAll = hockeyLoadData()
+        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-' + str(fold), datasetAll, labelsAll, numFramesAll)
+    return test_x, test_y, test_numFrames, mytransfroms
 
 def main():
     parser = argparse.ArgumentParser()
@@ -175,7 +192,7 @@ def main():
                 'featureExtract': args.featureExtract
             }
             ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
-            ss = ss+'_fold='str(fold)
+            ss = ss+'_fold='+str(fold)
             # print(ss)
             checkpoint_path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', 'RGBCNN-'+ss)
 
