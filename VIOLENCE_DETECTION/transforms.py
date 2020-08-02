@@ -40,13 +40,12 @@ def hockeyTransforms(input_size, mean=None, std=None):
     }
     return data_transforms
 
-def vifTransforms(input_size,
-                    train_mean=[0.5168978, 0.51586777, 0.5158742],
-                    train_std=[0.12358205, 0.11996705, 0.11759791],
-                    test_mean=[0.5168978, 0.51586777, 0.5158742],
-                    test_std=[0.12358205, 0.11996705, 0.1175979]):
+def vifTransforms(input_size,mean=None,std=None):
     # Data augmentation and normalization for training
     # Just normalization for validation
+    if mean is None:
+        mean = [0.5168978, 0.51586777, 0.5158742] #For dynamic images
+        std = [0.12358205, 0.11996705, 0.11759791]
     data_transforms = {
         "train": transforms.Compose(
             [
@@ -55,7 +54,7 @@ def vifTransforms(input_size,
                 transforms.RandomResizedCrop(input_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=train_mean, std=train_std)
+                transforms.Normalize(mean=mean, std=std)
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
@@ -64,17 +63,20 @@ def vifTransforms(input_size,
                 transforms.Resize(input_size),
                 transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=test_mean, std=test_std)
+                transforms.Normalize(mean=mean, std=std)
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
     }
     return data_transforms
 
-def ucf2CrimeTransforms(input_size):
-    mean = [0.51002795, 0.5097461, 0.5097256]
-    std1 = [0.07351338, 0.07239371, 0.07159009]
-    std2 = [0.07351349, 0.07239381, 0.07159019]
+def ucf2CrimeTransforms(input_size,mean=None,std=None):
+    # mean = [0.51002795, 0.5097461, 0.5097256]
+    # std1 = [0.07351338, 0.07239371, 0.07159009]
+    # std2 = [0.07351349, 0.07239381, 0.07159019]
+    if mean is None:
+        mean = [0.51002795, 0.5097461, 0.5097256] #For dynamic images
+        std = [0.07351338, 0.07239371, 0.07159009]
     data_transforms = {
         "train": transforms.Compose(
             [
@@ -83,7 +85,7 @@ def ucf2CrimeTransforms(input_size):
                 transforms.RandomResizedCrop(input_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=std1) #All Train split
+                transforms.Normalize(mean=mean, std=std) #All Train split
             ]
         ),
         "val": transforms.Compose(
@@ -91,7 +93,7 @@ def ucf2CrimeTransforms(input_size):
                 # transforms.Resize(input_size),
                 transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=std1) #All Train split
+                transforms.Normalize(mean=mean, std=std) #All Train split
                 
             ]
         ),
@@ -100,7 +102,7 @@ def ucf2CrimeTransforms(input_size):
                 transforms.Resize(input_size),
                 # transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=std1) #All Train split
+                transforms.Normalize(mean=mean, std=std) #All Train split
             ]
         )
     }

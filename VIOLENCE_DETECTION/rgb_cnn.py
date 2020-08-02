@@ -3,9 +3,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import constants
 from constants import DEVICE
-from VIOLENCE_DETECTION.transforms import hockeyTransforms
-from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData
-from UTIL.kfolds import k_folds
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, customize_kfold, vifLoadData, crime2localLoadData
+# from UTIL.kfolds import k_folds
 from operator import itemgetter
 from VIOLENCE_DETECTION.rgbDataset import RGBDataset
 from MODELS.ViolenceModels import ResNetRGB
@@ -43,11 +43,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
 
             running_loss = 0.0
             running_corrects = 0
-
             # Iterate over data.
             for data in tqdm(dataloaders[phase]):
                 
-                inputs, labels = data
+                v_name, inputs, labels = data
                 # print('inputs=', inputs.size(), type(inputs))
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
@@ -99,23 +98,17 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
     
     return model, early_stopping.best_acc, early_stopping.val_loss_min, early_stopping.best_epoch
 
-def base_dataset(dataset, fold):
-    if dataset == 'UCFCRIME2LOCAL':
-        mytransfroms = ucf2CrimeTransforms(224)
-        X, y, numFrames = crime2localLoadData(min_frames=40)
-        train_idx, test_idx = get_Fold_Data(fold)
-        train_x = list(itemgetter(*train_idx)(X))
-        train_y = list(itemgetter(*train_idx)(y))
-        train_numFrames = list(itemgetter(*train_idx)(numFrames))
-        test_x = list(itemgetter(*test_idx)(X))
-        test_y = list(itemgetter(*test_idx)(y))
-        test_numFrames = list(itemgetter(*test_idx)(numFrames))
-    elif dataset == 'VIF':
-    elif dataset == 'HOCKEY':
-        mytransfroms = hockeyTransforms(224)
+def base_dataset(dataset, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
+    if dataset == 'ucfcrime2local':
+        datasetAll, labelsAll, numFramesAll = crime2localLoadData(min_frames=40)
+        transfroms = ucf2CrimeTransforms(224, mean=mean, std=std)
+    elif dataset == 'vif':
+        datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+        transforms = vifTransforms(input_size=224, mean=mean, std=std)
+    elif dataset == 'hockey':
         datasetAll, labelsAll, numFramesAll = hockeyLoadData()
-        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-' + str(fold), datasetAll, labelsAll, numFramesAll)
-    return test_x, test_y, test_numFrames, mytransfroms
+        transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
+    return datasetAll, labelsAll, numFramesAll, transforms
 
 def main():
     parser = argparse.ArgumentParser()
@@ -136,9 +129,8 @@ def main():
     # batch_size = 8
     # num_workers = 4
     # numEpochs = 25
-    if args.dataset == 'hockey':
-        datasetAll, labelsAll, numFramesAll = hockeyLoadData()
-        transforms = hockeyTransforms(input_size, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
     # feature_extract = False
     # model_name = 'resnet50'
     patience = 5
@@ -149,7 +141,9 @@ def main():
     config = None
 
     
-    for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll), splits_folder=constants.PATH_HOCKEY_README):
+    # for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll), splits_folder=constants.PATH_HOCKEY_README):
+    for train_idx, test_idx in customize_kfold(n_splits=5, dataset=args.dataset, X_len=len(datasetAll), shuffle=False):
+        # print(test_idx)
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         train_x, train_y, test_x, test_y = None, None, None, None

@@ -21,9 +21,9 @@ def checkBalancedSplit(Y_train, Y_test):
 
 def customize_kfold(n_splits, dataset, X_len, shuffle=True):
     X=np.arange(X_len)
-    if dataset = 'HOCKEY' or dataset == 'UCFCrime':
+    if dataset == 'hockey' or dataset == 'ucfcrime2local':
         kfold = KFold(n_splits, shuffle=shuffle)
-        folder = constants.PATH_UCFCRIME2LOCAL_README if dataset=='UCFCrime' else constants.PATH_HOCKEY_README
+        folder = constants.PATH_UCFCRIME2LOCAL_README if dataset=='ucfcrime2local' else constants.PATH_HOCKEY_README
         if not os.path.exists(os.path.join(folder, 'fold_1_train.txt')):
             for i, (train_idx, test_idx) in enumerate(kfold.split(X)):
                 save_file(train_idx, os.path.join(folder, 'fold_{}_train.txt'.format(i + 1)))
@@ -35,7 +35,7 @@ def customize_kfold(n_splits, dataset, X_len, shuffle=True):
             train_idx = list(map(int, train_idx))
             test_idx = list(map(int, test_idx))
             yield train_idx, test_idx
-    elif dataset == 'VIF':
+    elif dataset == 'vif':
         splitsLen = []
         folder = os.path.join(constants.PATH_VIF_README)
         if not os.path.exists(os.path.join(folder, 'fold_1_train.txt')):
@@ -49,6 +49,7 @@ def customize_kfold(n_splits, dataset, X_len, shuffle=True):
                 save_file(splitsLen, os.path.join(folder, 'lengths.txt'))
             else:
                 splitsLen = read_file(os.path.join(folder, 'lengths.txt'))
+                splitsLen = list(map(int, splitsLen))
             
         for i,l in enumerate(splitsLen):
             end = np.sum(splitsLen[:(i+1)])
