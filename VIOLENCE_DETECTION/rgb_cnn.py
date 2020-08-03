@@ -142,7 +142,7 @@ def main():
 
     
     # for train_idx, test_idx in k_folds(n_splits=folds_number, subjects=len(datasetAll), splits_folder=constants.PATH_HOCKEY_README):
-    for train_idx, test_idx in customize_kfold(n_splits=5, dataset=args.dataset, X_len=len(datasetAll), shuffle=False):
+    for train_idx, test_idx in customize_kfold(n_splits=5, dataset=args.dataset, X_len=len(datasetAll), shuffle=True):
         # print(test_idx)
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
@@ -153,6 +153,35 @@ def main():
         test_x = list(itemgetter(*test_idx)(datasetAll))
         test_y = list(itemgetter(*test_idx)(labelsAll))
         test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+
+        
+        # print('\n\tTrain SANITY CHECK')
+        # for i,v in enumerate(train_x):
+        #     classes = ['Violence', 'NonViolence']
+        #     for cl in classes:
+        #         lvideos = os.listdir(os.path.join(constants.PATH_VIF_FRAMES, str(fold), cl))
+        #         h, t = os.path.split(v)
+        #         if i < len(lvideos):    
+        #             if lvideos[i] == t:
+        #                 print('Fail-> There are test videos in train set...', t, lvideos[i])
+        
+        # print('\n\tTest SANITY CHECK')
+        # names = []
+        # for i,v in enumerate(test_x):
+        #     _, v = os.path.split(v)
+        #     print(test_y[i],v)
+            # names.append(v)
+        
+        # print(test_y)
+        # # names.sort()
+        # for i,v in enumerate(names):
+        #     classes = ['Violence', 'NonViolence']
+        #     for cl in classes:
+        #         lvideos = os.listdir(os.path.join(constants.PATH_VIF_FRAMES, str(fold), cl))
+        #         lvideos.sort()
+        #         h, t = os.path.split(v)
+        #         if lvideos[i] != t:
+        #             print(i,'Fail->',cl, h,'\n'+t,'\n'+lvideos[i])
 
         train_dataset = RGBDataset(dataset=train_x,
                                 labels=train_y,
@@ -208,12 +237,6 @@ def main():
     print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
     print("Accuracy: %0.3f (+/- %0.3f), Losses: %0.3f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))
         
-
-
-
-            
-
-
 
 if __name__ == "__main__":
     main()

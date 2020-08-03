@@ -51,11 +51,21 @@ def customize_kfold(n_splits, dataset, X_len, shuffle=True):
                 splitsLen = read_file(os.path.join(folder, 'lengths.txt'))
                 splitsLen = list(map(int, splitsLen))
             
-        for i,l in enumerate(splitsLen):
-            end = np.sum(splitsLen[:(i+1)])
-            start = end-splitsLen[i]
-            test_idx = np.arange(start,end)
-            train_idx = np.arange(0, start).tolist() + np.arange(end, len(X)).tolist()
+            for i,l in enumerate(splitsLen):
+                end = np.sum(splitsLen[:(i+1)])
+                start = end-splitsLen[i]
+                test_idx = np.arange(start,end)
+                train_idx = np.arange(0, start).tolist() + np.arange(end, len(X)).tolist()
+                if shuffle:
+                    random.shuffle(train_idx)
+                    random.shuffle(test_idx)
+                save_file(train_idx, os.path.join(folder, 'fold_{}_train.txt'.format(i + 1)))
+                save_file(test_idx, os.path.join(folder, 'fold_{}_test.txt'.format(i + 1)))
+        for i in range(n_splits):
+            train_idx = read_file(os.path.join(folder, 'fold_{}_train.txt'.format(i + 1)))
+            test_idx = read_file(os.path.join(folder, 'fold_{}_test.txt'.format(i + 1)))
+            train_idx = list(map(int, train_idx))
+            test_idx = list(map(int, test_idx))
             yield train_idx, test_idx
 ###################################################################################################################
 ############################################### Vif #####################################################

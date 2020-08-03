@@ -67,6 +67,15 @@ def vifTransforms(input_size,mean=None,std=None):
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
+         "test": transforms.Compose(
+            [
+                transforms.Resize(input_size),
+                transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std)
+                # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
     }
     return data_transforms
 
