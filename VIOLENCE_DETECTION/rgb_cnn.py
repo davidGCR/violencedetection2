@@ -153,6 +153,7 @@ def main():
         test_x = list(itemgetter(*test_idx)(datasetAll))
         test_y = list(itemgetter(*test_idx)(labelsAll))
         test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+        # print(args.dataset.upper())
 
         
         # print('\n\tTrain SANITY CHECK')
@@ -217,7 +218,7 @@ def main():
             ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
             ss = ss+'_fold='+str(fold)
             # print(ss)
-            checkpoint_path = os.path.join(constants.PATH_RESULTS, 'HOCKEY', 'checkpoints', 'RGBCNN-'+ss)
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'RGBCNN-'+ss)
 
         model, best_acc, val_loss_min, best_epoch = train_model(model,
                                                                 dataloaders,

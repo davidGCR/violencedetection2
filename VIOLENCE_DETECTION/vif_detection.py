@@ -227,7 +227,7 @@ def __main__():
             # print('Train-mean={}, std0={}, std1={}'.format(pop_mean, pop_std0, pop_std1))
             # pop_mean_test, pop_std0_test, pop_std1_test = compute_mean_std(test_dt_loader.dataloader)
             # print('Test-mean={}, std0={}, std1={}'.format(pop_mean_test, pop_std0_test, pop_std1_test))
-            transforms = vifTransforms(input_size=224, train_mean=[0.5168978,  0.51586777, 0.5158742], train_std=[0.12358205, 0.11996705, 0.11759791], test_mean=[0.5168978,  0.51586777, 0.5158742], test_std=[0.12358205, 0.11996705, 0.11759791])
+            transforms = vifTransforms(input_size=224, mean=[0.5168978,  0.51586777, 0.5158742], std=[0.12358205, 0.11996705, 0.11759791])
             train_dt_loader.transform = transforms['train']
             # print('Dataloader',train_dt_loader.dataloader)
             test_dt_loader.transform = transforms['val']
