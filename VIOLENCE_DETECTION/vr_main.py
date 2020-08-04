@@ -28,7 +28,7 @@ from tqdm import tqdm
 import scipy.io as sio
 
 import random
-from transforms import hockeyTransforms
+from transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms
 from UTIL.chooseModel import initialize_model, initialize_FCNN
 from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
@@ -232,7 +232,7 @@ def main():
                     ss = ss + "_{!s}={!r}".format(key, val)
             ss = ss.replace("\'", "")
             # print(ss)
-            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-' + ss)
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
              
         model, best_acc, val_loss_min, best_epoch = train_model(model,
                                                             dataloaders,
