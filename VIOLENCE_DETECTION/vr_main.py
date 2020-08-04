@@ -116,7 +116,7 @@ def base_dataset(dataset, mean=None, std=None):
         datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
         transforms = vifTransforms(input_size=224, mean=mean, std=std)
     elif dataset == 'hockey':
-        datasetAll, labelsAll, numFramesAll = hockeyLoadData()
+        datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
         transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
     return datasetAll, labelsAll, numFramesAll, transforms
 

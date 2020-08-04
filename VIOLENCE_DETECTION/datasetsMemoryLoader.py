@@ -166,7 +166,7 @@ def train_test_iteration(test_fold_path, shuffle):
 #     return datasetAll, labelsAll, numFramesAll
 
 
-def hockeyLoadData():
+def hockeyLoadData(shuffle=True):
     path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
     path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
     # if not os.path.exists(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv')):
@@ -198,6 +198,11 @@ def hockeyLoadData():
     # Dataset = imagesF + imagesNoF
     # Labels = list([1] * len(imagesF)) + list([0] * len(imagesNoF))
     numFramesAll = [len(glob.glob1(datasetAll[i], "*.jpg")) for i in range(len(datasetAll))]
+    if shuffle:
+        combined = list(zip(datasetAll, labelsAll, numFramesAll))
+        random.shuffle(combined)
+        datasetAll[:], labelsAll[:], numFramesAll[:] = zip(*combined)
+
     return datasetAll, labelsAll, numFramesAll
 
 def hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll):
