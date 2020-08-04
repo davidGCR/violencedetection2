@@ -140,15 +140,64 @@ def train_test_iteration(test_fold_path, shuffle):
 ############################################### HOCKEY FIGHTS #####################################################
 ###################################################################################################################
 
+# def loadHockeyData(path_violence, path_non_violence, shuffle):
+#     datasetAll, labelsAll, numFramesAll = [], [], []
+#     v_videos = os.listdir(path_violence)
+#     v_videos = sortListByStrNumbers(v_videos)
+#     nv_videos = os.lisdir(path_non_violence)
+#     nv_videos = sortListByStrNumbers(nv_videos)
+
+#     for vd in v_videos:
+#         d = os.path.join(path_violence, vd)
+#         if not os.path.isdir(d):
+#             continue
+#         datasetAll.append(d)
+#         labelsAll.append(1)
+#     # imagesNoF = []
+#     for vd in nv_videos:
+#         d = os.path.join(path_non_violence, vd)
+#         if not os.path.isdir(d):
+#             continue
+#         datasetAll.append(d)
+#         labelsAll.append(0)
+#     # Dataset = imagesF + imagesNoF
+#     # Labels = list([1] * len(imagesF)) + list([0] * len(imagesNoF))
+#     numFramesAll = [len(glob.glob1(datasetAll[i], "*.jpg")) for i in range(len(datasetAll))]
+#     return datasetAll, labelsAll, numFramesAll
+
+
 def hockeyLoadData():
     path_violence = constants.PATH_HOCKEY_FRAMES_VIOLENCE
     path_non_violence = constants.PATH_HOCKEY_FRAMES_NON_VIOLENCE
-    if not os.path.exists(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv')):
-        datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
-        all_data = zip(datasetAll, labelsAll, numFramesAll)
-        save_csvfile_multicolumn(all_data, os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
-    else:
-        datasetAll, labelsAll, numFramesAll = read_csvfile_threecolumns(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+    # if not os.path.exists(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv')):
+    #     datasetAll, labelsAll, numFramesAll = initializeDataset.createDataset(path_violence, path_non_violence, shuffle)  #shuffle
+    #     all_data = zip(datasetAll, labelsAll, numFramesAll)
+    #     save_csvfile_multicolumn(all_data, os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+    # else:
+    #     datasetAll, labelsAll, numFramesAll = read_csvfile_threecolumns(os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
+    # return datasetAll, labelsAll, numFramesAll
+    datasetAll, labelsAll, numFramesAll = [], [], []
+    v_videos = os.listdir(path_violence)
+    v_videos = sortListByStrNumbers(v_videos)
+    nv_videos = os.listdir(path_non_violence)
+    nv_videos = sortListByStrNumbers(nv_videos)
+
+    for vd in v_videos:
+        d = os.path.join(path_violence, vd)
+        if not os.path.isdir(d):
+            continue
+        datasetAll.append(d)
+        labelsAll.append(1)
+    # imagesNoF = []
+    for vd in nv_videos:
+        d = os.path.join(path_non_violence, vd)
+        if not os.path.isdir(d):
+            continue
+        datasetAll.append(d)
+        labelsAll.append(0)
+    # Dataset = imagesF + imagesNoF
+    # Labels = list([1] * len(imagesF)) + list([0] * len(imagesNoF))
+    numFramesAll = [len(glob.glob1(datasetAll[i], "*.jpg")) for i in range(len(datasetAll))]
     return datasetAll, labelsAll, numFramesAll
 
 def hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll):
