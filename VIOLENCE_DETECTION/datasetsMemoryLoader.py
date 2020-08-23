@@ -9,7 +9,7 @@ import random
 import glob
 import numpy as np
 from operator import itemgetter
-
+import cv2
 from sklearn.model_selection import KFold
 
 def checkBalancedSplit(Y_train, Y_test):
@@ -67,6 +67,104 @@ def customize_kfold(n_splits, dataset, X_len, shuffle=True):
             train_idx = list(map(int, train_idx))
             test_idx = list(map(int, test_idx))
             yield train_idx, test_idx
+    elif dataset == 'rwf-2000':
+        train_idx, test_idx = [], []
+        for i in range(1):
+            yield train_idx, test_idx
+###################################################################################################################
+############################################### RWF-2000 ##########################################################
+###################################################################################################################
+def rwf_readVideo_saveFrames(file_path, frames_folder_path, resize=(224,224)):
+    # Load video
+    cap = cv2.VideoCapture(file_path)
+    success, frame = cap.read()
+    count = 1
+    
+    while success:
+        filename = os.path.join(frames_folder_path, "frame%d.jpg" % count)
+        frame = cv2.resize(frame, resize, interpolation=cv2.INTER_AREA)
+        cv2.imwrite(filename, frame)     # save frame as JPEG file      
+        success, frame = cap.read()
+        count += 1
+    cap.release()
+
+def rwf_videos2frames():
+    videos_train_path = os.path.join(constants.PATH_RWF_2000_VIDEOS, 'train')
+    videos_test_path = os.path.join(constants.PATH_RWF_2000_VIDEOS,'val')
+    
+    frames_train_path = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train')
+    frames_test_path = os.path.join(constants.PATH_RWF_2000_FRAMES,'val')
+    
+    all_dataset_videos = [videos_train_path, videos_test_path]
+    all_dataset_frames = [frames_train_path, frames_test_path]
+    for i, split in enumerate(all_dataset_videos):    
+        for classs in os.listdir(split):
+            k=1
+            for video in os.listdir(os.path.join(split, classs)):
+                video_name = video[:-4]
+                vd_pth = os.path.join(split, classs, video)
+                frames_folder = os.path.join(all_dataset_frames[i], classs, video_name)
+                print(k, '\t', frames_folder)
+                # print(k, '\t', vd_pth)
+                k += 1
+                if not os.path.exists(frames_folder):
+                    os.makedirs(frames_folder)
+                    rwf_readVideo_saveFrames(vd_pth, frames_folder)
+                else:
+                    print('Done!!')
+
+def rwf_load_data(shuffle=True, save_csv=False):
+    train_names = []
+    train_labels = []
+    train_num_frames = []
+    test_names = []
+    test_labels = []
+    test_num_frames = []
+
+    train_path = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train')
+    
+    for clase in os.listdir(train_path):
+        for vid_folder in os.listdir(os.path.join(train_path,clase)):
+            sample_path = os.path.join(train_path, clase, vid_folder)
+            if os.path.isdir(sample_path):
+                train_names.append(sample_path)
+                if clase == 'Fight':
+                    train_labels.append(1)
+                else:
+                    train_labels.append(0)
+                train_num_frames.append(len(os.listdir(sample_path)))
+    
+    test_path = os.path.join(constants.PATH_RWF_2000_FRAMES, 'val')
+    
+    for clase in os.listdir(test_path):
+        for vid_folder in os.listdir(os.path.join(test_path,clase)):
+            sample_path = os.path.join(test_path, clase, vid_folder)
+            if os.path.isdir(sample_path):
+                test_names.append(sample_path)
+                if clase == 'Fight':
+                    test_labels.append(1)
+                else:
+                    test_labels.append(0)
+                test_num_frames.append(len(os.listdir(sample_path)))
+    
+    if shuffle:
+        combined = list(zip(train_names, train_labels, train_num_frames))
+        random.shuffle(combined)
+        train_names[:], train_labels[:], train_num_frames[:] = zip(*combined)
+        combined = list(zip(test_names, test_labels, test_num_frames))
+        random.shuffle(combined)
+        test_names[:], test_labels[:], test_num_frames[:] = zip(*combined)
+
+    if save_csv:
+        all_data_train = zip(train_names, train_labels, train_num_frames)
+        save_csvfile_multicolumn(all_data_train, os.path.join(constants.PATH_RWF_2000_README, 'all_data_labels_numFrames_train.csv'))
+        all_data_test = zip(test_names, test_labels, test_num_frames)
+        save_csvfile_multicolumn(all_data_test, os.path.join(constants.PATH_RWF_2000_README, 'all_data_labels_numFrames_test.csv'))
+    
+    return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames
+
+
+
 ###################################################################################################################
 ############################################### Vif #####################################################
 ###################################################################################################################
@@ -344,5 +442,7 @@ def getBBoxLabels(video):
 
 
 if __name__ == "__main__":
+    # rwf_videos2frames()
+    rwf_load_data()
     # crime2localCreateSplits()
-    getBBoxFile('/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/violence/Arrest003-VSplit1')
+    # getBBoxFile('/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/violence/Arrest003-VSplit1')

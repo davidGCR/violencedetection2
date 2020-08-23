@@ -28,7 +28,7 @@ def load_model(path, stream_type):
         model_ = ResNetRGB(num_classes=2, model_name=model, feature_extract=featureExtract)
         model_ = model_.build_model()
     else:
-        model = checkpoint['model_config']['modelType']
+        model = checkpoint['model_config']['model']
         numDynamicImages = checkpoint['model_config']['numDynamicImages']
         joinType = checkpoint['model_config']['joinType']
         featureExtract = checkpoint['model_config']['featureExtract']

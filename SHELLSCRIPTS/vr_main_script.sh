@@ -1,7 +1,7 @@
 python3  VIOLENCE_DETECTION/vr_main.py \
 --modelType resnet50 \
---dataset hockey \
---numEpochs 25 \
+--dataset rwf-2000 \
+--numEpochs 3 \
 --numWorkers 4 \
 --batchSize 8 \
 --featureExtract false \

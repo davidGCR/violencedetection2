@@ -41,7 +41,7 @@ from UTIL.earlyStop import EarlyStopping
 import pandas as pd
 # from FPS import FPSMeter
 from torch.utils.tensorboard import SummaryWriter
-from datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, vifLoadData, crime2localLoadData, customize_kfold
+from datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, vifLoadData, crime2localLoadData, customize_kfold, rwf_load_data
 # from dataloader import MyDataloader
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 import csv
@@ -111,13 +111,18 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
 def base_dataset(dataset, mean=None, std=None):
     if dataset == 'ucfcrime2local':
         datasetAll, labelsAll, numFramesAll = crime2localLoadData(min_frames=40)
-        transfroms = ucf2CrimeTransforms(224, mean=mean, std=std)
+        transforms = ucf2CrimeTransforms(224, mean=mean, std=std)
     elif dataset == 'vif':
         datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
         transforms = vifTransforms(input_size=224, mean=mean, std=std)
     elif dataset == 'hockey':
         datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
         transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
+    elif dataset == 'rwf-2000':
+        train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+        transforms = ucf2CrimeTransforms(input_size=224, mean=mean, std=std)
+        return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames, transforms
+    
     return datasetAll, labelsAll, numFramesAll, transforms
 
 def main():
@@ -145,7 +150,10 @@ def main():
     args = parser.parse_args()
     input_size = 224
     shuffle = True
-    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
+    if args.dataset == 'rwf-2000':
+        datasetAll = []
+    else:
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
@@ -154,16 +162,22 @@ def main():
     fold = 0
     checkpoint_path = None
     config = None
-    for train_idx, test_idx in customize_kfold(n_splits=folds_number,dataset=args.dataset,X_len=len(datasetAll), shuffle=shuffle):
+    print(args.dataset)
+       
+    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset, X_len=len(datasetAll), shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
-        train_x, train_y, test_x, test_y = None, None, None, None
-        train_x = list(itemgetter(*train_idx)(datasetAll))
-        train_y = list(itemgetter(*train_idx)(labelsAll))
-        train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-        test_x = list(itemgetter(*test_idx)(datasetAll))
-        test_y = list(itemgetter(*test_idx)(labelsAll))
-        test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+        if args.dataset == 'rwf-2000':
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset)
+            print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
+        else:
+            train_x, train_y, test_x, test_y = None, None, None, None
+            train_x = list(itemgetter(*train_idx)(datasetAll))
+            train_y = list(itemgetter(*train_idx)(labelsAll))
+            train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+            test_x = list(itemgetter(*test_idx)(datasetAll))
+            test_y = list(itemgetter(*test_idx)(labelsAll))
+            test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
         train_dataset = ViolenceDataset(dataset=train_x,
                                         labels=train_y,
@@ -233,7 +247,7 @@ def main():
             ss = ss.replace("\'", "")
             # print(ss)
             checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
-             
+            
         model, best_acc, val_loss_min, best_epoch = train_model(model,
                                                             dataloaders,
                                                             criterion,
@@ -247,7 +261,7 @@ def main():
         cv_test_losses.append(val_loss_min)
         cv_final_epochs.append(best_epoch)
 
-   
+
     print('CV Accuracies=', cv_test_accs)
     print('CV Losses=', cv_test_losses)
     print('CV Epochs=', cv_final_epochs)

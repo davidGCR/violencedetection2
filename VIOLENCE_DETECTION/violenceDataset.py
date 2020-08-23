@@ -172,6 +172,7 @@ class ViolenceDataset(Dataset):
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        # print(frames_list)
         if self.skipInitialFrames > 0 and self.skipInitialFrames < len(frames_list):
             le = len(frames_list)
             frames_list = frames_list[self.skipInitialFrames:le]
