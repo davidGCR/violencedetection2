@@ -3,8 +3,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import constants
 from constants import DEVICE
-from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms
-from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, customize_kfold, vifLoadData, crime2localLoadData
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms, rwf_2000_Transforms
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, customize_kfold, vifLoadData, crime2localLoadData, rwf_load_data
 # from UTIL.kfolds import k_folds
 from operator import itemgetter
 from VIOLENCE_DETECTION.rgbDataset import RGBDataset
@@ -108,6 +108,10 @@ def base_dataset(dataset, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     elif dataset == 'hockey':
         datasetAll, labelsAll, numFramesAll = hockeyLoadData()
         transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
+    elif dataset == 'rwf-2000':
+        train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+        transforms = rwf_2000_Transforms(input_size=224, mean=mean, std=std)
+        return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames, transforms
     return datasetAll, labelsAll, numFramesAll, transforms
 
 def main():
@@ -126,13 +130,14 @@ def main():
     fold = 0
     # frame_idx = 14
     input_size = 224
-    # batch_size = 8
-    # num_workers = 4
-    # numEpochs = 25
     
-    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
-    # feature_extract = False
-    # model_name = 'resnet50'
+    if args.dataset == 'rwf-2000':
+        datasetAll = []
+    else:
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
+    
+    # datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
+    
     patience = 5
     cv_test_accs = []
     cv_test_losses = []
@@ -146,43 +151,18 @@ def main():
         # print(test_idx)
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
-        train_x, train_y, test_x, test_y = None, None, None, None
-        train_x = list(itemgetter(*train_idx)(datasetAll))
-        train_y = list(itemgetter(*train_idx)(labelsAll))
-        train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
-        test_x = list(itemgetter(*test_idx)(datasetAll))
-        test_y = list(itemgetter(*test_idx)(labelsAll))
-        test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
-        # print(args.dataset.upper())
 
-        
-        # print('\n\tTrain SANITY CHECK')
-        # for i,v in enumerate(train_x):
-        #     classes = ['Violence', 'NonViolence']
-        #     for cl in classes:
-        #         lvideos = os.listdir(os.path.join(constants.PATH_VIF_FRAMES, str(fold), cl))
-        #         h, t = os.path.split(v)
-        #         if i < len(lvideos):    
-        #             if lvideos[i] == t:
-        #                 print('Fail-> There are test videos in train set...', t, lvideos[i])
-        
-        # print('\n\tTest SANITY CHECK')
-        # names = []
-        # for i,v in enumerate(test_x):
-        #     _, v = os.path.split(v)
-        #     print(test_y[i],v)
-            # names.append(v)
-        
-        # print(test_y)
-        # # names.sort()
-        # for i,v in enumerate(names):
-        #     classes = ['Violence', 'NonViolence']
-        #     for cl in classes:
-        #         lvideos = os.listdir(os.path.join(constants.PATH_VIF_FRAMES, str(fold), cl))
-        #         lvideos.sort()
-        #         h, t = os.path.split(v)
-        #         if lvideos[i] != t:
-        #             print(i,'Fail->',cl, h,'\n'+t,'\n'+lvideos[i])
+        if args.dataset == 'rwf-2000':
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset)
+            print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
+        else:
+            train_x, train_y, test_x, test_y = None, None, None, None
+            train_x = list(itemgetter(*train_idx)(datasetAll))
+            train_y = list(itemgetter(*train_idx)(labelsAll))
+            train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+            test_x = list(itemgetter(*test_idx)(datasetAll))
+            test_y = list(itemgetter(*test_idx)(labelsAll))
+            test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
         train_dataset = RGBDataset(dataset=train_x,
                                 labels=train_y,

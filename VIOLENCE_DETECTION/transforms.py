@@ -199,11 +199,11 @@ if __name__ == "__main__":
                             numFrames=numFrames,
                             spatial_transform=None,
                             numDynamicImagesPerVideo=1,
-                            videoSegmentLength=10,
+                            videoSegmentLength=30,
                             positionSegment='begin',
                             overlaping=0,
                             frame_skip=0,
-                            skipInitialFrames=10,
+                            skipInitialFrames=60,
                             ppType=None)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=False, num_workers=4)
     pop_mean, pop_std0, pop_std1 = compute_mean_std(dataloader)
