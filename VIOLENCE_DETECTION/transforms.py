@@ -117,12 +117,51 @@ def ucf2CrimeTransforms(input_size,mean=None,std=None):
     }
     return data_transforms
 
+def rwf_2000_Transforms(input_size,mean=None,std=None):
+    # mean = [0.5006697,  0.500758,   0.50071216]  
+    # std1 = [0.07394832, 0.07340418, 0.07372487]
+    # std2 = [0.07394842, 0.07340426, 0.07372496]
+    if mean is None:
+        mean = [0.5006697,  0.500758,   0.50071216] #For dynamic images
+        std = [0.07394832, 0.07340418, 0.07372487]
+    data_transforms = {
+        "train": transforms.Compose(
+            [
+                # transforms.Resize(input_size),
+                # transforms.CenterCrop(input_size),
+                # transforms.RandomResizedCrop(input_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std) #All Train split
+            ]
+        ),
+        "val": transforms.Compose(
+            [
+                # transforms.Resize(input_size),
+                # transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std) #All Train split
+                
+            ]
+        ),
+        "test": transforms.Compose(
+            [
+                # transforms.Resize(input_size),
+                # transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std) #All Train split
+            ]
+        )
+    }
+    return data_transforms
+
 def compute_mean_std(dataloader):
     pop_mean = []
     pop_std0 = []
     pop_std1 = []
     for i, data in enumerate(dataloader, 0):
-        inputs, labels, _, _ = data
+        inputs, labels, _, _, _ = data
+        # dynamicImages, label, vid_name, preprocessing_time, paths
         inputs = torch.squeeze(inputs, dim=1)
         numpy_image = inputs.numpy()
         # print('shape: ', numpy_image.shape)
@@ -145,11 +184,16 @@ if __name__ == "__main__":
     import os
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from VIOLENCE_DETECTION.datasetsMemoryLoader import crime2localLoadData
+    from VIOLENCE_DETECTION.datasetsMemoryLoader import crime2localLoadData, rwf_load_data
     from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
     import torch
 
-    X, y, numFrames = crime2localLoadData(min_frames=40)
+    # X, y, numFrames = crime2localLoadData(min_frames=40)
+    train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+    X = train_names + test_names
+    y = train_labels + test_labels
+    numFrames = train_num_frames + test_num_frames
+    
     dataset = ViolenceDataset(dataset=X,
                             labels=y,
                             numFrames=numFrames,

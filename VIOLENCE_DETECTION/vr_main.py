@@ -28,7 +28,7 @@ from tqdm import tqdm
 import scipy.io as sio
 
 import random
-from transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms
+from transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms, rwf_2000_Transforms
 from UTIL.chooseModel import initialize_model, initialize_FCNN
 from UTIL.parameters import verifiParametersToTrain
 import UTIL.trainer as trainer
@@ -120,7 +120,7 @@ def base_dataset(dataset, mean=None, std=None):
         transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
     elif dataset == 'rwf-2000':
         train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
-        transforms = ucf2CrimeTransforms(input_size=224, mean=mean, std=std)
+        transforms = rwf_2000_Transforms(input_size=224, mean=mean, std=std)
         return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames, transforms
     
     return datasetAll, labelsAll, numFramesAll, transforms
