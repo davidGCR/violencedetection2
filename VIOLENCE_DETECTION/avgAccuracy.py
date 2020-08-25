@@ -5,8 +5,8 @@ from constants import DEVICE
 from VIOLENCE_DETECTION.rgbDataset import RGBDataset
 from MODELS.ViolenceModels import ResNetRGB
 # from UTIL.kfolds import k_folds
-from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, vifLoadData, crime2localLoadData, customize_kfold
-from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, vifLoadData, crime2localLoadData, customize_kfold, rwf_load_data
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms, rwf_2000_Transforms
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 from UTIL.chooseModel import initialize_model
 import constants
@@ -126,6 +126,11 @@ def base_dataset(dataset, mean=None, std=None):
         datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
         rgb_transforms = hockeyTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         dyn_transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
+    elif dataset == 'rwf-2000':
+        train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+        dyn_transforms = rwf_2000_Transforms(input_size=224, mean=mean, std=std)
+        rgb_transforms = rwf_2000_Transforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames, rgb_transforms, dyn_transforms
     return datasetAll, labelsAll, numFramesAll, rgb_transforms, dyn_transforms
 
 def main():
@@ -135,7 +140,10 @@ def main():
     parser.add_argument("--dynModel",type=str)
     args = parser.parse_args()
 
-    datasetAll, labelsAll, numFramesAll, rgb_transforms, dyn_transforms = base_dataset(args.dataset)
+    if args.dataset == 'rwf-2000':
+        datasetAll = []
+    else:
+        datasetAll, labelsAll, numFramesAll, rgb_transforms, dyn_transforms = base_dataset(args.dataset)
     fold = 0
     folds_number = 5
     shuffle = False
@@ -144,18 +152,20 @@ def main():
     for train_idx, test_idx in customize_kfold(n_splits=folds_number,dataset=args.dataset,X_len=len(datasetAll), shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
-        train_x, train_y, test_x, test_y = None, None, None, None
-        
-        test_x = list(itemgetter(*test_idx)(datasetAll))
-        test_y = list(itemgetter(*test_idx)(labelsAll))
-        test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+        if args.dataset == 'rwf-2000':
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, rgb_transforms, dyn_transforms = base_dataset(args.dataset)
+        else:
+            train_x, train_y, test_x, test_y = None, None, None, None
+            test_x = list(itemgetter(*test_idx)(datasetAll))
+            test_y = list(itemgetter(*test_idx)(labelsAll))
+            test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
         #### RGB ####
         rgb_dataset = RGBDataset(dataset=test_x,
                                 labels=test_y,
                                 numFrames=test_numFrames,
                                 spatial_transform=rgb_transforms['test'],
-                                frame_idx=14)
+                                frame_idx=29)
         rgb_dataloader = torch.utils.data.DataLoader(rgb_dataset, batch_size=1, shuffle=shuffle, num_workers=4)
         rgb_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', args.rgbModel + str(fold) + '.pt')
         print(rgb_path)
@@ -178,7 +188,7 @@ def main():
                                     videoSegmentLength=30,
                                     positionSegment='begin',
                                     overlaping=0,
-                                    frame_skip=0,
+                                    frame_skip=1,
                                     skipInitialFrames=0,
                                     ppType=None)
         dyn_dataloader = torch.utils.data.DataLoader(dyn_dataset, batch_size=1, shuffle=shuffle, num_workers=4)

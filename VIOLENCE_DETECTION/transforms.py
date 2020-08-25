@@ -122,8 +122,8 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
     # std1 = [0.07394832, 0.07340418, 0.07372487]
     # std2 = [0.07394842, 0.07340426, 0.07372496]
     if mean is None:
-        mean = [0.5006697,  0.500758,   0.50071216] #For dynamic images
-        std = [0.07394832, 0.07340418, 0.07372487]
+        mean = [0.49778724, 0.49780366, 0.49776983] #For dynamic images
+        std = [0.09050678, 0.09017131, 0.0898702 ]
     data_transforms = {
         "train": transforms.Compose(
             [
@@ -202,8 +202,8 @@ if __name__ == "__main__":
                             videoSegmentLength=30,
                             positionSegment='begin',
                             overlaping=0,
-                            frame_skip=0,
-                            skipInitialFrames=60,
+                            frame_skip=1,
+                            skipInitialFrames=0,
                             ppType=None)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=False, num_workers=4)
     pop_mean, pop_std0, pop_std1 = compute_mean_std(dataloader)
