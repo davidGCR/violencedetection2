@@ -240,7 +240,8 @@ def main():
                 'skipInitialFrames':args.skipInitialFrames,
                 'overlap':args.overlapping,
                 'joinType': args.joinType,
-                'log_dir': None
+                'log_dir': None,
+                'useKeyframes': args.useKeyframes
             }    
             # ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
             # ss = ss+'_fold='+str(fold)
