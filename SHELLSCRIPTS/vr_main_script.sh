@@ -1,6 +1,6 @@
 python3  VIOLENCE_DETECTION/vr_main.py \
 --modelType resnet50 \
---dataset rwf-2000 \
+--dataset hockey \
 --numEpochs 3 \
 --numWorkers 4 \
 --batchSize 8 \
@@ -12,4 +12,5 @@ python3  VIOLENCE_DETECTION/vr_main.py \
 --overlapping 0 \
 --frameSkip 0 \
 --saveCheckpoint True \
---split_type cross-val
+--split_type cross-val \
+--useKeyframes True

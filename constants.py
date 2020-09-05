@@ -7,6 +7,7 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 PATH_HOCKEY_FRAMES_VIOLENCE = root+'/DATASETS/HockeyFightsDATASET/frames/violence'
 PATH_HOCKEY_FRAMES_NON_VIOLENCE = root + '/DATASETS/HockeyFightsDATASET/frames/nonviolence'
 PATH_HOCKEY_README = root + '/DATASETS/HockeyFightsDATASET/readme'
+PATH_HOCKEY_VIDEOS= root+'/DATASETS/HockeyFightsDATASET/videos'
 # PATH_HOCKEY_CHECKPOINTS = root + '/RESULTS/HOCKEY_RESULTS/checkpoints'
 # PATH_HOCKEY_GIFTS = root + '/RESULTS/HOCKEY_RESULTS/gifts'
 
