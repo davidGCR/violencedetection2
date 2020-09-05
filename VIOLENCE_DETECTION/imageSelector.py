@@ -284,7 +284,7 @@ from Katna import Video
 from PIL import Image
 import numpy as np
 import Katna
-from Katna.image_selector.ImageSelector import ImageSelector
+from Katna import sele
 
 def main():
     # datasetAll, labelsAll, numFramesAll, transforms = base_dataset('hockey')

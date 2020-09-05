@@ -147,6 +147,7 @@ def main():
     parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--useKeyframes", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--windowLen", type=int, default=0)
     # parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
 
     args = parser.parse_args()
@@ -192,7 +193,8 @@ def main():
                                         frame_skip=args.frameSkip,
                                         skipInitialFrames=args.skipInitialFrames,
                                         ppType=None,
-                                        useKeyframes=args.useKeyframes)
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen)
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
 
         test_dataset = ViolenceDataset(dataset=test_x,
@@ -206,7 +208,8 @@ def main():
                                         frame_skip=args.frameSkip,
                                         skipInitialFrames=args.skipInitialFrames,
                                         ppType=None,
-                                        useKeyframes=args.useKeyframes)
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen)
         test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
         
         dataloaders = {'train': train_dataloader, 'val': test_dataloader}

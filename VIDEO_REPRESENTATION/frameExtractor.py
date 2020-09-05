@@ -10,6 +10,7 @@ from scipy.signal import argrelextrema
 from UTIL.util import sortListByStrNumbers
 from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, vifLoadData, rwf_load_data
 from operator import itemgetter
+import csv
 # Class to hold information about each frame
 class ReducedVideo:
     """Class for storing Reduced video
@@ -242,10 +243,17 @@ class FrameExtractor():
                 break
             i += 1
 
+    def __save__listDicts_csv__(self, ldicts, csv_columns, csv_file):
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in ldicts:
+                writer.writerow(data)
+
 
 def main():
     extractor = FrameExtractor(len_window=5)
-    # datasetAll = [os.path.join(constants.PATH_HOCKEY_FRAMES_VIOLENCE, '24')]
+    # datasetAll = [os.path.join(constants.PATH_HOCKEY_FRAMES_VIOLENCE, '24'), os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')]
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
     # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=False)
     # datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
@@ -255,6 +263,7 @@ def main():
 
     # print(datasetAll)
     fs = []
+    dicts = []
     
     for k,video_path in enumerate(datasetAll):
         _, video_name = os.path.split(video_path)
@@ -274,9 +283,18 @@ def main():
         candidate_frames, frames_indexes = extractor.__extract_candidate_frames_fromFramesList__(frames)
         fs.append(len(candidate_frames))
         print('{}-No frames/candidates frames={}/{}'.format(k + 1, len(frames), len(candidate_frames)))
+        dictionary = {
+            'video_path': video_path,
+            'video_len': len(frames),
+            'num_key_frames': len(candidate_frames),
+            'key_frames': frames_indexes
+        }
+        dicts.append(dictionary)
+
         # print('----Frames selected=', list(itemgetter(*frames_indexes)(imgs_paths)))
 
     print('Average selected={}'.format(np.average(np.array(fs))))
+    extractor.__save__listDicts_csv__(ldicts=dicts, csv_columns=['video_path', 'video_len', 'num_key_frames', 'key_frames'], csv_file='rwf_KeyFrames.csv')
     # extractor.__plot_frames_list__(candidate_frames, waitKey=1000)
 
 if __name__ == "__main__":

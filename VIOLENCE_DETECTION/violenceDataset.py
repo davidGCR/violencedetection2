@@ -26,7 +26,8 @@ class ViolenceDataset(Dataset):
                         frame_skip,
                         skipInitialFrames,
                         ppType,
-                        useKeyframes):
+                        useKeyframes,
+                        windowLen):
         if spatial_transform is None:
             self.spatial_transform = transforms.Compose([
                 # transforms.RandomResizedCrop(224),
@@ -47,7 +48,8 @@ class ViolenceDataset(Dataset):
         self.ppType = ppType  #preprocessing
         self.preprocessor = Preprocessor(ppType)
         self.useKeyframes = useKeyframes
-        self.extractor = FrameExtractor(len_window=5)
+        # self.windowLen = windowLen
+        self.extractor = FrameExtractor(len_window=windowLen)
 
     def __len__(self):
         return len(self.videos)
