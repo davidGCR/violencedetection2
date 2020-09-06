@@ -150,14 +150,18 @@ class ResNet(nn.Module):
     def forward(self, x):
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)
-        x = self.convLayers(c_in)
-        x = self.AdaptiveAvgPool2d(x)
-        # print('conv: ', x.size())
+        x = self.convLayers(c_in)  #torch.Size([8, 2048, 7, 7]
+        
+        x = self.bn(x) # torch.Size([8, 2048, 7, 7])
+        # print('batchNorm: ', x.size())
+
+        x = self.AdaptiveAvgPool2d(x) #torch.Size([8, 2048, 1, 1])
+        # print('AdaptiveAvgPool2d: ', x.size())
         x = torch.flatten(x, 1)
         num_fc_input_features = self.linear.in_features
         x = x.view(batch_size, timesteps, num_fc_input_features)
         x = x.max(dim=1).values
-        # x = self.bn(x)
+        
         
         # x = torch.flatten(x, 1)
         x = self.linear(x)
