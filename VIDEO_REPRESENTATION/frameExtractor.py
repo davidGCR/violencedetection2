@@ -252,7 +252,7 @@ class FrameExtractor():
 
 
 def main():
-    extractor = FrameExtractor(len_window=5)
+    extractor = FrameExtractor(len_window=10)
     # datasetAll = [os.path.join(constants.PATH_HOCKEY_FRAMES_VIOLENCE, '24'), os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')]
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
     # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=False)
@@ -294,7 +294,7 @@ def main():
         # print('----Frames selected=', list(itemgetter(*frames_indexes)(imgs_paths)))
 
     print('Average selected={}'.format(np.average(np.array(fs))))
-    extractor.__save__listDicts_csv__(ldicts=dicts, csv_columns=['video_path', 'video_len', 'num_key_frames', 'key_frames'], csv_file='rwf_KeyFrames.csv')
+    extractor.__save__listDicts_csv__(ldicts=dicts, csv_columns=['video_path', 'video_len', 'num_key_frames', 'key_frames'], csv_file='rwf_KeyFrames_10.csv')
     # extractor.__plot_frames_list__(candidate_frames, waitKey=1000)
 
 if __name__ == "__main__":

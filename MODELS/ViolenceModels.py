@@ -114,7 +114,7 @@ class ResNetConv(nn.Module):
         return x
 
 class ResNet(nn.Module):
-    def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,feature_extract):
+    def __init__(self, num_classes, numDiPerVideos, model_name, joinType ,freezeConvLayers):
         super(ResNet, self).__init__()
         self.numDiPerVideos = numDiPerVideos
         self.num_classes = num_classes
@@ -139,7 +139,7 @@ class ResNet(nn.Module):
         self.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d((1,1))
 
         # set_parameter_requires_grad(self.model_ft, feature_extract)
-        set_parameter_requires_grad(self.convLayers, feature_extract)
+        set_parameter_requires_grad(self.convLayers, freezeConvLayers)
         if self.joinType == constants.TEMP_MAX_POOL or self.joinType == constants.MULT_TEMP_POOL or self.joinType == constants.TEMP_AVG_POOL or self.joinType == constants.TEMP_STD_POOL:
             if model_name == 'resnet18' or model_name == 'resnet34':
                 self.linear = nn.Linear(512, self.num_classes)

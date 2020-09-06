@@ -132,7 +132,7 @@ def main():
     parser.add_argument("--dataset",type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
-    parser.add_argument("--featureExtract",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
+    parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
     parser.add_argument("--numDynamicImagesPerVideo", type=int)
     parser.add_argument("--joinType", type=str)
     parser.add_argument("--foldsNumber", type=int, default=5)
@@ -216,12 +216,13 @@ def main():
 
         model, _ = initialize_model(model_name=args.modelType,
                                     num_classes=2,
-                                    feature_extract=args.featureExtract,
+                                    freezeConvLayers=args.freezeConvLayers,
                                     numDiPerVideos=args.numDynamicImagesPerVideo,
                                     joinType=args.joinType,
                                     use_pretrained=True)
         model.to(DEVICE)
-        params_to_update = verifiParametersToTrain(model, args.featureExtract)
+        params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
+        # print(params_to_update)
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         criterion = nn.CrossEntropyLoss()
@@ -244,7 +245,8 @@ def main():
                 'overlap':args.overlapping,
                 'joinType': args.joinType,
                 'log_dir': None,
-                'useKeyframes': args.useKeyframes
+                'useKeyframes': args.useKeyframes,
+                'windowLen': args.windowLen
             }    
             # ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
             # ss = ss+'_fold='+str(fold)

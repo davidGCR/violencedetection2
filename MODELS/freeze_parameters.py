@@ -1,6 +1,6 @@
 
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
+def set_parameter_requires_grad(model, freezeConvLayers):
+    if freezeConvLayers:
         for param in model.parameters():
             param.requires_grad = False
     else:

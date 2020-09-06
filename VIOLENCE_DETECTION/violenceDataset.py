@@ -49,6 +49,7 @@ class ViolenceDataset(Dataset):
         self.preprocessor = Preprocessor(ppType)
         self.useKeyframes = useKeyframes
         # self.windowLen = windowLen
+        print('WWWWWWW=', windowLen)
         self.extractor = FrameExtractor(len_window=windowLen)
 
     def __len__(self):
@@ -124,6 +125,7 @@ class ViolenceDataset(Dataset):
             sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
             video_segment, paths = self.loadFramesSeq(vid_name, sequence)
             candidate_frames, frames_indexes = self.extractor.__extract_candidate_frames_fromFramesList__(video_segment)
+            print('Frames indexes-{}/{}='.format(len(sequence),len(frames_indexes)))
             imgPIL, img = dynamicImage.getDynamicImage(candidate_frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dynamicImages.append(imgPIL)

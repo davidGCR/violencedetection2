@@ -1,24 +1,26 @@
 import torch
 
-def set_parameter_requires_grad(model, feature_extract):
-    print("Finetuning?:"+str(not feature_extract))
-    if feature_extract:
+def set_parameter_requires_grad(model, freezeConvLayers):
+    # print("Freezing all conv?:"+str(freezeConvLayers))
+    if freezeConvLayers:
         for param in model.parameters():
             param.requires_grad = False
             
-def verifiParametersToTrain(model, feature_extract):
+def verifiParametersToTrain(model, freezeConvLayers, printLayers=False):
     params_to_update = model.parameters()
     # print("Finetuning?:"+str(not feature_extract))
-    if feature_extract:
-        params_to_update = []
-        for name,param in model.named_parameters():
-            if param.requires_grad == True:
-                params_to_update.append(param)
-                #   print("\t",name)
+    # if freezeConvLayers:
+    params_to_update = []
+    for name,param in model.named_parameters():
+        if param.requires_grad == True:
+            params_to_update.append(param)
+            if printLayers:
+                print("\t",name)
     # else:
     #     for name,param in model.named_parameters():
     #         if param.requires_grad == True:
-                #   print("\t",name)
+    #             if printLayers:
+    #                 print("\t",name)
     return params_to_update
 
 def get_lr(optimizer):
