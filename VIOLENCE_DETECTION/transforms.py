@@ -44,8 +44,10 @@ def vifTransforms(input_size,mean=None,std=None):
     # Data augmentation and normalization for training
     # Just normalization for validation
     if mean is None:
-        mean = [0.5168978, 0.51586777, 0.5158742] #For dynamic images
-        std = [0.12358205, 0.11996705, 0.11759791]
+        # mean = [0.5168978, 0.51586777, 0.5158742] #For dynamic images
+        # std = [0.12358205, 0.11996705, 0.11759791]
+        mean = [0.5237269,  0.52217895, 0.52246195] #For dynamic images blur
+        std = [0.120705,   0.1162039,  0.11319272]
     data_transforms = {
         "train": transforms.Compose(
             [
@@ -121,6 +123,8 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
     # mean = [0.5006697,  0.500758,   0.50071216]  
     # std1 = [0.07394832, 0.07340418, 0.07372487]
     # std2 = [0.07394842, 0.07340426, 0.07372496]
+
+    # [0.49727023 0.497301   0.49739712] [0.09021691 0.08970159 0.0890853 ] [0.09021697 0.08970167 0.08908544]
     if mean is None:
         mean = [0.49778724, 0.49780366, 0.49776983] #For dynamic images
         std = [0.09050678, 0.09017131, 0.0898702 ]
@@ -160,6 +164,7 @@ def compute_mean_std(dataloader):
     pop_std0 = []
     pop_std1 = []
     for i, data in enumerate(dataloader, 0):
+        print(i+1)
         inputs, labels, _, _, _ = data
         # dynamicImages, label, vid_name, preprocessing_time, paths
         inputs = torch.squeeze(inputs, dim=1)
@@ -180,19 +185,25 @@ def compute_mean_std(dataloader):
     pop_std1 = np.array(pop_std1).mean(axis=0)
     return pop_mean, pop_std0, pop_std1
 
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from VIOLENCE_DETECTION.datasetsMemoryLoader import crime2localLoadData, rwf_load_data, vifLoadData
+from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
+import torch
+import constants
+
 if __name__ == "__main__":
-    import os
-    import sys
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from VIOLENCE_DETECTION.datasetsMemoryLoader import crime2localLoadData, rwf_load_data
-    from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
-    import torch
+    
+
 
     # X, y, numFrames = crime2localLoadData(min_frames=40)
     train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
     X = train_names + test_names
     y = train_labels + test_labels
     numFrames = train_num_frames + test_num_frames
+
+    # X, y, numFrames, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
     
     dataset = ViolenceDataset(dataset=X,
                             labels=y,
@@ -204,8 +215,10 @@ if __name__ == "__main__":
                             overlaping=0,
                             frame_skip=1,
                             skipInitialFrames=0,
-                            ppType=None)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=False, num_workers=4)
+                            ppType=None,
+                            useKeyframes='blur',
+                            windowLen=0)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=4)
     pop_mean, pop_std0, pop_std1 = compute_mean_std(dataloader)
     print(pop_mean, pop_std0, pop_std1)
 

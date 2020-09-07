@@ -358,26 +358,29 @@ def main():
     #                 os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'NonFight','i2sLegg2JPA_1')]
 
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
-    # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=False)
-    # datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
-    train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+    # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
+    datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+    # train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
     datasetAll = train_names + test_names
     
+    bb=[]
     for k, video_path in enumerate(datasetAll):
         print()
+        print(video_path)
         frames = extractor.__load_video_frames__(video_path)
 
-        dyn_image, _ = getDynamicImage(frames)
-        dyn_image = extractor.__format_dynamic_image__(dyn_image)
-        cv2.imshow("dyn_image", dyn_image)
-        key = cv2.waitKey(0)
+        # dyn_image, _ = getDynamicImage(frames)
+        # dyn_image = extractor.__format_dynamic_image__(dyn_image)
+        # cv2.imshow("dyn_image", dyn_image)
+        # key = cv2.waitKey(0)
 
         candidate_frames, frames_indexes = extractor.__extract_candidate_frames_fromFramesList__(frames)
-        dyn_image_keyframes, _ = getDynamicImage(candidate_frames)
-        dyn_image_keyframes = extractor.__format_dynamic_image__(dyn_image_keyframes)
-        cv2.imshow("dyn_image_keyframes", dyn_image_keyframes)
-        key = cv2.waitKey(0)
-        print('Total/keyframes={}/{}'.format(len(frames), len(candidate_frames)))
+        
+        # dyn_image_keyframes, _ = getDynamicImage(candidate_frames)
+        # dyn_image_keyframes = extractor.__format_dynamic_image__(dyn_image_keyframes)
+        # cv2.imshow("dyn_image_keyframes", dyn_image_keyframes)
+        # key = cv2.waitKey(0)
+        # print('Total/keyframes={}/{}'.format(len(frames), len(candidate_frames)))
         
         blurrings = extractor.__compute_frames_blurring_fromList__(candidate_frames, plot=False)
         blurrings = np.array(blurrings)
@@ -385,11 +388,13 @@ def main():
         
         blurrier_frames = extractor.__candidate_frames_blur_based__(frames, blurrings)
         print('Total/blurrier_frames={}/{}'.format(len(frames), len(blurrier_frames)))
-
-        dyn_image_blur, _ = getDynamicImage(blurrier_frames)
-        dyn_image_blur = extractor.__format_dynamic_image__(dyn_image_blur)
-        cv2.imshow("dyn_image_blur", dyn_image_blur)
-        key = cv2.waitKey(0)
+        bb.append(len(blurrier_frames))
+        # dyn_image_blur, _ = getDynamicImage(blurrier_frames)
+        # dyn_image_blur = extractor.__format_dynamic_image__(dyn_image_blur)
+        # cv2.imshow("dyn_image_blur", dyn_image_blur)
+        # key = cv2.waitKey(0)
+    
+    print('Avg blurs keyframes=',np.average(np.array(bb)))
         
         
         
