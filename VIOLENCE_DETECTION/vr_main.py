@@ -146,7 +146,7 @@ def main():
     parser.add_argument("--skipInitialFrames", type=int, default=0)
     parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
-    parser.add_argument("--useKeyframes", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--useKeyframes", type=str, default=None)
     parser.add_argument("--windowLen", type=int, default=0)
     # parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
 

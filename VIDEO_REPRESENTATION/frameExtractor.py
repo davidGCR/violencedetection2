@@ -9,6 +9,7 @@ import cv2
 from scipy.signal import argrelextrema
 from UTIL.util import sortListByStrNumbers
 from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, vifLoadData, rwf_load_data
+from VIDEO_REPRESENTATION.dynamicImage import getDynamicImage
 from operator import itemgetter
 import csv
 # Class to hold information about each frame
@@ -249,53 +250,179 @@ class FrameExtractor():
             writer.writeheader()
             for data in ldicts:
                 writer.writerow(data)
+    
+    def __format_dynamic_image__(self, pilImag):
+        imgPIL = pilImag.convert("RGB")
+        img = np.array(imgPIL)
+        return img
+
+    def __variance_of_laplacian__(self, image):
+        # compute the Laplacian of the image and then return the focus
+        # measure, which is simply the variance of the Laplacian
+	    return cv2.Laplacian(image, cv2.CV_64F).var()
+    
+    def __load_video_frames__(self, video_path, as_grey=False):
+        _, video_name = os.path.split(video_path)
+        imgs_paths = os.listdir(video_path)
+        imgs_paths = sortListByStrNumbers(imgs_paths)
+        frames = []
+        for i, path in enumerate(imgs_paths):
+            frame_path = os.path.join(video_path, path)
+            img = cv2.imread(frame_path)
+            if as_grey:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            frames.append(img)
+        return frames
+
+    def __compute_frames_blurring_fromList__(self, frames, plot=False):
+        blurrings = []
+        for i, frame in enumerate(frames):
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            fm = self.__variance_of_laplacian__(gray)
+            blurrings.append(fm)
+            if plot:
+                text = "Not Blurry"
+                if fm < 50:
+                    text = "Blurry"
+                cv2.putText(frame, "{}: {:.2f}".format(text, fm), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                cv2.imshow("Image", frame)
+                key = cv2.waitKey(0)
+        return blurrings
+    
+    def __candidate_frames_blur_based__(self, frames, blurrings, criteria='max'):
+        avg_blur = np.average(np.average(blurrings))
+        selected_frames = []
+        for i, bl in enumerate(blurrings):
+            if criteria == 'max' and bl > avg_blur:
+                selected_frames.append(frames[i])
+            # if criteria == 'max' and bl > avg_blur:
+        
+        return selected_frames
+            
+
+    # def __compute_frames_blurring__(self, video_path, plot=False):
+    #     blurrings = []
+    #     frames_gray = self.__load_video_frames__(video_path, as_grey=True)
+    #     for i, frame in enumerate(frames_gray):
+    #         fm = self.__variance_of_laplacian__(frame)
+    #         blurrings.append(fm)
+    #         if plot:
+    #             text = "Not Blurry"
+    #             if fm < 50:
+    #                 text = "Blurry"
+    #             cv2.putText(frame, "{}: {:.2f}".format(text, fm), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 3)
+    #             cv2.imshow("Image", frame)
+    #             key = cv2.waitKey(0)
+    #     return blurrings
+    
+    def __analize_frames_differences__(self, video_path, max_frames=50):
+        frames = self.__load_video_frames__(video_path, as_grey=False)
+        
+        #Original Dynamic Image
+        if len(frames) > max_frames:
+            frames2di = frames[0:max_frames]
+        else:
+            frames2di = frames
+        imgPIL, img = getDynamicImage(frames2di)
+        imgPIL = imgPIL.convert("RGB")
+        img = np.array(imgPIL)
+        cv2.imshow("Raw Dynamic Image", img)
+        key = cv2.waitKey(0)
+
+        candidate_frames, frames_indexes = self.__extract_candidate_frames_fromFramesList__(frames)
+
+        #Dynamic Image from keyframes
+        imgPIL, img = getDynamicImage(candidate_frames)
+        imgPIL = imgPIL.convert("RGB")
+        img = np.array(imgPIL)
+        cv2.imshow("Dynamic Image from Keyframes", img)
+        key = cv2.waitKey(0)
+
+        # for i, cframe in enumerate(candidate_frames):
+        #     text = imgs_paths[frames_indexes[i]]
+        #     # show the image
+        #     cv2.putText(cframe, "{}: {:.2f}".format(text, i), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 3)
+        #     cv2.imshow("Image", cframe)
+        #     key = cv2.waitKey(0)
+        return frames, candidate_frames, frames_indexes
 
 
 def main():
-    extractor = FrameExtractor(len_window=10)
-    # datasetAll = [os.path.join(constants.PATH_HOCKEY_FRAMES_VIOLENCE, '24'), os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')]
+    extractor = FrameExtractor(len_window=5)
+    # datasetAll = [os.path.join(constants.PATH_HOCKEY_FRAMES_VIOLENCE, '24'),
+    #                 os.path.join(constants.PATH_VIF_FRAMES, '1', 'Violence', 'crowd_violence__Man_Utd_vs_Roma_Crowd_Trouble__uncychris__ZGI5vlDMpJA'),
+    #                 os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight', '_2RYnSFPD_U_0')]
+    
+    # datasetAll = [os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight', '_2RYnSFPD_U_0'),
+    #                 os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight', '_q5Nwh4Z6ao_1'),
+    #                 os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'NonFight','i2sLegg2JPA_1')]
+
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
     # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=False)
     # datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
     train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
     datasetAll = train_names + test_names
     
+    for k, video_path in enumerate(datasetAll):
+        print()
+        frames = extractor.__load_video_frames__(video_path)
 
-    # print(datasetAll)
-    fs = []
-    dicts = []
-    
-    for k,video_path in enumerate(datasetAll):
-        _, video_name = os.path.split(video_path)
-        imgs_paths = os.listdir(video_path)
-        imgs_paths = sortListByStrNumbers(imgs_paths)
-        # print(imgs_paths)
-        frames = []
-        for i, path in enumerate(imgs_paths):
-            frame_path = os.path.join(video_path, path)
-            # img1 = Image.open(frame_path)
-            # img1 = img1.convert("RGB")
-            # img = np.array(img1)
-            img = cv2.imread(frame_path)
-            frames.append(img)
-        # print('Nunmmber of frames=', len(frames))
-        
+        dyn_image, _ = getDynamicImage(frames)
+        dyn_image = extractor.__format_dynamic_image__(dyn_image)
+        cv2.imshow("dyn_image", dyn_image)
+        key = cv2.waitKey(0)
+
         candidate_frames, frames_indexes = extractor.__extract_candidate_frames_fromFramesList__(frames)
-        fs.append(len(candidate_frames))
-        print('{}-No frames/candidates frames={}/{}'.format(k + 1, len(frames), len(candidate_frames)))
-        dictionary = {
-            'video_path': video_path,
-            'video_len': len(frames),
-            'num_key_frames': len(candidate_frames),
-            'key_frames': frames_indexes
-        }
-        dicts.append(dictionary)
+        dyn_image_keyframes, _ = getDynamicImage(candidate_frames)
+        dyn_image_keyframes = extractor.__format_dynamic_image__(dyn_image_keyframes)
+        cv2.imshow("dyn_image_keyframes", dyn_image_keyframes)
+        key = cv2.waitKey(0)
+        print('Total/keyframes={}/{}'.format(len(frames), len(candidate_frames)))
+        
+        blurrings = extractor.__compute_frames_blurring_fromList__(candidate_frames, plot=False)
+        blurrings = np.array(blurrings)
+        print('Blurrings--Max={}, Min={}, Avg={}'.format(np.amax(blurrings), np.amin(blurrings), np.average(blurrings)))
+        
+        blurrier_frames = extractor.__candidate_frames_blur_based__(frames, blurrings)
+        print('Total/blurrier_frames={}/{}'.format(len(frames), len(blurrier_frames)))
 
-        # print('----Frames selected=', list(itemgetter(*frames_indexes)(imgs_paths)))
+        dyn_image_blur, _ = getDynamicImage(blurrier_frames)
+        dyn_image_blur = extractor.__format_dynamic_image__(dyn_image_blur)
+        cv2.imshow("dyn_image_blur", dyn_image_blur)
+        key = cv2.waitKey(0)
+        
+        
+        
 
-    print('Average selected={}'.format(np.average(np.array(fs))))
-    extractor.__save__listDicts_csv__(ldicts=dicts, csv_columns=['video_path', 'video_len', 'num_key_frames', 'key_frames'], csv_file='rwf_KeyFrames_10.csv')
-    # extractor.__plot_frames_list__(candidate_frames, waitKey=1000)
+    # fs = []
+    # dicts = []
+    # for k,video_path in enumerate(datasetAll):
+    #     _, video_name = os.path.split(video_path)
+    #     imgs_paths = os.listdir(video_path)
+    #     imgs_paths = sortListByStrNumbers(imgs_paths)
+    #     # print(imgs_paths)
+    #     frames = []
+    #     for i, path in enumerate(imgs_paths):
+    #         frame_path = os.path.join(video_path, path)
+    #         # img1 = Image.open(frame_path)
+    #         # img1 = img1.convert("RGB")
+    #         # img = np.array(img1)
+    #         img = cv2.imread(frame_path)
+    #         frames.append(img)
+        
+    #     candidate_frames, frames_indexes = extractor.__extract_candidate_frames_fromFramesList__(frames)
+    #     fs.append(len(candidate_frames))
+    #     print('{}-No frames/candidates frames={}/{}'.format(k + 1, len(frames), len(candidate_frames)))
+    #     dictionary = {
+    #         'video_path': video_path,
+    #         'video_len': len(frames),
+    #         'num_key_frames': len(candidate_frames),
+    #         'key_frames': frames_indexes
+    #     }
+    #     dicts.append(dictionary)
+
+    # print('Average selected={}'.format(np.average(np.array(fs))))
+    # extractor.__save__listDicts_csv__(ldicts=dicts, csv_columns=['video_path', 'video_len', 'num_key_frames', 'key_frames'], csv_file='rwf_KeyFrames_10.csv')
 
 if __name__ == "__main__":
     main()

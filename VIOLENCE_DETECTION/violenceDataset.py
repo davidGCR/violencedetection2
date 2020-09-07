@@ -120,7 +120,7 @@ class ViolenceDataset(Dataset):
         label = self.labels[idx]
         dynamicImages = []
         preprocessing_time = 0.0
-        if self.useKeyframes:
+        if self.useKeyframes == 'diff':
             sequence = os.listdir(vid_name)
             sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
             video_segment, paths = self.loadFramesSeq(vid_name, sequence)
@@ -131,6 +131,15 @@ class ViolenceDataset(Dataset):
             dynamicImages.append(imgPIL)
             # print('{}-No frames/candidates frames={}/{}'.format(idx, len(video_segment), len(candidate_frames)))
             # print('----Frames selected=', list(itemgetter(*frames_indexes)(sequence)))
+        elif self.useKeyframes == 'blur':
+            sequence = os.listdir(vid_name)
+            sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+            frames, paths = self.loadFramesSeq(vid_name, sequence)
+            blurrings = self.extractor.__compute_frames_blurring_fromList__(frames, plot=False)
+            blurrier_frames = self.extractor.__candidate_frames_blur_based__(frames, blurrings)
+            imgPIL, img = dynamicImage.getDynamicImage(blurrier_frames)
+            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            dynamicImages.append(imgPIL)
         else:
             video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
             paths = []
