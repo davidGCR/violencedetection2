@@ -126,8 +126,10 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
 
     # [0.49727023 0.497301   0.49739712] [0.09021691 0.08970159 0.0890853 ] [0.09021697 0.08970167 0.08908544]
     if mean is None:
-        mean = [0.49778724, 0.49780366, 0.49776983] #For dynamic images
-        std = [0.09050678, 0.09017131, 0.0898702 ]
+        # mean = [0.49778724, 0.49780366, 0.49776983] #For dynamic images
+        # std = [0.09050678, 0.09017131, 0.0898702 ]
+        mean = [0.4972705,  0.4973006,  0.49739745] #For dynamic images blur
+        std = [0.06079626, 0.06017601, 0.05966628]
     data_transforms = {
         "train": transforms.Compose(
             [
