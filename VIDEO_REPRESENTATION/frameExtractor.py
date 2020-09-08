@@ -272,7 +272,7 @@ class FrameExtractor():
             if as_grey:
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             frames.append(img)
-        return frames
+        return frames, imgs_paths
 
     def __compute_frames_blurring_fromList__(self, frames, plot=False):
         blurrings = []
@@ -289,15 +289,20 @@ class FrameExtractor():
                 key = cv2.waitKey(0)
         return blurrings
     
-    def __candidate_frames_blur_based__(self, frames, blurrings, criteria='max'):
-        avg_blur = np.average(np.average(blurrings))
+    def __candidate_frames_blur_based__(self, frames, blurrings, criteria, nelem):
+        blurrings = np.array(blurrings)
+        if criteria == 'blur-max':
+            indexes = np.argpartition(blurrings, -nelem)[-nelem:]
+        elif criteria == 'blur-min':
+            indexes = np.argpartition(blurrings, nelem)[:nelem]
+        indexes = np.sort(indexes)
+        # avg_blur = np.average(np.average(blurrings))
         selected_frames = []
-        for i, bl in enumerate(blurrings):
-            if criteria == 'max' and bl > avg_blur:
-                selected_frames.append(frames[i])
-            # if criteria == 'max' and bl > avg_blur:
+        # indexes = []
+        for i in indexes:
+            selected_frames.append(frames[i])
         
-        return selected_frames
+        return selected_frames, indexes
             
 
     # def __compute_frames_blurring__(self, video_path, plot=False):
@@ -316,7 +321,7 @@ class FrameExtractor():
     #     return blurrings
     
     def __analize_frames_differences__(self, video_path, max_frames=50):
-        frames = self.__load_video_frames__(video_path, as_grey=False)
+        frames, imgs_paths = self.__load_video_frames__(video_path, as_grey=False)
         
         #Original Dynamic Image
         if len(frames) > max_frames:
@@ -359,22 +364,23 @@ def main():
 
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
     # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
-    datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
-    # train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+    # datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+    train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
     datasetAll = train_names + test_names
     
     bb=[]
     for k, video_path in enumerate(datasetAll):
         print()
         print(video_path)
-        frames = extractor.__load_video_frames__(video_path)
+        frames, imgs_paths = extractor.__load_video_frames__(video_path)
+        # print(imgs_paths)
 
-        # dyn_image, _ = getDynamicImage(frames)
-        # dyn_image = extractor.__format_dynamic_image__(dyn_image)
-        # cv2.imshow("dyn_image", dyn_image)
-        # key = cv2.waitKey(0)
+        dyn_image, _ = getDynamicImage(frames[0:30])
+        dyn_image = extractor.__format_dynamic_image__(dyn_image)
+        cv2.imshow("dyn_image", dyn_image)
+        key = cv2.waitKey(0)
 
-        candidate_frames, frames_indexes = extractor.__extract_candidate_frames_fromFramesList__(frames)
+        # candidate_frames, frames_indexes = extractor.__extract_candidate_frames_fromFramesList__(frames)
         
         # dyn_image_keyframes, _ = getDynamicImage(candidate_frames)
         # dyn_image_keyframes = extractor.__format_dynamic_image__(dyn_image_keyframes)
@@ -382,19 +388,28 @@ def main():
         # key = cv2.waitKey(0)
         # print('Total/keyframes={}/{}'.format(len(frames), len(candidate_frames)))
         
-        blurrings = extractor.__compute_frames_blurring_fromList__(candidate_frames, plot=False)
+        blurrings = extractor.__compute_frames_blurring_fromList__(frames, plot=False)
         blurrings = np.array(blurrings)
-        print('Blurrings--Max={}, Min={}, Avg={}'.format(np.amax(blurrings), np.amin(blurrings), np.average(blurrings)))
+        print('Blurrings ({})--Max={}, Min={}, Avg={}'.format(len(blurrings),np.amax(blurrings), np.amin(blurrings), np.average(blurrings)))
         
-        blurrier_frames = extractor.__candidate_frames_blur_based__(frames, blurrings)
-        print('Total/blurrier_frames={}/{}'.format(len(frames), len(blurrier_frames)))
-        bb.append(len(blurrier_frames))
-        # dyn_image_blur, _ = getDynamicImage(blurrier_frames)
-        # dyn_image_blur = extractor.__format_dynamic_image__(dyn_image_blur)
-        # cv2.imshow("dyn_image_blur", dyn_image_blur)
-        # key = cv2.waitKey(0)
+        blurrier_frames_max, indexes_max = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', 30)
+        # print('Total/blurrier_frames={}/{}'.format(len(frames), len(blurrier_frames_max)))
+        # print('Blurrier indexes=', type(indexes), indexes)
+        # print('Blurrier frames=', blurrings[indexes])
+        # bb.append(len(blurrier_frames_max))
+        
+        dyn_image_blur_max, _ = getDynamicImage(blurrier_frames_max)
+        dyn_image_blur_max = extractor.__format_dynamic_image__(dyn_image_blur_max)
+        cv2.imshow("dyn_image_blur_max", dyn_image_blur_max)
+        key = cv2.waitKey(0)
+
+        blurrier_frames_min, indexes_min = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', 30)
+        dyn_image_blur_min, _ = getDynamicImage(blurrier_frames_min)
+        dyn_image_blur_min = extractor.__format_dynamic_image__(dyn_image_blur_min)
+        cv2.imshow("dyn_image_blur_min", dyn_image_blur_min)
+        key = cv2.waitKey(0)
     
-    print('Avg blurs keyframes=',np.average(np.array(bb)))
+    # print('Avg blurs keyframes=',np.average(np.array(bb)))
         
         
         

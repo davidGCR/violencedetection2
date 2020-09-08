@@ -131,12 +131,12 @@ class ViolenceDataset(Dataset):
             dynamicImages.append(imgPIL)
             # print('{}-No frames/candidates frames={}/{}'.format(idx, len(video_segment), len(candidate_frames)))
             # print('----Frames selected=', list(itemgetter(*frames_indexes)(sequence)))
-        elif self.useKeyframes == 'blur':
+        elif self.useKeyframes == 'blur-min' or self.useKeyframes == 'blur-max':
             sequence = os.listdir(vid_name)
             sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
             frames, paths = self.loadFramesSeq(vid_name, sequence)
             blurrings = self.extractor.__compute_frames_blurring_fromList__(frames, plot=False)
-            blurrier_frames = self.extractor.__candidate_frames_blur_based__(frames, blurrings)
+            blurrier_frames, _ = self.extractor.__candidate_frames_blur_based__(frames, blurrings, self.useKeyframes, self.videoSegmentLength)
             imgPIL, img = dynamicImage.getDynamicImage(blurrier_frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dynamicImages.append(imgPIL)
