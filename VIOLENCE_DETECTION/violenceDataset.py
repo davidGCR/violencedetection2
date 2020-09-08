@@ -140,6 +140,16 @@ class ViolenceDataset(Dataset):
             imgPIL, img = dynamicImage.getDynamicImage(blurrier_frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dynamicImages.append(imgPIL)
+        elif self.useKeyframes == 'blur-mixed':
+            sequence = os.listdir(vid_name)
+            sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+            frames, paths = self.loadFramesSeq(vid_name, sequence)
+            blurrings = self.extractor.__compute_frames_blurring_fromList__(frames, plot=False)
+            blurrier_frames_min, _ = self.extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', int(self.videoSegmentLength/2))
+            blurrier_frames_max, _ = self.extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', int(self.videoSegmentLength/2))
+            imgPIL, img = dynamicImage.getDynamicImage(blurrier_frames_min+blurrier_frames_max)
+            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+            dynamicImages.append(imgPIL)
         else:
             video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
             paths = []

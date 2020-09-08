@@ -305,6 +305,7 @@ class FrameExtractor():
                 indexes = indexes[::-1][:nelem]
             elif criteria == 'blur-min':
                 indexes = np.argsort(blurrings)
+                indexes = indexes[:nelem]
             # indexes = np.random.choice(indexes, nelem)
             indexes = np.sort(indexes)
             # avg_blur = np.average(np.average(blurrings))
@@ -431,7 +432,7 @@ def main():
         blurrings = np.array(blurrings)
         print('Blurrings ({})--Max={}, Min={}, Avg={}'.format(len(blurrings),np.amax(blurrings), np.amin(blurrings), np.average(blurrings)))
         
-        blurrier_frames_max, indexes_max = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', 30)
+        blurrier_frames_max, indexes_max = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', 20)
         print('Total/blurs={}/{}'.format(len(frames), len(blurrier_frames_max)))
         print('indexes_max=',indexes_max)
 
@@ -445,11 +446,18 @@ def main():
         cv2.imshow("dyn_image_blur_max", dyn_image_blur_max)
         key = cv2.waitKey(0)
 
-        # blurrier_frames_min, indexes_min = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', 30)
-        # dyn_image_blur_min, _ = getDynamicImage(blurrier_frames_min)
-        # dyn_image_blur_min = extractor.__format_dynamic_image__(dyn_image_blur_min)
-        # cv2.imshow("dyn_image_blur_min", dyn_image_blur_min)
-        # key = cv2.waitKey(0)
+        blurrier_frames_min, indexes_min = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', 20)
+        print('indexes_min=',indexes_min)
+        dyn_image_blur_min, _ = getDynamicImage(blurrier_frames_min)
+        dyn_image_blur_min = extractor.__format_dynamic_image__(dyn_image_blur_min)
+        cv2.imshow("dyn_image_blur_min", dyn_image_blur_min)
+        key = cv2.waitKey(0)
+
+        # blurrier_frames_min, indexes_min = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', 20)
+        dyn_image_blur_mixed, _ = getDynamicImage(blurrier_frames_min+blurrier_frames_max)
+        dyn_image_blur_mixed = extractor.__format_dynamic_image__(dyn_image_blur_mixed)
+        cv2.imshow("dyn_image_blur_mixed", dyn_image_blur_mixed)
+        key = cv2.waitKey(0)
     
     print('Avg blurs keyframes=',np.average(np.array(bb)))
         

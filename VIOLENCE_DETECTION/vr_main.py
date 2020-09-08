@@ -160,7 +160,7 @@ def main():
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
-    patience = 5
+    # patience = 5
     folds_number = 5
     fold = 0
     checkpoint_path = None
@@ -263,7 +263,7 @@ def main():
                                                             criterion,
                                                             optimizer,
                                                             num_epochs=args.numEpochs,
-                                                            patience=patience,
+                                                            patience=args.patience,
                                                             fold=fold,
                                                             path=checkpoint_path,
                                                             model_config=config)
