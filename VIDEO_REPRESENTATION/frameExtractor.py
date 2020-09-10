@@ -395,12 +395,13 @@ def main():
     #                 os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'NonFight','i2sLegg2JPA_1')]
 
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
-    # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
+    datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
     # datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
-    train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
-    datasetAll = train_names + test_names
+    # train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+    # datasetAll = train_names + test_names
     
-    bb=[]
+    bb = []
+    framesLen = 5
     for k, video_path in enumerate(datasetAll):
         print()
         print(video_path)
@@ -432,7 +433,7 @@ def main():
         blurrings = np.array(blurrings)
         print('Blurrings ({})--Max={}, Min={}, Avg={}'.format(len(blurrings),np.amax(blurrings), np.amin(blurrings), np.average(blurrings)))
         
-        blurrier_frames_max, indexes_max = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', 20)
+        blurrier_frames_max, indexes_max = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', framesLen)
         print('Total/blurs={}/{}'.format(len(frames), len(blurrier_frames_max)))
         print('indexes_max=',indexes_max)
 
@@ -446,7 +447,7 @@ def main():
         cv2.imshow("dyn_image_blur_max", dyn_image_blur_max)
         key = cv2.waitKey(0)
 
-        blurrier_frames_min, indexes_min = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', 20)
+        blurrier_frames_min, indexes_min = extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', framesLen)
         print('indexes_min=',indexes_min)
         dyn_image_blur_min, _ = getDynamicImage(blurrier_frames_min)
         dyn_image_blur_min = extractor.__format_dynamic_image__(dyn_image_blur_min)

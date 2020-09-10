@@ -1,16 +1,17 @@
 python3  VIOLENCE_DETECTION/vr_main.py \
 --modelType resnet50 \
---dataset hockey \
+--dataset vif \
 --numEpochs 3 \
 --numWorkers 4 \
 --batchSize 8 \
---featureExtract false \
+--freezeConvLayers True \
 --joinType maxTempPool \
 --videoSegmentLength 30 \
 --numDynamicImagesPerVideo 1 \
 --positionSegment begin \
 --overlapping 0 \
 --frameSkip 0 \
---saveCheckpoint True \
+--saveCheckpoint False \
 --split_type cross-val \
---useKeyframes True
+--useKeyframes blur-max \
+# --windowLen 10
