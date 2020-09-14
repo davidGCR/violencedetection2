@@ -94,7 +94,10 @@ class ViolenceDataset(Dataset):
         # print('self.numFrames = ', type(self.numFrames))
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
         
-        seqLen = self.videoSegmentLength
+        if self.videoSegmentLength == 0:
+            seqLen = self.numFrames[idx]
+        else:
+            seqLen = self.videoSegmentLength
         # print('seqLen = ', seqLen)
         overlap_length = int(self.overlaping*seqLen)
         indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen-overlap_length)]
@@ -116,7 +119,7 @@ class ViolenceDataset(Dataset):
 
     def __getitem__(self, idx):
         vid_name = self.videos[idx]
-        # print(vid_name)
+        # print(vid_name, self.numFrames[idx])
         label = self.labels[idx]
         dynamicImages = []
         preprocessing_time = 0.0
@@ -156,8 +159,9 @@ class ViolenceDataset(Dataset):
             for i, sequence in enumerate(video_segments):
                 video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
                 paths.append(pths)
-            
+            # print('Clips={}/Len={}'.format(len(video_segments), len(video_segments[0])))
             for sequence in video_segments:
+                
                 start_time = time.time()
                 imgPIL, img = dynamicImage.getDynamicImage(sequence)
                 end_time = time.time()
@@ -165,7 +169,7 @@ class ViolenceDataset(Dataset):
                 imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
                 preprocessing_time += (end_time - start_time)
                 dynamicImages.append(imgPIL)
-        
+            # print('Num dynamicImages={}'.format(len(dynamicImages)))
         dynamicImages = torch.stack(dynamicImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
         # print(dynamicImages.size())
         return dynamicImages, label, vid_name, preprocessing_time, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])

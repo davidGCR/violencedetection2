@@ -125,6 +125,8 @@ def base_dataset(dataset, mean=None, std=None):
     
     return datasetAll, labelsAll, numFramesAll, transforms
 
+# def collate_fn(batch):
+#     return tuple(zip(*batch))
 
 def main():
     parser = argparse.ArgumentParser()

@@ -96,7 +96,10 @@ class AnomalyDataset(Dataset):
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         # bbox_file = self.bbox_files[idx]
         video_segments = []
-        seqLen = self.videoSegmentLength  #number of frames for each segment
+        if self.videoSegmentLength == -1:
+            seqLen = self.numFrames[idx]
+        else:
+            seqLen = self.videoSegmentLength  #number of frames for each segment
         
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
         indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen)]
