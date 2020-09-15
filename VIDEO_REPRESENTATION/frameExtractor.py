@@ -274,6 +274,16 @@ class FrameExtractor():
             frames.append(img)
         return frames, imgs_paths
 
+    def __load_frames_from_list__(self, video_path, imgs_paths, as_grey=False):
+        frames = []
+        for i, path in enumerate(imgs_paths):
+            frame_path = os.path.join(video_path, path)
+            img = cv2.imread(frame_path)
+            if as_grey:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            frames.append(img)
+        return frames
+
     def __compute_frames_blurring_fromList__(self, frames, plot=False):
         blurrings = []
         for i, frame in enumerate(frames):
@@ -291,14 +301,14 @@ class FrameExtractor():
     
     def __candidate_frames_blur_based__(self, frames, blurrings, criteria, nelem):
         blurrings = np.array(blurrings)
-        selected_frames = []
+        # selected_frames = []
         indexes = []
         if len(frames) > nelem:
             # if criteria == 'blur-max':
             #     indexes = np.argpartition(blurrings, -nelem)[-nelem:]
             # elif criteria == 'blur-min':
             #     indexes = np.argpartition(blurrings, nelem)[:nelem]
-            ss = nelem + int(nelem/2)
+            # ss = nelem + int(nelem/2)
             if criteria == 'blur-max':
                 # indexes = np.argpartition(blurrings, -ss)[-ss:]
                 indexes = np.argsort(blurrings)
@@ -307,16 +317,16 @@ class FrameExtractor():
                 indexes = np.argsort(blurrings)
                 indexes = indexes[:nelem]
             # indexes = np.random.choice(indexes, nelem)
-            indexes = np.sort(indexes)
+            # indexes = np.sort(indexes)
             # avg_blur = np.average(np.average(blurrings))
-            selected_frames = []
+            # selected_frames = []
             # indexes = []
-            for i in indexes:
-                selected_frames.append(frames[i])
+            # for i in indexes:
+            #     selected_frames.append(frames[i])
         else:
             indexes = np.arange(len(frames))
-            selected_frames = frames
-        return selected_frames, indexes
+            # selected_frames = frames
+        return indexes.tolist()
     
     def __avg_dynamic_image__(self, frames, tempWindowLen):
         dimages = []
@@ -383,6 +393,44 @@ class FrameExtractor():
         #     key = cv2.waitKey(0)
         return frames, candidate_frames, frames_indexes
 
+    def __padding__(self, segment_list, numDynImgs):
+        if  len(segment_list) < numDynImgs:
+            last_element = segment_list[len(segment_list) - 1]
+            for i in range(numDynImgs - len(segment_list)):
+                segment_list.append(last_element)
+        elif len(segment_list) > numDynImgs:
+            segment_list = segment_list[0:numDynImgs]
+        return segment_list
+
+    def __checkSegmentLength__(self, segment, seqLen, minSegmentLen=4):
+        return (len(segment) == seqLen or len(segment) > minSegmentLen)
+
+    def __getVideoSegments__(self, vid_path, numDynImgs=1, seqLen=0, overlaping=0):
+        frames_list = os.listdir(vid_path)
+        frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        # video_segments = []
+        indices = [x for x in range(0, len(frames_list), 1)]
+        
+        if seqLen == 0:
+            seqLen = len(frames_list)
+        # print('seqLen = ', seqLen)
+        overlap_length = int(overlaping*seqLen)
+        indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen-overlap_length)]
+        
+        indices_segments_cpy = []
+        for i,seg in enumerate(indices_segments): #Verify is a segment has at least 2 or more frames.
+            if self.__checkSegmentLength__(seg, seqLen):
+                indices_segments_cpy.append(indices_segments[i])
+        indices_segments = indices_segments_cpy
+        
+        # indices_segments = self.__padding__(indices_segments, numDynImgs) #If numDynamicImages < wanted the padding else delete
+        # print('indices3: ', len(indices_segments), indices_segments)
+
+        # for i, indices_segment in enumerate(indices_segments): #Generate segments using indices
+        #     segment = np.asarray(frames_list)[indices_segment].tolist()
+        #     video_segments.append(segment)
+                
+        return indices_segments
 
 def main():
     extractor = FrameExtractor(len_window=5)
@@ -396,18 +444,63 @@ def main():
 
     # images_folder = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train', 'Fight','GafFu4IZtIA_0')
     # datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
-    datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
-    # train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
-    # datasetAll = train_names + test_names
+    # datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+    train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+    datasetAll = train_names + test_names
     
     bb = []
-    framesLen = 5
+    nelem = 1
+    seqLen = 15
     dynamicImgLen = [5, 10, 15, 20]
     for k, video_path in enumerate(datasetAll):
         print()
-        print(video_path)
+        
         _, video_name = os.path.split(video_path)
-        frames, imgs_paths = extractor.__load_video_frames__(video_path)
+
+        frames, imgs_paths = extractor.__load_video_frames__(video_path) # Load all frames
+        print(len(imgs_paths), video_path)
+        indices_segments = extractor.__getVideoSegments__(video_path, seqLen=seqLen) # split all video in shots of seqLen frames
+        # print(len(video_segments), video_segments)
+        print(indices_segments)
+        segment_idxs = []
+        for i,idxs in enumerate(indices_segments):
+
+            frames_in_segment = list(itemgetter(*idxs)(frames)) #np.asarray(frames)[idxs].tolist()
+            blurrings = extractor.__compute_frames_blurring_fromList__(frames_in_segment, plot=False)
+            # print('blurrings=',blurrings)
+            indexes_candidates = extractor.__candidate_frames_blur_based__(frames_in_segment, blurrings, 'blur-min', nelem=nelem)
+            # print('indexes_candidates1=',indexes_candidates, type(indexes_candidates))
+
+            if nelem > 1:
+                indexes_candidates = list(itemgetter(*indexes_candidates)(idxs))
+                segment_idxs += indexes_candidates
+                print('Segment i{}-(len={}/candidates={})'.format(i+1,len(frames_in_segment), len(indexes_candidates)))
+            else:
+                indexes_candidates = idxs[indexes_candidates[0]]
+                segment_idxs.append(indexes_candidates)
+                print('Segment i{}-(len={}/candidates={})'.format(i+1,len(frames_in_segment), 1))
+            
+            print('indexes_candidates=',indexes_candidates)
+            
+
+        segment_idxs.sort()
+        candidate_frames = list(itemgetter(*segment_idxs)(frames))
+        print('CAndidate frames  len({}), indexes={}'.format(len(candidate_frames),segment_idxs))
+
+        dyn_image, _ = getDynamicImage(frames[0:30]) #all frames
+        dyn_image = extractor.__format_dynamic_image__(dyn_image)
+        cv2.imshow("dyn_image", dyn_image)
+        key = cv2.waitKey(0)
+
+        dyn_image_cand, _ = getDynamicImage(candidate_frames) #candidate frames
+        dyn_image_cand = extractor.__format_dynamic_image__(dyn_image_cand)
+        cv2.imshow("dyn_image_cand", dyn_image_cand)
+        key = cv2.waitKey(0)
+
+
+
+        
+
         # print(imgs_paths)
 
         # for dl in dynamicImgLen:
@@ -416,10 +509,7 @@ def main():
         #     extractor.__save_frame_to_disk__(dyn_image, 'DATASETS/DynamicImagesSamples/HOCKEY/{}_{}.PNG'.format(video_name,dl))
         #     cv2.imshow("dyn_image", dyn_image)
         #     key = cv2.waitKey(0)  
-        dyn_image, _ = getDynamicImage(frames)
-        dyn_image = extractor.__format_dynamic_image__(dyn_image)
-        cv2.imshow("dyn_image", dyn_image)
-        key = cv2.waitKey(0)
+        
 
         # dimages, avg = extractor.__avg_dynamic_image__(frames, 20)
         # for d in dimages:

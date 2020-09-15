@@ -108,14 +108,14 @@ class ViolenceDataset(Dataset):
                 indices_segments_cpy.append(indices_segments[i])
         indices_segments = indices_segments_cpy
         # print('indices2: ',indices_segments)
-        indices_segments = self.padding(indices_segments) #If numDynamicImages < wanted the padding else delete
+        # indices_segments = self.padding(indices_segments) #If numDynamicImages < wanted the padding else delete
         # print('indices3: ', len(indices_segments), indices_segments)
 
         for i, indices_segment in enumerate(indices_segments): #Generate segments using indices
             segment = np.asarray(frames_list)[indices_segment].tolist()
             video_segments.append(segment)
                 
-        return video_segments
+        return video_segments, indices_segments
 
     def __getitem__(self, idx):
         vid_name = self.videos[idx]
@@ -135,26 +135,33 @@ class ViolenceDataset(Dataset):
             # print('{}-No frames/candidates frames={}/{}'.format(idx, len(video_segment), len(candidate_frames)))
             # print('----Frames selected=', list(itemgetter(*frames_indexes)(sequence)))
         elif self.useKeyframes == 'blur-min' or self.useKeyframes == 'blur-max':
+            nelem = 1
             sequence = os.listdir(vid_name)
             sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
             frames, paths = self.loadFramesSeq(vid_name, sequence)
-            blurrings = self.extractor.__compute_frames_blurring_fromList__(frames, plot=False)
-            blurrier_frames, _ = self.extractor.__candidate_frames_blur_based__(frames, blurrings, self.useKeyframes, self.videoSegmentLength)
-            imgPIL, img = dynamicImage.getDynamicImage(blurrier_frames)
-            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            dynamicImages.append(imgPIL)
-        elif self.useKeyframes == 'blur-mixed':
-            sequence = os.listdir(vid_name)
-            sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-            frames, paths = self.loadFramesSeq(vid_name, sequence)
-            blurrings = self.extractor.__compute_frames_blurring_fromList__(frames, plot=False)
-            blurrier_frames_min, _ = self.extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-min', int(self.videoSegmentLength/2))
-            blurrier_frames_max, _ = self.extractor.__candidate_frames_blur_based__(frames, blurrings, 'blur-max', int(self.videoSegmentLength/2))
-            imgPIL, img = dynamicImage.getDynamicImage(blurrier_frames_min+blurrier_frames_max)
+            
+            _, indices_segments = self.getVideoSegments(vid_name, idx)
+            # print(len(frames),len(indices_segments))
+            segment_idxs = []
+            for i,idxs in enumerate(indices_segments):
+                frames_in_segment = list(itemgetter(*idxs)(frames)) #np.asarray(frames)[idxs].tolist()
+                blurrings = self.extractor.__compute_frames_blurring_fromList__(frames_in_segment, plot=False)
+                indexes_candidates = self.extractor.__candidate_frames_blur_based__(frames_in_segment, blurrings, self.useKeyframes, nelem=nelem)
+
+                if nelem > 1:
+                    indexes_candidates = list(itemgetter(*indexes_candidates)(idxs))
+                    segment_idxs += indexes_candidates
+                else:
+                    indexes_candidates = idxs[indexes_candidates[0]]
+                    segment_idxs.append(indexes_candidates)
+            segment_idxs.sort()
+            candidate_frames = list(itemgetter(*segment_idxs)(frames))
+    
+            imgPIL, img = dynamicImage.getDynamicImage(candidate_frames)
             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
             dynamicImages.append(imgPIL)
         else:
-            video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+            video_segments, _ = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
             paths = []
             for i, sequence in enumerate(video_segments):
                 video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
