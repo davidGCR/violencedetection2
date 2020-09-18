@@ -66,8 +66,8 @@ class ViolenceDataset(Dataset):
             last_element = segment_list[len(segment_list) - 1]
             for i in range(self.numDynamicImagesPerVideo - len(segment_list)):
                 segment_list.append(last_element)
-        elif len(segment_list) > self.numDynamicImagesPerVideo:
-            segment_list = segment_list[0:self.numDynamicImagesPerVideo]
+        # elif len(segment_list) > self.numDynamicImagesPerVideo:
+        #     segment_list = segment_list[0:self.numDynamicImagesPerVideo]
         return segment_list
 
     def loadFramesSeq(self, vid_name, sequence):
@@ -108,7 +108,7 @@ class ViolenceDataset(Dataset):
                 indices_segments_cpy.append(indices_segments[i])
         indices_segments = indices_segments_cpy
         # print('indices2: ',indices_segments)
-        # indices_segments = self.padding(indices_segments) #If numDynamicImages < wanted the padding else delete
+        indices_segments = self.padding(indices_segments) #If numDynamicImages < wanted the padding else delete
         # print('indices3: ', len(indices_segments), indices_segments)
 
         for i, indices_segment in enumerate(indices_segments): #Generate segments using indices
@@ -142,6 +142,7 @@ class ViolenceDataset(Dataset):
             
             _, indices_segments = self.getVideoSegments(vid_name, idx)
             # print(len(frames),len(indices_segments))
+            # ca2@i@VnTCC5TDK
             segment_idxs = []
             for i,idxs in enumerate(indices_segments):
                 frames_in_segment = list(itemgetter(*idxs)(frames)) #np.asarray(frames)[idxs].tolist()

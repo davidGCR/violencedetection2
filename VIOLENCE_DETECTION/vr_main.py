@@ -239,7 +239,7 @@ def main():
                 'dataset':args.dataset,
                 'model': args.modelType,
                 'numEpochs': args.numEpochs,
-                'featureExtract': args.featureExtract,
+                'freezeConvLayers': args.freezeConvLayers,
                 'numDynamicImages':args.numDynamicImagesPerVideo,
                 'segmentLength':args.videoSegmentLength,
                 'frameSkip':args.frameSkip,
