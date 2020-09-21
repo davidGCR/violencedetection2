@@ -164,31 +164,10 @@ def base_dataset(dataset, mean=None, std=None):
 #     parser.add_argument("--trainDataset",type=str)
 #     args = parser.parse_args()
 
-def openSet_experiments(mode):
-    parser = argparse.ArgumentParser()
+def openSet_experiments(mode, args):
+    # parser = argparse.ArgumentParser()
     # parser.add_argument("--mode",type=str)
     if mode == 'openSet-train':
-        parser.add_argument("--modelType", type=str, default="alexnet", help="model")
-        parser.add_argument("--dataset",type=str)
-        parser.add_argument("--numEpochs",type=int,default=30)
-        parser.add_argument("--batchSize",type=int,default=64)
-        parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
-        parser.add_argument("--numDynamicImagesPerVideo", type=int)
-        parser.add_argument("--joinType", type=str)
-        parser.add_argument("--foldsNumber", type=int, default=5)
-        parser.add_argument("--numWorkers", type=int, default=4)
-        parser.add_argument("--videoSegmentLength", type=int)
-        parser.add_argument("--positionSegment", type=str)
-        parser.add_argument("--split_type", type=str)
-        parser.add_argument("--overlapping", type=float)
-        parser.add_argument("--frameSkip", type=int, default=0)
-        parser.add_argument("--patience", type=int, default=5)
-        parser.add_argument("--skipInitialFrames", type=int, default=0)
-        parser.add_argument("--transferModel", type=str, default=None)
-        parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
-        parser.add_argument("--useKeyframes", type=str, default=None)
-        parser.add_argument("--windowLen", type=int, default=0)
-        args = parser.parse_args()
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
         train_dataset = ViolenceDataset(dataset=datasetAll,
                                         labels=labelsAll,
@@ -259,9 +238,6 @@ def openSet_experiments(mode):
                                                             metric_to_track='train-loss')
 
     elif mode == 'openSet-test':
-        parser.add_argument("--modelPath", type=str)
-        parser.add_argument("--testDataset",type=str)
-        args = parser.parse_args()
 
         ## Load model
         checkpoint = torch.load(args.modelPath, map_location=DEVICE)
@@ -310,8 +286,8 @@ def openSet_experiments(mode):
         test_model(model_, test_dataloader)
 
 
-def main(parser):
-    # parser = argparse.ArgumentParser()
+def main():
+    parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
     parser.add_argument("--dataset",type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
@@ -323,7 +299,7 @@ def main(parser):
     parser.add_argument("--numWorkers", type=int, default=4)
     parser.add_argument("--videoSegmentLength", type=int)
     parser.add_argument("--positionSegment", type=str)
-    parser.add_argument("--split_type", type=str)
+    parser.add_argument("--splitType", type=str)
     parser.add_argument("--overlapping", type=float)
     parser.add_argument("--frameSkip", type=int, default=0)
     parser.add_argument("--patience", type=int, default=5)
@@ -334,7 +310,15 @@ def main(parser):
     parser.add_argument("--windowLen", type=int, default=0)
     # parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
 
+    parser.add_argument("--modelPath", type=str, default=None)
+    parser.add_argument("--testDataset",type=str, default=None)
+
     args = parser.parse_args()
+
+    if args.splitType == 'openSet-train' or args.splitType == 'openSet-test':
+        openSet_experiments(mode=args.splitType, args=args)
+        return 0
+
     input_size = 224
     shuffle = True
     if args.dataset == 'rwf-2000':
@@ -466,6 +450,6 @@ def main(parser):
 
 
 if __name__ == "__main__":
-    # # main()
-    openSet_experiments(mode='openSet-train')
+    main()
+    # openSet_experiments(mode='openSet-train')
     # openSet_experiments(mode='openSet-test')
