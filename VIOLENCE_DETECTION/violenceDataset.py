@@ -66,8 +66,8 @@ class ViolenceDataset(Dataset):
             last_element = segment_list[len(segment_list) - 1]
             for i in range(self.numDynamicImagesPerVideo - len(segment_list)):
                 segment_list.append(last_element)
-        # elif len(segment_list) > self.numDynamicImagesPerVideo:
-        #     segment_list = segment_list[0:self.numDynamicImagesPerVideo]
+        elif len(segment_list) > self.numDynamicImagesPerVideo:
+            segment_list = segment_list[0:self.numDynamicImagesPerVideo]
         return segment_list
 
     def loadFramesSeq(self, vid_name, sequence):

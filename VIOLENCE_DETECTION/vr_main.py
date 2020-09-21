@@ -47,7 +47,7 @@ from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 import csv
 from operator import itemgetter
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold, path, model_config):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold, path, model_config, phases, metric_to_track=None):
     since = time.time()
     val_acc_history = []
     # best_model_wts = copy.deepcopy(model.state_dict())
@@ -60,7 +60,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
         print('-' * 10)
         # Each epoch has a training and validation phase
         last_train_loss = np.inf
-        for phase in ['train', 'val']:
+        last_train_acc = np.inf
+        for phase in phases:
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
@@ -100,6 +101,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
                 early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
             else:
                 last_train_loss = epoch_loss
+                last_train_acc = epoch_acc
+                if metric_to_track == 'train-loss':
+                    early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
         if early_stopping.early_stop:
             print("Early stopping")
             break
@@ -107,6 +111,36 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     
     return model, early_stopping.best_acc, early_stopping.val_loss_min, early_stopping.best_epoch
+
+def test_model(model, dataloader):
+    model.eval()   # Set model to evaluate mode
+
+    running_loss = 0.0
+    running_corrects = 0
+    # Iterate over data.
+    for data in tqdm(dataloader):
+        inputs, labels, v_names, _, _ = data
+        # print('inputs=', inputs.size(), type(inputs))
+        inputs = inputs.to(DEVICE)
+        labels = labels.to(DEVICE)
+        batch_size = inputs.size()[0]
+        # forward
+        with torch.set_grad_enabled(False):
+            # Get model outputs and calculate loss
+            outputs = model(inputs)
+            # loss = criterion(outputs, labels)
+            _, preds = torch.max(outputs, 1)
+            
+        # statistics
+        # running_loss += loss.item() * inputs.size(0)
+        running_corrects += torch.sum(preds == labels.data)
+
+
+    # epoch_loss = running_loss / len(dataloader.dataset)
+    epoch_acc = running_corrects.double() / len(dataloader.dataset)
+    
+    print('{} Loss: {:.4f} Acc: {:.4f}'.format('Test', 0, epoch_acc))
+    
 
 def base_dataset(dataset, mean=None, std=None):
     if dataset == 'ucfcrime2local':
@@ -125,11 +159,159 @@ def base_dataset(dataset, mean=None, std=None):
     
     return datasetAll, labelsAll, numFramesAll, transforms
 
-# def collate_fn(batch):
-#     return tuple(zip(*batch))
+# def openSet_experiments_train():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--trainDataset",type=str)
+#     args = parser.parse_args()
 
-def main():
+def openSet_experiments(mode):
     parser = argparse.ArgumentParser()
+    # parser.add_argument("--mode",type=str)
+    if mode == 'openSet-train':
+        parser.add_argument("--modelType", type=str, default="alexnet", help="model")
+        parser.add_argument("--dataset",type=str)
+        parser.add_argument("--numEpochs",type=int,default=30)
+        parser.add_argument("--batchSize",type=int,default=64)
+        parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
+        parser.add_argument("--numDynamicImagesPerVideo", type=int)
+        parser.add_argument("--joinType", type=str)
+        parser.add_argument("--foldsNumber", type=int, default=5)
+        parser.add_argument("--numWorkers", type=int, default=4)
+        parser.add_argument("--videoSegmentLength", type=int)
+        parser.add_argument("--positionSegment", type=str)
+        parser.add_argument("--split_type", type=str)
+        parser.add_argument("--overlapping", type=float)
+        parser.add_argument("--frameSkip", type=int, default=0)
+        parser.add_argument("--patience", type=int, default=5)
+        parser.add_argument("--skipInitialFrames", type=int, default=0)
+        parser.add_argument("--transferModel", type=str, default=None)
+        parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
+        parser.add_argument("--useKeyframes", type=str, default=None)
+        parser.add_argument("--windowLen", type=int, default=0)
+        args = parser.parse_args()
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
+        train_dataset = ViolenceDataset(dataset=datasetAll,
+                                        labels=labelsAll,
+                                        numFrames=numFramesAll,
+                                        spatial_transform=transforms['train'],
+                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                        videoSegmentLength=args.videoSegmentLength,
+                                        positionSegment=args.positionSegment,
+                                        overlaping=args.overlapping,
+                                        frame_skip=args.frameSkip,
+                                        skipInitialFrames=args.skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen)
+        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
+        dataloaders = {'train': train_dataloader}
+
+        model, _ = initialize_model(model_name=args.modelType,
+                                    num_classes=2,
+                                    freezeConvLayers=args.freezeConvLayers,
+                                    numDiPerVideos=args.numDynamicImagesPerVideo,
+                                    joinType=args.joinType,
+                                    use_pretrained=True)
+        model.to(DEVICE)
+        params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
+        # print(params_to_update)
+        optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+        criterion = nn.CrossEntropyLoss()
+        fold = 0
+        checkpoint_path=None
+        config = None
+        if args.saveCheckpoint:
+            config = {
+                'dataset':args.dataset,
+                'model': args.modelType,
+                'numEpochs': args.numEpochs,
+                'freezeConvLayers': args.freezeConvLayers,
+                'numDynamicImages':args.numDynamicImagesPerVideo,
+                'segmentLength':args.videoSegmentLength,
+                'frameSkip':args.frameSkip,
+                'skipInitialFrames':args.skipInitialFrames,
+                'overlap':args.overlapping,
+                'joinType': args.joinType,
+                'log_dir': None,
+                'useKeyframes': args.useKeyframes,
+                'windowLen': args.windowLen
+            }
+            ss = ""
+            for (key, val) in config.items():
+                if key != 'log_dir':
+                    ss = ss + "_{!s}={!r}".format(key, val)
+            ss = ss.replace("\'", "")
+            # print(ss)
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
+        
+        phases = ['train']   
+        model, best_acc, val_loss_min, best_epoch = train_model(model,
+                                                            dataloaders,
+                                                            criterion,
+                                                            optimizer,
+                                                            num_epochs=args.numEpochs,
+                                                            patience=args.patience,
+                                                            fold=fold,
+                                                            path=checkpoint_path,
+                                                            model_config=config,
+                                                            phases = phases,
+                                                            metric_to_track='train-loss')
+
+    elif mode == 'openSet-test':
+        parser.add_argument("--modelPath", type=str)
+        parser.add_argument("--testDataset",type=str)
+        args = parser.parse_args()
+
+        ## Load model
+        checkpoint = torch.load(args.modelPath, map_location=DEVICE)
+        model = checkpoint['model_config']['model']
+        numDynamicImages = checkpoint['model_config']['numDynamicImages']
+        joinType = checkpoint['model_config']['joinType']
+        freezeConvLayers = checkpoint['model_config']['freezeConvLayers']
+        videoSegmentLength = checkpoint['model_config']['segmentLength']
+        overlapping = checkpoint['model_config']['overlap']
+        frameSkip = checkpoint['model_config']['frameSkip']
+        skipInitialFrames = checkpoint['model_config']['skipInitialFrames']
+        useKeyframes = checkpoint['model_config']['useKeyframes']
+        windowLen = checkpoint['model_config']['windowLen']
+
+        model_, _ = initialize_model(model_name=model,
+                                        num_classes=2,
+                                        freezeConvLayers=freezeConvLayers,
+                                        numDiPerVideos=numDynamicImages,
+                                        joinType=joinType,
+                                        use_pretrained=True)
+
+        model_.to(DEVICE)
+        # print(model_)
+        if DEVICE == 'cuda:0':
+            model_.load_state_dict(checkpoint['model_state_dict'], strict=False)
+        else:
+            model_.load_state_dict(checkpoint['model_state_dict'])
+        
+
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.testDataset)
+        test_dataset = ViolenceDataset(dataset=datasetAll,
+                                        labels=labelsAll,
+                                        numFrames=numFramesAll,
+                                        spatial_transform=transforms['val'],
+                                        numDynamicImagesPerVideo=numDynamicImages,
+                                        videoSegmentLength=videoSegmentLength,
+                                        positionSegment=None,
+                                        overlaping=overlapping,
+                                        frame_skip=frameSkip,
+                                        skipInitialFrames=skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=useKeyframes,
+                                        windowLen=windowLen)
+        test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=True, num_workers=4)
+
+        test_model(model_, test_dataloader)
+
+
+def main(parser):
+    # parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
     parser.add_argument("--dataset",type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
@@ -259,7 +441,8 @@ def main():
             ss = ss.replace("\'", "")
             # print(ss)
             checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
-            
+        
+        phases = ['train', 'val']  
         model, best_acc, val_loss_min, best_epoch = train_model(model,
                                                             dataloaders,
                                                             criterion,
@@ -268,6 +451,7 @@ def main():
                                                             patience=args.patience,
                                                             fold=fold,
                                                             path=checkpoint_path,
+                                                            phases = phases,
                                                             model_config=config)
         cv_test_accs.append(best_acc.item())
         cv_test_losses.append(val_loss_min)
@@ -282,5 +466,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # key_frame_selection()
+    # # main()
+    openSet_experiments(mode='openSet-train')
+    # openSet_experiments(mode='openSet-test')
