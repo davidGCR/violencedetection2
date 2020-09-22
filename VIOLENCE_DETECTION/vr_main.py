@@ -237,7 +237,7 @@ def openSet_experiments(mode, args):
                     ss = ss + "_{!s}={!r}".format(key, val)
             ss = ss.replace("\'", "")
             # print(ss)
-            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, 'OPENSET', 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
         
         phases = ['train']   
         model, best_acc, val_loss_min, best_epoch = train_model(model,
@@ -440,7 +440,10 @@ def main():
                     ss = ss + "_{!s}={!r}".format(key, val)
             ss = ss.replace("\'", "")
             # print(ss)
-            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
+            # datasets=''
+            # for dt in args.dataset:
+            #     datasets += '-'+dt 
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper, 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
         
         phases = ['train', 'val']  
         model, best_acc, val_loss_min, best_epoch = train_model(model,
