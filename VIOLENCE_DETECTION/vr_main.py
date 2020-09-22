@@ -56,7 +56,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
     early_stopping = EarlyStopping(patience=patience, verbose=True, path=path, model_config=model_config)
 
     for epoch in range(1,num_epochs+1,1):
-        print('Fold ({})--Epoch {}/{}'.format(fold, epoch, num_epochs - 1))
+        print('Fold ({})--Epoch {}/{}'.format(fold, epoch, num_epochs+1))
         print('-' * 10)
         # Each epoch has a training and validation phase
         last_train_loss = np.inf
@@ -72,6 +72,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             # Iterate over data.
             for data in tqdm(dataloaders[phase]):
                 inputs, labels, v_names, _, _ = data
+                print(v_names)
                 # print('inputs=', inputs.size(), type(inputs))
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
@@ -147,6 +148,7 @@ def base_dataset(dataset, mean=None, std=None):
         datasetAll, labelsAll, numFramesAll = crime2localLoadData(min_frames=40)
         transforms = ucf2CrimeTransforms(224, mean=mean, std=std)
     elif dataset == 'vif':
+        # print('hereeeeeeeeee')
         datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
         transforms = vifTransforms(input_size=224, mean=mean, std=std)
     elif dataset == 'hockey':
@@ -168,11 +170,24 @@ def openSet_experiments(mode, args):
     # parser = argparse.ArgumentParser()
     # parser.add_argument("--mode",type=str)
     if mode == 'openSet-train':
-        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
+        # datasets = args.splitType[1:]
+        # print(datasets)
+        datasetAll, labelsAll, numFramesAll, transforms = [], [], [], []
+        for dt in args.dataset:
+            print(dt)
+            x, y, num, tr = base_dataset(dt)
+            datasetAll += x
+            labelsAll += y
+            numFramesAll += num
+            transforms.append(tr) 
+        combined = list(zip(datasetAll, labelsAll, numFramesAll))
+        random.shuffle(combined)
+        datasetAll[:], labelsAll[:], numFramesAll[:] = zip(*combined)
+        
         train_dataset = ViolenceDataset(dataset=datasetAll,
                                         labels=labelsAll,
                                         numFrames=numFramesAll,
-                                        spatial_transform=transforms['train'],
+                                        spatial_transform=transforms[0]['train'],
                                         numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                         videoSegmentLength=args.videoSegmentLength,
                                         positionSegment=args.positionSegment,
@@ -289,7 +304,7 @@ def openSet_experiments(mode, args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
-    parser.add_argument("--dataset",type=str)
+    parser.add_argument("--dataset", nargs='+', type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
     parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
@@ -316,6 +331,7 @@ def main():
     args = parser.parse_args()
 
     if args.splitType == 'openSet-train' or args.splitType == 'openSet-test':
+
         openSet_experiments(mode=args.splitType, args=args)
         return 0
 
@@ -324,7 +340,7 @@ def main():
     if args.dataset == 'rwf-2000':
         datasetAll = []
     else:
-        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset)
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0])
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
