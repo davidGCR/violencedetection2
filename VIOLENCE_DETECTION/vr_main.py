@@ -72,7 +72,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             # Iterate over data.
             for data in tqdm(dataloaders[phase]):
                 inputs, labels, v_names, _, _ = data
-                print(v_names)
+                # print(v_names)
                 # print('inputs=', inputs.size(), type(inputs))
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
