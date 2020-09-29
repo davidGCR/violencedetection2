@@ -300,6 +300,35 @@ def openSet_experiments(mode, args):
 
         test_model(model_, test_dataloader)
 
+def load_model(modelPath):
+    checkpoint = torch.load(modelPath, map_location=DEVICE)
+    model = checkpoint['model_config']['model']
+    numDynamicImages = checkpoint['model_config']['numDynamicImages']
+    joinType = checkpoint['model_config']['joinType']
+    freezeConvLayers = checkpoint['model_config']['freezeConvLayers']
+    videoSegmentLength = checkpoint['model_config']['segmentLength']
+    overlapping = checkpoint['model_config']['overlap']
+    frameSkip = checkpoint['model_config']['frameSkip']
+    skipInitialFrames = checkpoint['model_config']['skipInitialFrames']
+    useKeyframes = checkpoint['model_config']['useKeyframes']
+    windowLen = checkpoint['model_config']['windowLen']
+
+    model_, _ = initialize_model(model_name=model,
+                                    num_classes=2,
+                                    freezeConvLayers=freezeConvLayers,
+                                    numDiPerVideos=numDynamicImages,
+                                    joinType=joinType,
+                                    use_pretrained=True)
+
+    model_.to(DEVICE)
+    # print(model_)
+    if DEVICE == 'cuda:0':
+        model_.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    else:
+        model_.load_state_dict(checkpoint['model_state_dict'])
+
+    return model_
+
 def __weakly_localization__():
     from VIOLENCE_DETECTION.CAM import compute_CAM
     from VIOLENCE_DETECTION.datasetsMemoryLoader import load_fold_data
@@ -408,7 +437,6 @@ def __my_main__():
     parser.add_argument("--frameSkip", type=int, default=0)
     parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--skipInitialFrames", type=int, default=0)
-    parser.add_argument("--transferModel", type=str, default=None)
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--useKeyframes", type=str, default=None)
     parser.add_argument("--windowLen", type=int, default=0)
@@ -416,6 +444,7 @@ def __my_main__():
 
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
+    parser.add_argument("--transferModel", type=str, default=None)
 
     args = parser.parse_args()
 
@@ -491,12 +520,15 @@ def __my_main__():
         
         dataloaders = {'train': train_dataloader, 'val': test_dataloader}
 
-        model, _ = initialize_model(model_name=args.modelType,
-                                    num_classes=2,
-                                    freezeConvLayers=args.freezeConvLayers,
-                                    numDiPerVideos=args.numDynamicImagesPerVideo,
-                                    joinType=args.joinType,
-                                    use_pretrained=True)
+        if args.transferModel is not None:
+            model = load_model(args.transferModel)
+        else:
+            model, _ = initialize_model(model_name=args.modelType,
+                                        num_classes=2,
+                                        freezeConvLayers=args.freezeConvLayers,
+                                        numDiPerVideos=args.numDynamicImagesPerVideo,
+                                        joinType=args.joinType,
+                                        use_pretrained=True)
         model.to(DEVICE)
         params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
         # print(params_to_update)
