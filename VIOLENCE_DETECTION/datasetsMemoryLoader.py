@@ -19,6 +19,15 @@ def checkBalancedSplit(Y_train, Y_test):
     posTest = [1 for y in Y_test if y == 1]
     print('Test-Positives samples={}, Negative samples={}'.format(len(posTest), len(Y_test) - len(posTest)))
 
+def load_fold_data(dataset, fold):
+    if dataset == 'hockey' or dataset == 'ucfcrime2local':
+        folder = constants.PATH_UCFCRIME2LOCAL_README if dataset=='ucfcrime2local' else constants.PATH_HOCKEY_README
+        train_idx = read_file(os.path.join(folder, 'fold_{}_train.txt'.format(fold)))
+        test_idx = read_file(os.path.join(folder, 'fold_{}_test.txt'.format(fold)))
+        train_idx = list(map(int, train_idx))
+        test_idx = list(map(int, test_idx))
+        return train_idx, test_idx
+
 def customize_kfold(n_splits, dataset, X_len, shuffle=True):
     X=np.arange(X_len)
     if dataset == 'hockey' or dataset == 'ucfcrime2local':

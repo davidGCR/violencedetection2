@@ -300,8 +300,97 @@ def openSet_experiments(mode, args):
 
         test_model(model_, test_dataloader)
 
+def __weakly_localization__():
+    from VIOLENCE_DETECTION.CAM import compute_CAM
+    from VIOLENCE_DETECTION.datasetsMemoryLoader import load_fold_data
+    from VIDEO_REPRESENTATION.dynamicImage import getDynamicImage
+    import cv2
 
-def main():
+    ## Load model
+    modelPath = os.path.join(
+        constants.PATH_RESULTS,
+        'HOCKEY/checkpoints',
+        'DYN_Stream-_dataset=[hockey]_model=resnet50_numEpochs=25_freezeConvLayers=True_numDynamicImages=1_segmentLength=30_frameSkip=0_skipInitialFrames=0_overlap=0.0_joinType=maxTempPool_useKeyframes=None_windowLen=0-fold=1.pt'
+        )
+    dataset='hockey'
+
+    checkpoint = torch.load(modelPath, map_location=DEVICE)
+    model = checkpoint['model_config']['model']
+    numDynamicImages = checkpoint['model_config']['numDynamicImages']
+    joinType = checkpoint['model_config']['joinType']
+    freezeConvLayers = checkpoint['model_config']['freezeConvLayers']
+    videoSegmentLength = checkpoint['model_config']['segmentLength']
+    overlapping = checkpoint['model_config']['overlap']
+    frameSkip = checkpoint['model_config']['frameSkip']
+    skipInitialFrames = checkpoint['model_config']['skipInitialFrames']
+    useKeyframes = checkpoint['model_config']['useKeyframes']
+    windowLen = checkpoint['model_config']['windowLen']
+
+    model_, _ = initialize_model(model_name=model,
+                                    num_classes=2,
+                                    freezeConvLayers=freezeConvLayers,
+                                    numDiPerVideos=numDynamicImages,
+                                    joinType=joinType,
+                                    use_pretrained=True)
+
+    model_.to(DEVICE)
+    # print(model_)
+    if DEVICE == 'cuda:0':
+        model_.load_state_dict(checkpoint['model_state_dict'], strict=False)
+    else:
+        model_.load_state_dict(checkpoint['model_state_dict'])
+
+
+    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(dataset)
+    train_idx, test_idx = load_fold_data(dataset, fold=1)
+    train_x = list(itemgetter(*train_idx)(datasetAll))
+    train_y = list(itemgetter(*train_idx)(labelsAll))
+    train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+    test_x = list(itemgetter(*test_idx)(datasetAll))
+    test_y = list(itemgetter(*test_idx)(labelsAll))
+    test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+
+    test_dataset = ViolenceDataset(dataset=test_x,
+                                    labels=test_y,
+                                    numFrames=test_numFrames,
+                                    spatial_transform=transforms['val'],
+                                    numDynamicImagesPerVideo=numDynamicImages,
+                                    videoSegmentLength=videoSegmentLength,
+                                    positionSegment=None,
+                                    overlaping=overlapping,
+                                    frame_skip=frameSkip,
+                                    skipInitialFrames=skipInitialFrames,
+                                    ppType=None,
+                                    useKeyframes=useKeyframes,
+                                    windowLen=windowLen)
+    # test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=True, num_workers=4)
+    indices =  [0, 1, 2, 9, 11, 3, 5]  # select your indices here as a list  
+    subset = torch.utils.data.Subset(test_dataset, indices)
+    dataloader = torch.utils.data.DataLoader(subset, batch_size = 1, shuffle =False)
+
+
+    for data in dataloader:
+        
+        inputs, labels, v_names, _, paths = data
+
+        frames_rgb = []
+        for pt in paths[0]:
+            image_path = pt[0]
+            im=cv2.imread(image_path)
+            frames_rgb.append(im)
+        dyn_img, _ = getDynamicImage(frames_rgb)
+        dyn_img = dyn_img.convert("RGB")
+        dyn_img = np.array(dyn_img)
+
+        print('\ninput size=', inputs.size())
+        print('v_names=',v_names)
+        print('image_path=',image_path)
+
+        # image = cv2.imread(image_path)
+        compute_CAM(model_, inputs, dyn_img)
+
+
+def __my_main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
     parser.add_argument("--dataset", nargs='+', type=str)
@@ -330,6 +419,10 @@ def main():
 
     args = parser.parse_args()
 
+    if args.splitType == 'cam':
+         __weakly_localization__()
+         return 0
+
     if args.splitType == 'openSet-train' or args.splitType == 'openSet-test':
 
         openSet_experiments(mode=args.splitType, args=args)
@@ -337,7 +430,7 @@ def main():
 
     input_size = 224
     shuffle = True
-    if args.dataset == 'rwf-2000':
+    if args.dataset[0] == 'rwf-2000':
         datasetAll = []
     else:
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0])
@@ -351,7 +444,7 @@ def main():
     config = None
     print(args.dataset)
        
-    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset, X_len=len(datasetAll), shuffle=shuffle):
+    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         if args.dataset == 'rwf-2000':
@@ -443,7 +536,7 @@ def main():
             # datasets=''
             # for dt in args.dataset:
             #     datasets += '-'+dt 
-            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper, 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
+            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
         
         phases = ['train', 'val']  
         model, best_acc, val_loss_min, best_epoch = train_model(model,
@@ -469,6 +562,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # openSet_experiments(mode='openSet-train')
-    # openSet_experiments(mode='openSet-test')
+    __my_main__()
+    
+

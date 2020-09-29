@@ -102,13 +102,14 @@ def save_csvfile_multicolumn(data, out_file):
     writer = csv.writer(f, delimiter='\t')
     writer.writerows(data)
 
-def read_csvfile_threecolumns(file):
+def read_csvfile_threecolumns(file, delimiter='\t'):
   x = []
   y = []
   numFrames = []
   with open(file) as csvfile:
-    readCSV = csv.reader(csvfile, delimiter='\t')
+    readCSV = csv.reader(csvfile, delimiter=delimiter)
     for row in readCSV:
+        # print('len(row)=',len(row), row)
         x.append(row[0])
         y.append(int(row[1]))
         numFrames.append(int(row[2]))
