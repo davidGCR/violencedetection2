@@ -11,6 +11,8 @@ import numpy as np
 from operator import itemgetter
 import cv2
 from sklearn.model_selection import KFold
+import re
+import shutil
 
 def checkBalancedSplit(Y_train, Y_test):
     positive = 0
@@ -20,8 +22,11 @@ def checkBalancedSplit(Y_train, Y_test):
     print('Test-Positives samples={}, Negative samples={}'.format(len(posTest), len(Y_test) - len(posTest)))
 
 def load_fold_data(dataset, fold):
-    if dataset == 'hockey' or dataset == 'ucfcrime2local':
-        folder = constants.PATH_UCFCRIME2LOCAL_README if dataset=='ucfcrime2local' else constants.PATH_HOCKEY_README
+    if dataset == 'hockey' or dataset == 'ucfcrime2local' or dataset == 'vif':
+        if dataset == 'vif':
+            folder = constants.PATH_VIF_README
+        else:
+            folder = constants.PATH_UCFCRIME2LOCAL_README if dataset=='ucfcrime2local' else constants.PATH_HOCKEY_README
         train_idx = read_file(os.path.join(folder, 'fold_{}_train.txt'.format(fold)))
         test_idx = read_file(os.path.join(folder, 'fold_{}_test.txt'.format(fold)))
         train_idx = list(map(int, train_idx))
@@ -338,45 +343,51 @@ def hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll):
 
 def crime2localLoadData(min_frames):
     if not os.path.exists(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt')):
-        train_violence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_violence_split.txt')
-        train_nonviolence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_nonviolence_split.txt')
-        test_violence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_violence_split.txt')
-        test_nonviolence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_nonviolence_split.txt')
-
-        X_train_pos = read_file(train_violence)
-        y_train_pos  = [1 for i in range(len(X_train_pos))]
-        X_test_pos = read_file(test_violence)
-        y_test_pos  = [1 for i in range(len(X_test_pos))]
-
-        X_train_neg = read_file(train_nonviolence)
-        sampled_list = random.sample(X_train_neg, len(X_train_pos))
-        X_train_neg = sampled_list
-        y_train_neg  = [0 for i in range(len(X_train_neg))]
-        
-        X_test_neg = read_file(test_nonviolence)
-        sampled_list = random.sample(X_test_neg, len(X_test_pos))
-        X_test_neg = sampled_list
-        y_test_neg  = [0 for i in range(len(X_test_neg))]
-
-        X_train_pos = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, X_train_pos[i]) for i in range(len(X_train_pos))]
-        X_train_neg = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, X_train_neg[i]) for i in range(len(X_train_neg))]
-        X_test_pos = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, X_test_pos[i]) for i in range(len(X_test_pos))]
-        X_test_neg = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, X_test_neg[i]) for i in range(len(X_test_neg))]
-
-        y = y_train_pos + y_train_neg + y_test_pos + y_test_neg
-        X = X_train_pos + X_train_neg + X_test_pos + X_test_neg
-        numFrames = [len(glob.glob1(X[i], "*.jpg")) for i in range(len(X))]
-        
-        yxn = list(zip(y, X, numFrames))
-        yxn_sorted = [(y, x, n) for y, x, n in yxn if n > min_frames]
-        y, X, numFrames = zip(*yxn_sorted)
-
-        X_t = []
+        X, y, numFrames = rebuild_load_data()
         for i in range(len(X)):
-            _, vname = os.path.split(X[i])
-            X_t.append(vname)
-        X = X_t    
-        save_csvfile_multicolumn(zip(X, y, numFrames), os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt'))
+            if y[i]==1:
+                X[i]=os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, X[i])
+            else:
+                X[i]=os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, X[i])
+        # train_violence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_violence_split.txt')
+        # train_nonviolence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_nonviolence_split.txt')
+        # test_violence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_violence_split.txt')
+        # test_nonviolence = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_nonviolence_split.txt')
+
+        # X_train_pos = read_file(train_violence)
+        # y_train_pos  = [1 for i in range(len(X_train_pos))]
+        # X_test_pos = read_file(test_violence)
+        # y_test_pos  = [1 for i in range(len(X_test_pos))]
+
+        # X_train_neg = read_file(train_nonviolence)
+        # sampled_list = random.sample(X_train_neg, len(X_train_pos))
+        # X_train_neg = sampled_list
+        # y_train_neg  = [0 for i in range(len(X_train_neg))]
+        
+        # X_test_neg = read_file(test_nonviolence)
+        # sampled_list = random.sample(X_test_neg, len(X_test_pos))
+        # X_test_neg = sampled_list
+        # y_test_neg  = [0 for i in range(len(X_test_neg))]
+
+        # X_train_pos = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, X_train_pos[i]) for i in range(len(X_train_pos))]
+        # X_train_neg = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, X_train_neg[i]) for i in range(len(X_train_neg))]
+        # X_test_pos = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, X_test_pos[i]) for i in range(len(X_test_pos))]
+        # X_test_neg = [os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, X_test_neg[i]) for i in range(len(X_test_neg))]
+
+        # y = y_train_pos + y_train_neg + y_test_pos + y_test_neg
+        # X = X_train_pos + X_train_neg + X_test_pos + X_test_neg
+        # numFrames = [len(glob.glob1(X[i], "*.jpg")) for i in range(len(X))]
+        
+        # yxn = list(zip(y, X, numFrames))
+        # yxn_sorted = [(y, x, n) for y, x, n in yxn if n > min_frames]
+        # y, X, numFrames = zip(*yxn_sorted)
+
+        # X_t = []
+        # for i in range(len(X)):
+        #     _, vname = os.path.split(X[i])
+        #     X_t.append(vname)
+        # X = X_t    
+        # save_csvfile_multicolumn(zip(X, y, numFrames), os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt'))
     else:
         X, y, numFrames = read_csvfile_threecolumns(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt'))
         X_t = []
@@ -419,39 +430,145 @@ def get_Fold_Data(fold):
     test_idx = list(map(int, test_idx))
     return train_idx, test_idx
 
-def getBBoxLabels(video):
-    video_folder, video_name = os.path.split(video)
-    video_name = video_name[:-8]
-    Txt_file = os.path.join(constants.PATH_UCFCRIME2LOCAL_Txt_ANNOTATIONS, video_name)
-    bbox_file = os.path.join(constants.PATH_UCFCRIME2LOCAL_BBOX_ANNOTATIONS, video_name)
+def rebuild_load_data():
+    normal_videos = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'normal_videos.txt'))
+    normal_videos_from_anormal = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'normal_videos_from_anormal.txt'))
+    anomaly_normal = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'anomaly_normal.txt'))
+    violence_videos = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'violence_videos.txt'))
+    X, y, numFrames = [], [], []
+    ll = [violence_videos, anomaly_normal]
+    llabels = [1, 0]
+    for i, videos_list in enumerate(ll):
+        for v_video in videos_list:
+            if llabels[i] == 1:
+                v_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_VIOLENCE, v_video)
+            else:
+                v_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, v_video)
+            l_frames = os.listdir(v_path)
+            X.append(v_video)
+            y.append(llabels[i])
+            numFrames.append(len(l_frames))
 
-    frame_list = os.listdir(video)
-    frame_list = sortListByStrNumbers(frame_list)
-    frame_begin = frame_list[0]
-    frame_begin = int(frame_begin[5:-4])
-    frame_end = frame_list[len(frame_list) - 1]
-    frame_end = int(frame_end[5:-4])
-
-    print('Begin={}, End={}'.format(frame_begin, frame_end))
-    data=[]
-    with open(Txt_file+'.txt', 'r') as file:
-        for row in file:
-            data.append(row.split())
-    data = np.array(data)
-
-    print(data[11])
-    bbox = []
-    for row in data:
-        num_frame = row[6]
-        
-        flac = row[7]
-        print(num_frame)
-    
+    save_csvfile_multicolumn(zip(X, y, numFrames), os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt'))
+    return X, y, numFrames
 
 
+    # print('normal_videos', len(normal_videos), normal_videos[0])
+    # print('normal_videos_from_anormal', len(normal_videos_from_anormal), normal_videos_from_anormal[0])
+    # print('anomaly_normal', len(anomaly_normal), anomaly_normal[0])
+    # print('violence_videos', len(violence_videos), violence_videos[0])
+
+def temporal_cut_long_videos():
+    anomaly_normal = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'anomaly_normal.txt'))
+    for av in anomaly_normal:
+        v_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, av)
+        print(v_path)
+        l_frames = os.listdir(v_path)
+        l_frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        bdx_file_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_Txt_ANNOTATIONS, av+'.txt')
+        data = [] 
+        with open(bdx_file_path, 'r') as file:
+            for row in file:
+                data.append(row.split())
+        # data = np.array(data)
+        gt_bboxes = []
+        anomaly_clips = []
+        counter=0
+        start=False
+        end=False
+
+        clip_frames = []
+        counter = 0
+        for i,frame_path in enumerate(l_frames):
+            # print('------frame_path=',frame_path)
+            pth, frame_name = os.path.split(frame_path)
+            splits = re.split('(\d+)', frame_name)
+            frame_number = int(splits[1])
+
+            if frame_number >= len(data):
+                break
+            frame_data = data[frame_number]
+            # print('video={}, frame={}, frame_number={}, gt={}'.format(video_name, frame_name, frame_number, frame_data))
+            if frame_number != int(frame_data[5]):
+                print('=========*********** Error en Ground Truth!!!!!!!!!')
+                break
+            x0, y0, w, h = int(frame_data[1]), int(frame_data[2]), int(frame_data[3])-int(frame_data[1]), int(frame_data[4])-int(frame_data[2])
+            gt_bboxes.append([x0, y0, w, h])
+            # frame = cv2.imread(os.path.join(v_path,frame_path))
+            flac = int(frame_data[6])
+            if flac == 0:
+                # cv2.rectangle(frame, (x0, y0),(x0+w, y0+h), (0,255,0), 2)
+                clip_frames.append(os.path.join(v_path,frame_path))
+                if not start:
+                    # print('================')
+                    # clip_frames.append(os.path.join(v_path,frame_path))
+                    start=True  
+            elif start:
+                end=True
+                start = False
+                # for f in clip_frames:
+                #     print(f)
+                anomaly_clips.append(clip_frames)
+                counter+=1
+                f_name = av+'-VSplit-'+str(counter)
+                if not os.path.isdir(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, f_name)):
+                    os.mkdir(os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, f_name))
+                for fimg in clip_frames:
+                    newPath = shutil.copy(fimg, os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, f_name))
+
+
+
+                clip_frames=[]
+            # cv2.imshow("frame", frame)
+            # key = cv2.waitKey(0)
+
+def plot_bbox_annotations():
+    anomaly_normal = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'anomaly_normal.txt'))
+    for av in anomaly_normal:
+        v_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_FRAMES_NONVIOLENCE, av)
+        print(v_path)
+        l_frames = os.listdir(v_path)
+        l_frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        av = av[:-8]
+        bdx_file_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_Txt_ANNOTATIONS, av+'.txt')
+        data = [] 
+        with open(bdx_file_path, 'r') as file:
+            for row in file:
+                data.append(row.split())
+        # data = np.array(data)
+        gt_bboxes = []
+        counter=0
+        start=False
+        end=False
+
+        for i,frame_path in enumerate(l_frames):
+            # print('------frame_path=',frame_path)
+            pth, frame_name = os.path.split(frame_path)
+            splits = re.split('(\d+)', frame_name)
+            frame_number = int(splits[1])
+
+            if frame_number >= len(data):
+                break
+            frame_data = data[frame_number]
+            # print('video={}, frame={}, frame_number={}, gt={}'.format(video_name, frame_name, frame_number, frame_data))
+            if frame_number != int(frame_data[5]):
+                print('=========*********** Error en Ground Truth!!!!!!!!!')
+                break
+            x0, y0, w, h = int(frame_data[1]), int(frame_data[2]), int(frame_data[3])-int(frame_data[1]), int(frame_data[4])-int(frame_data[2])
+            gt_bboxes.append([x0, y0, w, h])
+            frame = cv2.imread(os.path.join(v_path,frame_path))
+            flac = int(frame_data[6])
+            if flac == 0:
+                cv2.rectangle(frame, (x0, y0),(x0+w, y0+h), (0,255,0), 2)
+                
+            cv2.imshow("frame", frame)
+            key = cv2.waitKey(0)
 
 if __name__ == "__main__":
+    plot_bbox_annotations()
+    # temporal_cut_long_videos()
+    # rebuild_load_data()
     # rwf_videos2frames()
-    rwf_load_data()
+    # rwf_load_data()
     # crime2localCreateSplits()
     # getBBoxFile('/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2/DATASETS/CrimeViolence2LocalDATASET/frames/violence/Arrest003-VSplit1')

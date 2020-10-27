@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import torch.nn as nn
 from torchvision import models
 # from util import *
@@ -7,7 +11,7 @@ import MODELS.Pooling as Pooling
 from MODELS.Identity import Identity
 import torch
 import constants
-
+from torchvision.ops.roi_pool import RoIPool
 
 class AlexNet(nn.Module):  # ViolenceModel2
     def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
@@ -147,7 +151,7 @@ class ResNet(nn.Module):
                 self.linear = nn.Linear(2048, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
 
-    def forward(self, x):
+    def forward(self, x, nxnx):
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)
         x = self.convLayers(c_in)  #torch.Size([8, 2048, 7, 7]
@@ -157,6 +161,56 @@ class ResNet(nn.Module):
 
         x = self.AdaptiveAvgPool2d(x) #torch.Size([8, 2048, 1, 1])
         # print('AdaptiveAvgPool2d: ', x.size())
+        x = torch.flatten(x, 1)
+        num_fc_input_features = self.linear.in_features
+        x = x.view(batch_size, timesteps, num_fc_input_features)
+        x = x.max(dim=1).values
+        
+        
+        # x = torch.flatten(x, 1)
+        x = self.linear(x)
+        return x
+
+class ResNet_ROI_Pool(nn.Module):
+    def __init__(self, num_classes=2, numDiPerVideos=1, model_name='resnet50', joinType='maxTempPool' ,freezeConvLayers=True):
+        super(ResNet_ROI_Pool, self).__init__()
+        self.numDiPerVideos = numDiPerVideos
+        self.num_classes = num_classes
+        self.joinType = joinType
+        self.model_ft = None
+        self.model_ft = models.resnet50(pretrained=True)
+        
+        self.num_ftrs = self.model_ft.fc.in_features
+        self.model_ft.fc = Identity()
+        self.bn = nn.BatchNorm2d(2048)
+        
+        self.model_ft = nn.Sequential(*list(self.model_ft.children())[:-2])  # to tempooling
+
+        self.roi_pool = RoIPool(3, 1)
+
+        # model_ft = None
+        self.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d((1,1))
+
+        # set_parameter_requires_grad(self.model_ft, feature_extract)
+        set_parameter_requires_grad(self.model_ft, freezeConvLayers)
+        if self.joinType == constants.TEMP_MAX_POOL:
+            self.linear = nn.Linear(2048, self.num_classes)
+            # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
+
+    def forward(self, x, bboxes):
+        batch_size, timesteps, C, H, W = x.size()
+        c_in = x.view(batch_size * timesteps, C, H, W)
+        x = self.model_ft(c_in)  #torch.Size([8, 2048, 7, 7]
+
+        x = self.roi_pool(x, [bboxes])
+        # print('Roi Pooling out=', x.size())
+        
+        x = self.bn(x) # torch.Size([8, 2048, 7, 7])
+        # print('batchNorm: ', x.size())
+
+        x = self.AdaptiveAvgPool2d(x) #torch.Size([8, 2048, 1, 1])
+        # print('AdaptiveAvgPool2d: ', x.size())
+
         x = torch.flatten(x, 1)
         num_fc_input_features = self.linear.in_features
         x = x.view(batch_size, timesteps, num_fc_input_features)
@@ -286,40 +340,49 @@ class Inception(nn.Module):  # ViolenceModel2
         x = self.linear(x)
         return x
 
-from efficientnet_pytorch import EfficientNet
+# from efficientnet_pytorch import EfficientNet
 
-class MyEfficientNet(nn.Module):  # ViolenceModel2
-    def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
-        super(MyEfficientNet, self).__init__()
-        self.numDiPerVideos = numDiPerVideos
-        self.joinType = joinType
-        self.num_classes = num_classes
-        self.model = EfficientNet.from_name('efficientnet-b1')
-        set_parameter_requires_grad(self.model, feature_extract)
-        self.num_ftrs = self.model._fc.in_features
+# class MyEfficientNet(nn.Module):  # ViolenceModel2
+#     def __init__(self, num_classes, numDiPerVideos, joinType, feature_extract):
+#         super(MyEfficientNet, self).__init__()
+#         self.numDiPerVideos = numDiPerVideos
+#         self.joinType = joinType
+#         self.num_classes = num_classes
+#         self.model = EfficientNet.from_name('efficientnet-b1')
+#         set_parameter_requires_grad(self.model, feature_extract)
+#         self.num_ftrs = self.model._fc.in_features
 
-        self.model._fc=Identity()
-        # self.convLayers = nn.Sequential(*list(self.model.children())[:-5])
-        # self._avg_pooling = nn.AdaptiveAvgPool2d(1)
-        # self._dropout = nn.Dropout(p=0.2, inplace=False)
-        self.linear = nn.Linear(self.num_ftrs, 2)  
+#         self.model._fc=Identity()
+#         # self.convLayers = nn.Sequential(*list(self.model.children())[:-5])
+#         # self._avg_pooling = nn.AdaptiveAvgPool2d(1)
+#         # self._dropout = nn.Dropout(p=0.2, inplace=False)
+#         self.linear = nn.Linear(self.num_ftrs, 2)  
         
 
-    def forward(self, x):
-        # print(x.size())
-        batch_size, timesteps, C, H, W = x.size()
-        c_in = x.view(batch_size * timesteps, C, H, W)
-        # print('cin: ', c_in.size())
+#     def forward(self, x):
+#         # print(x.size())
+#         batch_size, timesteps, C, H, W = x.size()
+#         c_in = x.view(batch_size * timesteps, C, H, W)
+#         # print('cin: ', c_in.size())
 
-        x = self.model(c_in)
+#         x = self.model(c_in)
 
-        x = torch.flatten(x, 1)
-        x = x.view(batch_size, timesteps, self.num_ftrs)
-        x = x.max(dim=1).values
+#         x = torch.flatten(x, 1)
+#         x = x.view(batch_size, timesteps, self.num_ftrs)
+#         x = x.max(dim=1).values
 
-        # x = self._avg_pooling(x)
-        # x = x.view(bs, -1)
-        # x = self._dropout(x)
-        x = self.linear(x)
+#         # x = self._avg_pooling(x)
+#         # x = x.view(bs, -1)
+#         # x = self._dropout(x)
+#         x = self.linear(x)
 
-        return x
+#         return x
+if __name__ == '__main__':
+    model = ResNet_ROI_Pool()
+    x = torch.randn(4, 1, 3, 224, 224)
+    y = model(x)
+
+    import torchvision
+
+    detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
+    print(detector)

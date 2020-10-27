@@ -67,7 +67,13 @@ def load_localization_ground_truth(paths):
     
     one_box = None
     for gtb in gt_bboxes:
-        one_box = gtb if one_box is None else joinBBoxes(one_box,gtb)
+        if one_box is None:
+            one_box = gtb 
+        else:
+            xmin = min(bbox1.pmin.x, bbox2.pmin.x)
+            ymin = min(bbox1.pmin.y, bbox2.pmin.y)
+            xmax = max(bbox1.pmax.x, bbox2.pmax.x)
+            ymax = max(bbox1.pmax.y, bbox2.pmax.y)
     return gt_bboxes, one_box
 
 def yolo():

@@ -80,26 +80,26 @@ def train(mask_model, criterion, optimizer, regularizers, classifier_model, num_
         #     print('Saving entire saliency model...')
         #     save_checkpoint(saliency_m,checkpoint_path)
 
-def base_dataset(dataset, fold):
-    if dataset == 'UCFCRIME2LOCAL':
-        mytransfroms = ucf2CrimeTransforms(224)
-        X, y, numFrames = crime2localLoadData(min_frames=40)
-        train_idx, test_idx = get_Fold_Data(fold)
-        train_x = list(itemgetter(*train_idx)(X))
-        train_y = list(itemgetter(*train_idx)(y))
-        train_numFrames = list(itemgetter(*train_idx)(numFrames))
-        test_x = list(itemgetter(*test_idx)(X))
-        test_y = list(itemgetter(*test_idx)(y))
-        test_numFrames = list(itemgetter(*test_idx)(numFrames))
-    elif dataset == 'HOCKEY':
-        mytransfroms = hockeyTransforms(224)
-        datasetAll, labelsAll, numFramesAll = hockeyLoadData()
-        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-' + str(fold), datasetAll, labelsAll, numFramesAll)
-    elif dataset == 'VIF':
-        mytransfroms = vifTransforms(input_size=224)
-        fold_path = os.path.join(constants.PATH_VIF_FRAMES,str(fold))
-        train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = train_test_iteration(fold_path, shuffle=False)
-    return train_x, train_y, train_numFrames, mytransfroms
+# def base_dataset(dataset, fold):
+#     if dataset == 'UCFCRIME2LOCAL':
+#         mytransfroms = ucf2CrimeTransforms(224)
+#         X, y, numFrames = crime2localLoadData(min_frames=40)
+#         train_idx, test_idx = get_Fold_Data(fold)
+#         train_x = list(itemgetter(*train_idx)(X))
+#         train_y = list(itemgetter(*train_idx)(y))
+#         train_numFrames = list(itemgetter(*train_idx)(numFrames))
+#         test_x = list(itemgetter(*test_idx)(X))
+#         test_y = list(itemgetter(*test_idx)(y))
+#         test_numFrames = list(itemgetter(*test_idx)(numFrames))
+#     elif dataset == 'HOCKEY':
+#         mytransfroms = hockeyTransforms(224)
+#         datasetAll, labelsAll, numFramesAll = hockeyLoadData()
+#         train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = hockeyTrainTestSplit('train-test-' + str(fold), datasetAll, labelsAll, numFramesAll)
+#     elif dataset == 'VIF':
+#         mytransfroms = vifTransforms(input_size=224)
+#         fold_path = os.path.join(constants.PATH_VIF_FRAMES,str(fold))
+#         train_x, train_y, train_numFrames, test_x, test_y, test_numFrames = train_test_iteration(fold_path, shuffle=False)
+#     return train_x, train_y, train_numFrames, mytransfroms
 
 def __anomaly_main__():
     parser = argparse.ArgumentParser()

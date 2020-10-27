@@ -113,25 +113,25 @@ def avg_accuracy(y, y_pred_rgb, y_pred_dyn):
     print('Sklearn Accuracy=', acc)
     return acc
 
-def base_dataset(dataset, mean=None, std=None):
-    if dataset == 'ucfcrime2local':
-        datasetAll, labelsAll, numFramesAll = crime2localLoadData(min_frames=40)
-        rgb_transforms = ucf2CrimeTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        dyn_transforms = ucf2CrimeTransforms(224, mean=mean, std=std)
-    elif dataset == 'vif':
-        datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
-        rgb_transforms = vifTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        dyn_transforms = vifTransforms(input_size=224, mean=mean, std=std)
-    elif dataset == 'hockey':
-        datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
-        rgb_transforms = hockeyTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        dyn_transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
-    elif dataset == 'rwf-2000':
-        train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
-        dyn_transforms = rwf_2000_Transforms(input_size=224, mean=mean, std=std)
-        rgb_transforms = rwf_2000_Transforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames, rgb_transforms, dyn_transforms
-    return datasetAll, labelsAll, numFramesAll, rgb_transforms, dyn_transforms
+# def base_dataset(dataset, mean=None, std=None):
+#     if dataset == 'ucfcrime2local':
+#         datasetAll, labelsAll, numFramesAll = crime2localLoadData(min_frames=40)
+#         rgb_transforms = ucf2CrimeTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+#         dyn_transforms = ucf2CrimeTransforms(224, mean=mean, std=std)
+#     elif dataset == 'vif':
+#         datasetAll, labelsAll, numFramesAll, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
+#         rgb_transforms = vifTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+#         dyn_transforms = vifTransforms(input_size=224, mean=mean, std=std)
+#     elif dataset == 'hockey':
+#         datasetAll, labelsAll, numFramesAll = hockeyLoadData(shuffle=True)
+#         rgb_transforms = hockeyTransforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+#         dyn_transforms = hockeyTransforms(input_size=224, mean=mean, std=std)
+#     elif dataset == 'rwf-2000':
+#         train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames = rwf_load_data()
+#         dyn_transforms = rwf_2000_Transforms(input_size=224, mean=mean, std=std)
+#         rgb_transforms = rwf_2000_Transforms(input_size=224, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+#         return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames, rgb_transforms, dyn_transforms
+#     return datasetAll, labelsAll, numFramesAll, rgb_transforms, dyn_transforms
 
 def main():
     parser = argparse.ArgumentParser()

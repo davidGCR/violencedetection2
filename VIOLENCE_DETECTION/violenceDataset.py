@@ -13,21 +13,23 @@ from VIDEO_REPRESENTATION.frameExtractor import FrameExtractor
 import random
 import torchvision.transforms as transforms
 from operator import itemgetter
+from UTIL.bbox_gt_loader import load_bbox_gt
 
 class ViolenceDataset(Dataset):
-    def __init__(self, dataset,
+    def __init__(self, videos,
                         labels,
                         numFrames,
                         spatial_transform,
                         numDynamicImagesPerVideo,
                         videoSegmentLength,
-                        positionSegment,
-                        overlaping,
-                        frame_skip,
-                        skipInitialFrames,
-                        ppType,
-                        useKeyframes,
-                        windowLen):
+                        positionSegment='begin',
+                        overlaping=0,
+                        frame_skip=0,
+                        skipInitialFrames=0,
+                        ppType=None,
+                        useKeyframes=None,
+                        windowLen=None,
+                        dataset=None):
         if spatial_transform is None:
             self.spatial_transform = transforms.Compose([
                 # transforms.RandomResizedCrop(224),
@@ -35,7 +37,7 @@ class ViolenceDataset(Dataset):
                 transforms.ToTensor()])
         else:    
             self.spatial_transform = spatial_transform
-        self.videos = dataset
+        self.videos = videos
         self.labels = labels
         self.numFrames = numFrames
         self.numDynamicImagesPerVideo = numDynamicImagesPerVideo
@@ -48,9 +50,8 @@ class ViolenceDataset(Dataset):
         self.ppType = ppType  #preprocessing
         self.preprocessor = Preprocessor(ppType)
         self.useKeyframes = useKeyframes
-        # self.windowLen = windowLen
-        # print('WWWWWWW=', windowLen)
         self.extractor = FrameExtractor(len_window=windowLen)
+        self.dataset = dataset
 
     def __len__(self):
         return len(self.videos)
@@ -117,195 +118,82 @@ class ViolenceDataset(Dataset):
                 
         return video_segments, indices_segments
 
+    def __getitem_diff__(self, vid_name):
+        dynamicImages = []
+        sequence = os.listdir(vid_name)
+        sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        video_segment, paths = self.loadFramesSeq(vid_name, sequence)
+        candidate_frames, frames_indexes = self.extractor.__extract_candidate_frames_fromFramesList__(video_segment)
+        # print('Frames indexes-{}/{}='.format(len(sequence),len(frames_indexes)))
+        imgPIL, img = dynamicImage.getDynamicImage(candidate_frames)
+        imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+        dynamicImages.append(imgPIL)
+        return dynamicImages
+
+    def __getitem_blur__(self, vid_name):
+        dynamicImages = []
+        nelem = 1
+        sequence = os.listdir(vid_name)
+        sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+        frames, paths = self.loadFramesSeq(vid_name, sequence)
+        
+        _, indices_segments = self.getVideoSegments(vid_name, idx)
+        # print(len(frames),len(indices_segments))
+        # ca2@i@VnTCC5TDK
+        segment_idxs = []
+        for i,idxs in enumerate(indices_segments):
+            frames_in_segment = list(itemgetter(*idxs)(frames)) #np.asarray(frames)[idxs].tolist()
+            blurrings = self.extractor.__compute_frames_blurring_fromList__(frames_in_segment, plot=False)
+            indexes_candidates = self.extractor.__candidate_frames_blur_based__(frames_in_segment, blurrings, self.useKeyframes, nelem=nelem)
+
+            if nelem > 1:
+                indexes_candidates = list(itemgetter(*indexes_candidates)(idxs))
+                segment_idxs += indexes_candidates
+            else:
+                indexes_candidates = idxs[indexes_candidates[0]]
+                segment_idxs.append(indexes_candidates)
+        segment_idxs.sort()
+        candidate_frames = list(itemgetter(*segment_idxs)(frames))
+
+        imgPIL, img = dynamicImage.getDynamicImage(candidate_frames)
+        imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
+        dynamicImages.append(imgPIL)
+        return dynamicImages
+
     def __getitem__(self, idx):
         vid_name = self.videos[idx]
         # print(vid_name, self.numFrames[idx])
         label = self.labels[idx]
         dynamicImages = []
-        preprocessing_time = 0.0
-        if self.useKeyframes == 'diff':
-            sequence = os.listdir(vid_name)
-            sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-            video_segment, paths = self.loadFramesSeq(vid_name, sequence)
-            candidate_frames, frames_indexes = self.extractor.__extract_candidate_frames_fromFramesList__(video_segment)
-            # print('Frames indexes-{}/{}='.format(len(sequence),len(frames_indexes)))
-            imgPIL, img = dynamicImage.getDynamicImage(candidate_frames)
-            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            dynamicImages.append(imgPIL)
-            # print('{}-No frames/candidates frames={}/{}'.format(idx, len(video_segment), len(candidate_frames)))
-            # print('----Frames selected=', list(itemgetter(*frames_indexes)(sequence)))
-        elif self.useKeyframes == 'blur-min' or self.useKeyframes == 'blur-max':
-            nelem = 1
-            sequence = os.listdir(vid_name)
-            sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-            frames, paths = self.loadFramesSeq(vid_name, sequence)
-            
-            _, indices_segments = self.getVideoSegments(vid_name, idx)
-            # print(len(frames),len(indices_segments))
-            # ca2@i@VnTCC5TDK
-            segment_idxs = []
-            for i,idxs in enumerate(indices_segments):
-                frames_in_segment = list(itemgetter(*idxs)(frames)) #np.asarray(frames)[idxs].tolist()
-                blurrings = self.extractor.__compute_frames_blurring_fromList__(frames_in_segment, plot=False)
-                indexes_candidates = self.extractor.__candidate_frames_blur_based__(frames_in_segment, blurrings, self.useKeyframes, nelem=nelem)
+        ipts = []
+        # preprocessing_time = 0.0
+        video_segments, _ = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
+        paths = []
+        for i, sequence in enumerate(video_segments):
+            video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
+            paths.append(pths)
+        for sequence in video_segments:
+            # start_time = time.time()
+            imgPIL, img = dynamicImage.getDynamicImage(sequence)
+            # end_time = time.time()
+            # preprocessing_time += (end_time - start_time)
+            dynamicImages.append(np.array(imgPIL))
+            ipts.append(self.spatial_transform(imgPIL.convert("RGB")))
+        ipts = torch.stack(ipts, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+        
+        gt_bboxes, one_box = None, None
+        if self.dataset == 'ucfcrime2local':
+            # print('---------------paths=',len(paths[0]))
+            gt_bboxes, one_box = load_bbox_gt(vid_name, label, paths[0])
+            # if label != 0:
+            #     gt_bboxes, one_box = load_bbox_gt(vid_name, paths[0])
+            # else:
+            #     gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
+        one_box=torch.from_numpy(np.array(one_box)).float()
+        dynamicImages = torch.from_numpy(np.array([0])).float()
+        # print(one_box)
 
-                if nelem > 1:
-                    indexes_candidates = list(itemgetter(*indexes_candidates)(idxs))
-                    segment_idxs += indexes_candidates
-                else:
-                    indexes_candidates = idxs[indexes_candidates[0]]
-                    segment_idxs.append(indexes_candidates)
-            segment_idxs.sort()
-            candidate_frames = list(itemgetter(*segment_idxs)(frames))
+        return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
     
-            imgPIL, img = dynamicImage.getDynamicImage(candidate_frames)
-            imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            dynamicImages.append(imgPIL)
-        else:
-            video_segments, _ = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
-            paths = []
-            for i, sequence in enumerate(video_segments):
-                video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
-                paths.append(pths)
-            # print('Clips={}/Len={}'.format(len(video_segments), len(video_segments[0])))
-            for sequence in video_segments:
-                
-                start_time = time.time()
-                imgPIL, img = dynamicImage.getDynamicImage(sequence)
-                end_time = time.time()
-                
-                imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-                preprocessing_time += (end_time - start_time)
-                dynamicImages.append(imgPIL)
-            # print('Num dynamicImages={}'.format(len(dynamicImages)))
-        dynamicImages = torch.stack(dynamicImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-        # print(dynamicImages.size())
-        return dynamicImages, label, vid_name, preprocessing_time, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+# if __name__ == '__main__':
     
-    # def getindex(self, vid_name, label=None):
-    #     matching = []
-    #     for vid in self.videos:
-    #         p, n = os.path.split(vid)
-    #         if n == vid_name:
-    #             matching.append(vid)
-    #     # matching = [s for s in self.videos if vid_name  s]
-    #     # print('matching=',matching)
-    #     if len(matching) > 0:
-    #         for vid_name in matching:
-    #             index = self.videos.index(vid_name)
-    #             if label is not None and label == self.labels[index]:
-    #                 return index, self.videos[index]
-    #             if label is None:
-    #                 return index, self.videos[index]
-    #     print('Video: {} not found!!!'.format(vid_name))
-    #     return None, None
-
-    # def getOneItem(self, idx, transform, ptype, savePath, ndi, seqLen):
-    #     vid_name = self.videos[idx]; print('idx={}, vid name={}'.format(idx,vid_name))
-    #     label = self.labels[idx]
-    #     dynamicImages = []
-    #     images = []
-    #     self.numDynamicImagesPerVideo = ndi
-    #     if seqLen is not None:
-    #         self.videoSegmentLength = seqLen
-    #     video_segments = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info 
-        
-    #     for i, sequence in enumerate(video_segments):
-    #         video_segments[i], _ = self.loadFramesSeq(vid_name, sequence)
-        
-    #     for segment in video_segments:
-    #         if ptype == 'blur':
-    #             segment = [Image.fromarray(frame) for frame in segment]
-    #             segment = self.preprocessor.blur(sequence=segment, k=2)
-    #             segment = [frame.convert("RGB") for frame in segment]
-    #             segment = [np.array(frame) for frame in segment]
-    #         images.append(segment)
-    #         imgPIL, img = dynamicImage.getDynamicImage(segment, savePath)
-            
-    #         if transform:
-    #             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-            
-    #         dynamicImages.append(imgPIL)
-
-    #         imgPIL = transforms.ToTensor()(imgPIL.convert("RGB"))
-    #         dynamicImages2 = torch.stack([imgPIL], dim=0)
-
-    #     return images, dynamicImages, dynamicImages2,  label
-
-
-    # def getVideoSegmentsOverlapped(self, vid_name, idx):
-    #     frames_list = os.listdir(vid_name)
-    #     frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-    #     video_segments = []
-    #     seqLen = self.videoSegmentLength
-    #     o = int(self.overlaping * seqLen)
-    #     indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
-    #     indices_segments = [indices[x:x + seqLen] for x in range(0, len(indices), seqLen-o)]
-        
-        
-    #     for indices_segment in indices_segments:
-    #         segment = np.asarray(frames_list)[indices_segment].tolist()
-    #         video_segments.append(segment)
-    #         # video_segments.append(frames_list[indices_segment])
-               
-    #     return video_segments
-
-    # def getTemporalSegment(self, frames_list, start):
-    #     segments_block = []
-    #     if start == 0: #first segment
-    #         block = []
-    #         for i in range(start,start + self.videoSegmentLength):
-    #             block.append(frames_list[i])
-    #         # block = frames_list[start:start + self.videoBlockLength]
-    #         idx_next_block = self.videoSegmentLength
-            
-    #     else:
-    #         start = start - int(self.videoSegmentLength * self.overlaping)
-    #         end = start + self.videoSegmentLength
-    #         # block = frames_list[start:end]
-    #         block = []
-    #         for i in range(start,end):
-    #             if i<len(frames_list):
-    #                 block.append(frames_list[i])
-    #         idx_next_block = end
-            
-        
-    #     segments_block.append(block)
-    #     # print('block: ',block)
-    #     return block, start, idx_next_block, segments_block
-        
-    # def getTemporalBlock(self, vid_name, idx_next_block):
-    #     # vid_name = self.videos[idx_video]
-    #     idx_video = self.getindex(vid_name)
-    #     label = self.labels[idx_video]
-    #     print('video buscado: {}, video encontrado: {}'.format(vid_name, self.videos[idx_video]))
-    #     frames_list = os.listdir(vid_name)
-    #     frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-    #     preprocessing_time = 0
-    #     dinamycImages = []
-    #     real_frames = None
-    #     if idx_next_block < self.numFrames[idx_video]:
-    #         block, start, idx_next_block, segments_block = self.getTemporalSegment(frames_list, idx_next_block)
-    #         for seq in segments_block:
-    #             # print('segment len:{}, segment: {}',len(seq), seq)
-    #             frames = []
-    #             real_frames = seq
-    #             # r_frames = []
-    #             for frame in seq:
-    #                 img_dir = str(vid_name) + "/" + frame
-    #                 img1 = Image.open(img_dir).convert("RGB")
-    #                 img = np.array(img1)
-    #                 frames.append(img)
-    #             start_time = time.time()
-    #             imgPIL, img = dynamicImage.getDynamicImage(frames)
-    #             end_time = time.time()
-    #             imgPIL = self.spatial_transform(imgPIL.convert("RGB"))
-                
-    #             preprocessing_time += (end_time - start_time)
-    #             dinamycImages.append(imgPIL)
-    #         # print('Len: ', len(dinamycImages), vid_name)
-    #         dinamycImages = torch.stack(dinamycImages, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-    #         # if self.numDynamicImagesPerVideo == 1:
-    #         #     dinamycImages = dinamycImages.squeeze(dim=0)  ## get normal pytorch tensor [bs, ch, h, w]
-                
-    #     return dinamycImages, label, idx_next_block, preprocessing_time, real_frames

@@ -12,45 +12,6 @@ import csv
 from constants import DEVICE
 import torch
 
-def load_torch_checkpoint(path, model=None):
-  checkpoint = torch.load(path, map_location=DEVICE)
-  # model.load_state_dict(checkpoint['model_state_dict'])
-  # if DEVICE == 'cuda:0':
-  #     model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-  # else:
-  #     model.load_state_dict(checkpoint['model_state_dict'], map_location=DEVICE))
-  # epoch = checkpoint['epoch']
-  # fold = checkpoint['fold']
-  # val_acc = checkpoint['val_acc']
-  # val_loss = checkpoint['val_loss']
-  # model_config = checkpoint['model_config']
-
-  # return model_config, epoch, val_acc, val_loss, fold
-  return checkpoint
-
-def expConfig(**kwargs):
-  dict_ = {
-    'dataset':kwargs['dataset'],
-    'modelType': kwargs['modelType'],
-    'numDynamicImages': kwargs['numDynamicImages'],
-    'segmentLength': kwargs['segmentLength'],
-    'joinType': kwargs['joinType'],
-    'frameSkip': kwargs['frameSkip'],
-    'featureExtract': kwargs['featureExtract'],
-    'overlap': kwargs['overlap'],
-    'skipInitialFrames': kwargs['skipInitialFrames'],
-  }
-  return dict_
-
-def load_model_inference(file, device):
-    if str(device) == 'cpu':
-        model = torch.load(file, map_location=torch.device('cpu'))
-    else:
-        model = torch.load(file)
-        model = model.cuda()
-    model = model.eval()
-    return model
-
 def min_max_normalize_tensor(img):
     # print("normalize:", img.size())
     _min = torch.min(img)
