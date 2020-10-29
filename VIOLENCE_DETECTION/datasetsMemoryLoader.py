@@ -10,9 +10,10 @@ import glob
 import numpy as np
 from operator import itemgetter
 import cv2
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 import re
 import shutil
+from sklearn.model_selection import train_test_split
 
 def checkBalancedSplit(Y_train, Y_test):
     positive = 0
@@ -33,13 +34,14 @@ def load_fold_data(dataset, fold):
         test_idx = list(map(int, test_idx))
         return train_idx, test_idx
 
-def customize_kfold(n_splits, dataset, X_len, shuffle=True):
-    X=np.arange(X_len)
+def customize_kfold(n_splits, dataset, X, y, shuffle=True):
+    # X=np.arange(X_len)
     if dataset == 'hockey' or dataset == 'ucfcrime2local':
-        kfold = KFold(n_splits, shuffle=shuffle)
+        kfold = StratifiedKFold(n_splits, shuffle=shuffle)
         folder = constants.PATH_UCFCRIME2LOCAL_README if dataset=='ucfcrime2local' else constants.PATH_HOCKEY_README
         if not os.path.exists(os.path.join(folder, 'fold_1_train.txt')):
-            for i, (train_idx, test_idx) in enumerate(kfold.split(X)):
+            # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+            for i, (train_idx, test_idx) in enumerate(kfold.split(X, y)):
                 save_file(train_idx, os.path.join(folder, 'fold_{}_train.txt'.format(i + 1)))
                 save_file(test_idx, os.path.join(folder, 'fold_{}_test.txt'.format(i + 1)))
         

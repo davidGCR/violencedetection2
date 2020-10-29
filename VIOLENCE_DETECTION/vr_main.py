@@ -48,6 +48,8 @@ from VIOLENCE_DETECTION.rgbDataset import RGBDataset
 import csv
 from operator import itemgetter
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset
+from collections import Counter
+from sklearn.model_selection import train_test_split
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold, path, model_config, phases, metric_to_track=None):
     since = time.time()
@@ -282,8 +284,6 @@ def openSet_experiments(mode, args):
         test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=True, num_workers=4)
 
         test_model(model_, test_dataloader)
-
-
 
 def __weakly_localization__():
     from VIOLENCE_DETECTION.CAM import compute_CAM, cam2bb
@@ -566,11 +566,6 @@ def __weakly_localization__():
     #     y_preds.append([y_pred, x0, y0, w, h])
     # le = loc_error(y, y_preds)
     # print('Localization error RGB={}'.format(le))
-    
-    
-
-
-
 
 def __my_main__():
     parser = argparse.ArgumentParser()
@@ -606,7 +601,6 @@ def __my_main__():
          return 0
 
     if args.splitType == 'openSet-train' or args.splitType == 'openSet-test':
-
         openSet_experiments(mode=args.splitType, args=args)
         return 0
 
@@ -747,9 +741,152 @@ def __my_main__():
     print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
     print("Accuracy: %0.3f (+/- %0.3f), Losses: %0.3f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))
 
+def skorch_a():
+    from skorch import NeuralNetClassifier
+    from skorch.helper import predefined_split
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--modelType", type=str, default="alexnet", help="model")
+    parser.add_argument("--dataset", nargs='+', type=str)
+    parser.add_argument("--numEpochs",type=int,default=30)
+    parser.add_argument("--batchSize",type=int,default=64)
+    parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
+    parser.add_argument("--numDynamicImagesPerVideo", type=int)
+    parser.add_argument("--joinType", type=str)
+    parser.add_argument("--foldsNumber", type=int, default=5)
+    parser.add_argument("--numWorkers", type=int, default=4)
+    parser.add_argument("--videoSegmentLength", type=int)
+    parser.add_argument("--positionSegment", type=str)
+    parser.add_argument("--splitType", type=str)
+    parser.add_argument("--overlapping", type=float)
+    parser.add_argument("--frameSkip", type=int, default=0)
+    parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--skipInitialFrames", type=int, default=0)
+    parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
+    parser.add_argument("--useKeyframes", type=str, default=None)
+    parser.add_argument("--windowLen", type=int, default=0)
+    parser.add_argument("--modelPath", type=str, default=None)
+    parser.add_argument("--testDataset",type=str, default=None)
+    parser.add_argument("--transferModel", type=str, default=None)
+
+    args = parser.parse_args()
+    input_size = 224
+    shuffle = True
+    if args.dataset[0] == 'rwf-2000':
+        datasetAll = []
+    else:
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0])
+    cv_test_accs = []
+    cv_test_losses = []
+    cv_final_epochs = []
+    # patience = 5
+    folds_number = 5
+    fold = 0
+    checkpoint_path = None
+    config = None
+    print(args.dataset)
+       
+    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
+        fold = fold + 1
+        print("**************** Fold:{}/{} ".format(fold, folds_number))
+        if args.dataset[0] == 'rwf-2000':
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0])
+            # print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
+        else:
+            train_x, train_y, test_x, test_y = None, None, None, None
+            train_x = list(itemgetter(*train_idx)(datasetAll))
+            train_y = list(itemgetter(*train_idx)(labelsAll))
+            train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
+            test_x = list(itemgetter(*test_idx)(datasetAll))
+            test_y = list(itemgetter(*test_idx)(labelsAll))
+            test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
+
+        train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
+        #Label distribution
+        print('Label distribution:')
+        print('Train=', Counter(train_y))
+        print('Val=', Counter(val_y))
+        print('Test=', Counter(test_y))
+
+        train_dataset = ViolenceDataset(videos=train_x,
+                                        labels=train_y,
+                                        numFrames=train_numFrames,
+                                        spatial_transform=transforms['train'],
+                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                        videoSegmentLength=args.videoSegmentLength,
+                                        positionSegment=args.positionSegment,
+                                        overlaping=args.overlapping,
+                                        frame_skip=args.frameSkip,
+                                        skipInitialFrames=args.skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen,
+                                        dataset=args.dataset[0])
+
+        val_dataset = ViolenceDataset(videos=val_x,
+                                        labels=val_y,
+                                        numFrames=val_numFrames,
+                                        spatial_transform=transforms['val'],
+                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                        videoSegmentLength=args.videoSegmentLength,
+                                        positionSegment=args.positionSegment,
+                                        overlaping=args.overlapping,
+                                        frame_skip=args.frameSkip,
+                                        skipInitialFrames=args.skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen,
+                                        dataset=args.dataset[0])
+        # test_dataset = ViolenceDataset(videos=test_x,
+        #                                 labels=test_y,
+        #                                 numFrames=test_numFrames,
+        #                                 spatial_transform=transforms['val'],
+        #                                 numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+        #                                 videoSegmentLength=args.videoSegmentLength,
+        #                                 positionSegment=args.positionSegment,
+        #                                 overlaping=args.overlapping,
+        #                                 frame_skip=args.frameSkip,
+        #                                 skipInitialFrames=args.skipInitialFrames,
+        #                                 ppType=None,
+        #                                 useKeyframes=args.useKeyframes,
+        #                                 windowLen=args.windowLen,
+        #                                 dataset=args.dataset[0])
+        
+        from MODELS.ViolenceModels import ResNet
+        PretrainedModel = ResNet(num_classes=2,
+                                numDiPerVideos=args.numDynamicImagesPerVideo,
+                                model_name=args.modelType,
+                                joinType=args.joinType,
+                                freezeConvLayers=args.freezeConvLayers) 
+
+        from skorch.callbacks import LRScheduler
+        lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
+        
+        from skorch.callbacks import Freezer
+        freezer = Freezer(lambda x: not x.startswith('model.linear'))
+
+        net = NeuralNetClassifier(
+                PretrainedModel, 
+                criterion=nn.CrossEntropyLoss,
+                lr=0.001,
+                batch_size=8,
+                max_epochs=25,
+                optimizer=optim.SGD,
+                optimizer__momentum=0.9,
+                iterator_train__shuffle=True,
+                iterator_train__num_workers=4,
+                iterator_valid__shuffle=True,
+                iterator_valid__num_workers=4,
+                train_split=predefined_split(val_dataset),
+                callbacks=[lrscheduler]
+                # device=DEVICE
+                # module__output_features=2,
+            )
+        net.fit(train_dataset, y=None);
 
 if __name__ == "__main__":
-    __my_main__()
+    skorch_a()
+    # __my_main__()
     # __weakly_localization__()
 
     

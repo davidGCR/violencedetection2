@@ -189,11 +189,15 @@ class ViolenceDataset(Dataset):
             #     gt_bboxes, one_box = load_bbox_gt(vid_name, paths[0])
             # else:
             #     gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
+        else:
+            gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
+
         one_box=torch.from_numpy(np.array(one_box)).float()
         dynamicImages = torch.from_numpy(np.array([0])).float()
-        # print(one_box)
-
-        return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
+        
+        # print('Dataset=',ipts.size())
+        return ipts, label
+        # return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
     
 # if __name__ == '__main__':
     
