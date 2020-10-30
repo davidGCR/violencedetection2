@@ -863,14 +863,18 @@ def skorch_a():
         lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
         
         from skorch.callbacks import Freezer
-        freezer = Freezer(lambda x: not x.startswith('model.linear'))
+        freezer = Freezer(lambda x: not x.startswith('linear'))
+
+        from skorch.callbacks import TensorBoard
+        writer = SummaryWriter()
+        ts = TensorBoard(writer)
 
         net = NeuralNetClassifier(
                 PretrainedModel, 
                 criterion=nn.CrossEntropyLoss,
                 lr=0.001,
-                batch_size=8,
-                max_epochs=25,
+                batch_size=args.batchSize,
+                max_epochs=args.numEpochs,
                 optimizer=optim.SGD,
                 optimizer__momentum=0.9,
                 iterator_train__shuffle=True,
@@ -878,7 +882,7 @@ def skorch_a():
                 iterator_valid__shuffle=True,
                 iterator_valid__num_workers=4,
                 train_split=predefined_split(val_dataset),
-                callbacks=[lrscheduler]
+                callbacks=[lrscheduler, freezer, ts]
                 # device=DEVICE
                 # module__output_features=2,
             )
