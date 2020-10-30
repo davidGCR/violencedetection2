@@ -567,6 +567,36 @@ def __weakly_localization__():
     # le = loc_error(y, y_preds)
     # print('Localization error RGB={}'.format(le))
 
+def args_2_checkpoint_path(args, fold=0):
+    config = {
+                'dataset':args.dataset,
+                'model': args.modelType,
+                'numEpochs': args.numEpochs,
+                'freezeConvLayers': args.freezeConvLayers,
+                'numDynamicImages':args.numDynamicImagesPerVideo,
+                'segmentLength':args.videoSegmentLength,
+                'frameSkip':args.frameSkip,
+                'skipInitialFrames':args.skipInitialFrames,
+                'overlap':args.overlapping,
+                'joinType': args.joinType,
+                'log_dir': None,
+                'useKeyframes': args.useKeyframes,
+                'windowLen': args.windowLen
+            }    
+    # ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
+    # ss = ss+'_fold='+str(fold)
+    ss = ""
+    for (key, val) in config.items():
+        if key != 'log_dir':
+            ss = ss + "_{!s}={!r}".format(key, val)
+    ss = ss.replace("\'", "")
+    # print(ss)
+    # datasets=''
+    # for dt in args.dataset:
+    #     datasets += '-'+dt 
+    checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'TemporalStream_Best_model-{}-fold={}.pt'.format(ss, fold))
+    return checkpoint_path
+
 def __my_main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
@@ -691,33 +721,7 @@ def __my_main__():
         # log_dir = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'tensorboard-runs', experimentConfig_str)
         # writer = SummaryWriter(log_dir)
         if args.saveCheckpoint:
-            config = {
-                'dataset':args.dataset,
-                'model': args.modelType,
-                'numEpochs': args.numEpochs,
-                'freezeConvLayers': args.freezeConvLayers,
-                'numDynamicImages':args.numDynamicImagesPerVideo,
-                'segmentLength':args.videoSegmentLength,
-                'frameSkip':args.frameSkip,
-                'skipInitialFrames':args.skipInitialFrames,
-                'overlap':args.overlapping,
-                'joinType': args.joinType,
-                'log_dir': None,
-                'useKeyframes': args.useKeyframes,
-                'windowLen': args.windowLen
-            }    
-            # ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
-            # ss = ss+'_fold='+str(fold)
-            ss = ""
-            for (key, val) in config.items():
-                if key != 'log_dir':
-                    ss = ss + "_{!s}={!r}".format(key, val)
-            ss = ss.replace("\'", "")
-            # print(ss)
-            # datasets=''
-            # for dt in args.dataset:
-            #     datasets += '-'+dt 
-            checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
+            checkpoint_path = args_2_checkpoint_path(args, fold=fold)
         
         phases = ['train', 'val']  
         model, best_acc, val_loss_min, best_epoch = train_model(model,
@@ -869,6 +873,10 @@ def skorch_a():
         writer = SummaryWriter()
         ts = TensorBoard(writer)
 
+        from skorch.callbacks import Checkpoint
+        checkpoint_path = args_2_checkpoint_path(args, fold=fold)
+        checkpoint = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
+
         net = NeuralNetClassifier(
                 PretrainedModel, 
                 criterion=nn.CrossEntropyLoss,
@@ -886,7 +894,15 @@ def skorch_a():
                 # device=DEVICE
                 # module__output_features=2,
             )
-        net.fit(train_dataset, y=None);
+        # net.fit(train_dataset, y=None);
+        from sklearn.model_selection import GridSearchCV
+        params = {
+            'lr': [,0.03, 0.02, 0.01, 0.001],
+            'max_epochs': [25, 35],
+        }
+        gs = GridSearchCV(net, params, refit=False, cv=5, scoring='accuracy')
+
+        gs.fit(X, y)
 
 if __name__ == "__main__":
     skorch_a()
