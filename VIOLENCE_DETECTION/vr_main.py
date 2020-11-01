@@ -897,12 +897,24 @@ def skorch_a():
         # net.fit(train_dataset, y=None);
         from sklearn.model_selection import GridSearchCV
         params = {
-            'lr': [,0.03, 0.02, 0.01, 0.001],
+            'lr': [0.03, 0.02, 0.01, 0.001],
             'max_epochs': [25, 35],
         }
-        gs = GridSearchCV(net, params, refit=False, cv=5, scoring='accuracy')
+        gs = GridSearchCV(net, params, refit=False, cv=3, scoring='accuracy',n_jobs=1, verbose=1)
+        
+        from skorch.helper import SliceDataset
 
-        gs.fit(X, y)
+        X_sl = SliceDataset(train_dataset, idx=0)  # idx=0 is the default
+        print(X_sl.shape)
+        
+        # y_sl = np.array([y for x, y in iter(train_dataset)])
+        y_sl = SliceDataset(train_dataset, idx=1)
+        print(y_sl.shape)
+
+        try:
+          gs.fit(X_sl, y_sl)
+        except Exception as e:
+          print(e)
 
 if __name__ == "__main__":
     skorch_a()
