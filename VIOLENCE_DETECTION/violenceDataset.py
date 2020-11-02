@@ -196,7 +196,7 @@ class ViolenceDataset(Dataset):
         dynamicImages = torch.from_numpy(np.array([0])).float()
         
         # print('Dataset=',ipts.size())
-        return ipts, label
+        return (ipts,one_box), label
         # return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
     
 # if __name__ == '__main__':

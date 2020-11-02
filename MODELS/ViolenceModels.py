@@ -198,7 +198,8 @@ class ResNet_ROI_Pool(nn.Module):
             self.linear = nn.Linear(2048, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
 
-    def forward(self, x, bboxes):
+    def forward(self, X):
+        (x, bboxes) = X
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)
         x = self.model_ft(c_in)  #torch.Size([8, 2048, 7, 7]
