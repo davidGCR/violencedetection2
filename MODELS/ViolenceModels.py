@@ -151,7 +151,8 @@ class ResNet(nn.Module):
                 self.linear = nn.Linear(2048, self.num_classes)
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
 
-    def forward(self, x):
+    def forward(self, X):
+        (x, bboxes) = X
         # print(x.size())
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)

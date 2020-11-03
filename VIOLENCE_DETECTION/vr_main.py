@@ -841,20 +841,20 @@ def skorch_a():
                                         useKeyframes=args.useKeyframes,
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
-        # test_dataset = ViolenceDataset(videos=test_x,
-        #                                 labels=test_y,
-        #                                 numFrames=test_numFrames,
-        #                                 spatial_transform=transforms['val'],
-        #                                 numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
-        #                                 videoSegmentLength=args.videoSegmentLength,
-        #                                 positionSegment=args.positionSegment,
-        #                                 overlaping=args.overlapping,
-        #                                 frame_skip=args.frameSkip,
-        #                                 skipInitialFrames=args.skipInitialFrames,
-        #                                 ppType=None,
-        #                                 useKeyframes=args.useKeyframes,
-        #                                 windowLen=args.windowLen,
-        #                                 dataset=args.dataset[0])
+        test_dataset = ViolenceDataset(videos=test_x,
+                                        labels=test_y,
+                                        numFrames=test_numFrames,
+                                        spatial_transform=transforms['val'],
+                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                        videoSegmentLength=args.videoSegmentLength,
+                                        positionSegment=args.positionSegment,
+                                        overlaping=args.overlapping,
+                                        frame_skip=args.frameSkip,
+                                        skipInitialFrames=args.skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen,
+                                        dataset=args.dataset[0])
         
         from MODELS.ViolenceModels import ResNet
         # PretrainedModel = ResNet(num_classes=2,
@@ -902,6 +902,18 @@ def skorch_a():
                 # module__output_features=2,
             )
         net.fit(train_dataset, y=None);
+
+        from sklearn.metrics import accuracy_score
+        from skorch.helper import SliceDataset
+
+        y_pred = net.predict(test_dataset)
+        
+        # test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=args.numWorkers)
+        # y_test = [yy for _, yy in test_dataloader]
+        
+        acc = accuracy_score(SliceDataset(test_dataset, idx=1), y_pred)
+        cv_test_accs.append(acc)
+        print('Accuracy={}'.format(acc))
         # from sklearn.model_selection import GridSearchCV
         # params = {
         #     'lr': [0.03, 0.02, 0.01, 0.001],
@@ -922,6 +934,11 @@ def skorch_a():
         #   gs.fit(X_sl, y_sl)
         # except Exception as e:
         #   print(e)
+    print('CV Accuracies=', cv_test_accs)
+    # print('CV Losses=', cv_test_losses)
+    # print('CV Epochs=', cv_final_epochs)
+    print('Test AVG Accuracy={}'.format(np.average(cv_test_accs))
+    print("Accuracy: %0.3f (+/- %0.3f)" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2)
 
 if __name__ == "__main__":
     skorch_a()
