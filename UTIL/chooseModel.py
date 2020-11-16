@@ -8,6 +8,7 @@ from torchvision import datasets, models, transforms
 # import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg
 from MODELS.ViolenceModels import AlexNet, AlexNetV2, ResNet, Densenet, AlexNetConv, ResNetConv, ResnetXt, ResNet_ROI_Pool
+from MODELS.c3d import C3D
 
 def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
     # if model_name == "resnet18" or model_name == "resnet34":
@@ -46,7 +47,11 @@ def initialize_model(model_name, num_classes, freezeConvLayers, numDiPerVideos, 
         """ Densenet
         """
         model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
-        
+        input_size = 224
+    elif model_name == "c3d":
+        # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
+        model_ft = C3D(pretrained='https://download.openmmlab.com/mmaction/recognition/c3d/c3d_sports1m_pretrain_20201016-dcc47ddc.pth')
+        model_ft.init_weights()
         input_size = 224
     # elif model_name == "efficientnet":
     #     model_ft = MyEfficientNet(num_classes, numDiPerVideos, joinType, freezeConvLayers)

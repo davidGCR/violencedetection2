@@ -17,7 +17,7 @@ def getRoot():
       root = '/content'
       enviroment = 'colab'
   else:
-      root = '/Users/davidchoqueluqueroman/Desktop/PAPERS-CODIGOS/violencedetection2'
+      root = '/Users/davidchoqueluqueroman/Desktop/PROJECTS-SOURCE-CODES/violencedetection2'
       enviroment = 'local'
   return root, enviroment
 

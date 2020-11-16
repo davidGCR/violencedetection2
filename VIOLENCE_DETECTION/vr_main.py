@@ -47,7 +47,7 @@ from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 from VIOLENCE_DETECTION.rgbDataset import RGBDataset
 import csv
 from operator import itemgetter
-from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset
+from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset, plot_example
 from collections import Counter
 from sklearn.model_selection import train_test_split
 
@@ -56,7 +56,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
     val_acc_history = []
     # best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-    
+
     early_stopping = EarlyStopping(patience=patience, verbose=True, path=path, model_config=model_config)
 
     for epoch in range(1,num_epochs+1,1):
@@ -75,11 +75,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             running_corrects = 0
             # Iterate over data.
             for data in tqdm(dataloaders[phase]):
-                inputs, dynamicImages, labels, v_names, one_box, paths = data
-                # pts, dynamicImages, label, vid_name, gt_bboxes, torch.from_numpy(np.array(one_box)).float(), paths
-                # print(v_names)
-                # print('inputs=', inputs.size(), type(inputs))
-                # print('one_box=', one_box.size(), type(one_box))
+                (inputs, idx, dynamicImages, one_box), labels = data
+                # inputs, dynamicImages, labels, v_names, one_box, paths = data
+                # print('Train function, inputs size=', inputs.size())
+                # print('Train function, labels size=', labels.size())
 
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
@@ -92,7 +91,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
-                    outputs = model(inputs, one_box)
+                    # outputs = model(inputs, one_box) #for roi_pool
+                    outputs = model(inputs)
                     loss = criterion(outputs, labels)
                     _, preds = torch.max(outputs, 1)
                     # backward + optimize only if in training phase
@@ -119,7 +119,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             break
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    
+
     return model, early_stopping.best_acc, early_stopping.val_loss_min, early_stopping.best_epoch
 
 def test_model(model, dataloader):
@@ -140,7 +140,7 @@ def test_model(model, dataloader):
             outputs = model(inputs)
             # loss = criterion(outputs, labels)
             _, preds = torch.max(outputs, 1)
-            
+
         # statistics
         # running_loss += loss.item() * inputs.size(0)
         running_corrects += torch.sum(preds == labels.data)
@@ -148,7 +148,7 @@ def test_model(model, dataloader):
 
     # epoch_loss = running_loss / len(dataloader.dataset)
     epoch_acc = running_corrects.double() / len(dataloader.dataset)
-    
+
     print('{} Loss: {:.4f} Acc: {:.4f}'.format('Test', 0, epoch_acc))
 
 def openSet_experiments(mode, args):
@@ -164,11 +164,11 @@ def openSet_experiments(mode, args):
             datasetAll += x
             labelsAll += y
             numFramesAll += num
-            transforms.append(tr) 
+            transforms.append(tr)
         combined = list(zip(datasetAll, labelsAll, numFramesAll))
         random.shuffle(combined)
         datasetAll[:], labelsAll[:], numFramesAll[:] = zip(*combined)
-        
+
         train_dataset = ViolenceDataset(dataset=datasetAll,
                                         labels=labelsAll,
                                         numFrames=numFramesAll,
@@ -223,8 +223,8 @@ def openSet_experiments(mode, args):
             ss = ss.replace("\'", "")
             # print(ss)
             checkpoint_path = os.path.join(constants.PATH_RESULTS, 'OPENSET', 'checkpoints', 'DYN_Stream-{}-fold={}'.format(ss,fold))
-        
-        phases = ['train']   
+
+        phases = ['train']
         model, best_acc, val_loss_min, best_epoch = train_model(model,
                                                             dataloaders,
                                                             criterion,
@@ -265,7 +265,7 @@ def openSet_experiments(mode, args):
             model_.load_state_dict(checkpoint['model_state_dict'], strict=False)
         else:
             model_.load_state_dict(checkpoint['model_state_dict'])
-        
+
 
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.testDataset)
         test_dataset = ViolenceDataset(dataset=datasetAll,
@@ -361,7 +361,7 @@ def __weakly_localization__():
     #                                 videoSegmentLength=args['videoSegmentLength'],
     #                                 dataset=dataset
     #                                 )
- 
+
     model_2 = ResNet_ROI_Pool(
 
         )
@@ -380,12 +380,12 @@ def __weakly_localization__():
                                     dataset=dataset
                                     )
 
-   
+
     # print(model_2)
     # test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=True, num_workers=4)
-    # indices =  [8, 0, 1, 2, 9, 11, 3, 5]  # select your indices here as a list  
+    # indices =  [8, 0, 1, 2, 9, 11, 3, 5]  # select your indices here as a list
     # subset = torch.utils.data.Subset(test_dataset, indices)
-    
+
     def background_model(dynamicImages, iters=10):
         # img_0 = dynamicImages[0]
         # img_0 = torch.squeeze(img_0).numpy()
@@ -414,20 +414,20 @@ def __weakly_localization__():
 
             # threshold = 0.60*np.amax(gray)
             # ret, thresh = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-            
-            
+
+
             # threshold_inv = np.amin(gray) + 60
             # ret, thresh_inv = cv2.threshold(gray, threshold_inv, 255, cv2.THRESH_BINARY)
 
             # print('max={}, min={}, mean={}, threshold={}, thresh_inv={}'.format(np.amax(gray), np.amin(gray), np.mean(gray), threshold, threshold_inv))
-            
+
             # cv2.imshow("thresh", thresh)
             # key = cv2.waitKey(0)
 
             # cv2.imshow("thresh_inv", thresh_inv)
             # key = cv2.waitKey(0)
 
-            
+
 
             # diff = img_1-img_0
             # cv2.imshow("diff", diff)
@@ -478,7 +478,7 @@ def __weakly_localization__():
         #     ret, thresh1 = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
         #     cv2.imshow("threshold", thresh1)
         #     key = cv2.waitKey(0)
-            
+
 
     # ## Dynamic Image CNN
     y, y_preds = [], []
@@ -492,7 +492,7 @@ def __weakly_localization__():
 
         # for g in gt_bboxes:
         #     print(g)
-        
+
         # y = model_2(inputs, one_box)
         # print('y=',type(y))
 
@@ -548,7 +548,7 @@ def __weakly_localization__():
     #                             frame_idx=args_rgb['frameIdx'])
     # rgb_dataloader = torch.utils.data.DataLoader(rgb_dataset, batch_size=1, shuffle=False, num_workers=4)
 
-    
+
     # y, y_preds = [], []
     # for data in rgb_dataloader:
     #     v_name, inputs, labels, frame_path = data
@@ -582,7 +582,7 @@ def args_2_checkpoint_path(args, fold=0):
                 'log_dir': None,
                 'useKeyframes': args.useKeyframes,
                 'windowLen': args.windowLen
-            }    
+            }
     # ss = '_'.join("{!s}={!r}".format(key, val) for (key, val) in config.items())
     # ss = ss+'_fold='+str(fold)
     ss = ""
@@ -593,13 +593,14 @@ def args_2_checkpoint_path(args, fold=0):
     # print(ss)
     # datasets=''
     # for dt in args.dataset:
-    #     datasets += '-'+dt 
+    #     datasets += '-'+dt
     checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'TemporalStream_Best_model-{}-fold={}.pt'.format(ss, fold))
     return checkpoint_path
 
 def __my_main__():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
+    parser.add_argument("--inputSize", type=int)
     parser.add_argument("--dataset", nargs='+', type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -639,7 +640,9 @@ def __my_main__():
     if args.dataset[0] == 'rwf-2000':
         datasetAll = []
     else:
-        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0])
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
+
+    print('====> Loaded all dataset? X:{}, y:{}, numFrames:{}'.format(len(datasetAll), len(labelsAll), len(numFramesAll)))
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
@@ -649,8 +652,9 @@ def __my_main__():
     checkpoint_path = None
     config = None
     print(args.dataset)
-       
-    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
+
+    # for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
+    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         if args.dataset[0] == 'rwf-2000':
@@ -696,7 +700,7 @@ def __my_main__():
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
         test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
-        
+
         dataloaders = {'train': train_dataloader, 'val': test_dataloader}
 
         if args.transferModel is not None:
@@ -714,7 +718,7 @@ def __my_main__():
         optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
         criterion = nn.CrossEntropyLoss()
-        
+
         # for (key, val) in config.items():
         #     if key != '\'log_dir\'':
         #         ss.join("{!s}={!r}".format(key, val))
@@ -722,8 +726,8 @@ def __my_main__():
         # writer = SummaryWriter(log_dir)
         if args.saveCheckpoint:
             checkpoint_path = args_2_checkpoint_path(args, fold=fold)
-        
-        phases = ['train', 'val']  
+
+        phases = ['train', 'val']
         model, best_acc, val_loss_min, best_epoch = train_model(model,
                                                             dataloaders,
                                                             criterion,
@@ -789,7 +793,7 @@ def skorch_a():
     checkpoint_path = None
     config = None
     print(args.dataset)
-       
+
     for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
@@ -855,14 +859,14 @@ def skorch_a():
                                         useKeyframes=args.useKeyframes,
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
-        
+
         from MODELS.ViolenceModels import ResNet
         # PretrainedModel = ResNet(num_classes=2,
         #                         numDiPerVideos=args.numDynamicImagesPerVideo,
         #                         model_name=args.modelType,
         #                         joinType=args.joinType,
-        #                         freezeConvLayers=args.freezeConvLayers) 
-        
+        #                         freezeConvLayers=args.freezeConvLayers)
+
         PretrainedModel, _ = initialize_model(model_name=args.modelType,
                                         num_classes=2,
                                         freezeConvLayers=args.freezeConvLayers,
@@ -872,7 +876,7 @@ def skorch_a():
 
         from skorch.callbacks import LRScheduler
         lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
-        
+
         from skorch.callbacks import Freezer
         freezer = Freezer(lambda x: not x.startswith('linear'))
 
@@ -885,7 +889,7 @@ def skorch_a():
         checkpoint = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
 
         net = NeuralNetClassifier(
-                PretrainedModel, 
+                PretrainedModel,
                 criterion=nn.CrossEntropyLoss,
                 lr=0.001,
                 batch_size=args.batchSize,
@@ -907,25 +911,32 @@ def skorch_a():
         from skorch.helper import SliceDataset
 
         y_pred = net.predict(test_dataset)
-        
-        # test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=args.numWorkers)
-        # y_test = [yy for _, yy in test_dataloader]
-        
-        acc = accuracy_score(SliceDataset(test_dataset, idx=1), y_pred)
+        X_test_s = SliceDataset(test_dataset)
+        y_test_s = SliceDataset(test_dataset, idx=1)
+        acc = accuracy_score(y_test_s, y_pred)
         cv_test_accs.append(acc)
         print('Accuracy={}'.format(acc))
+
+        error_mask = y_pred != y_test_s
+        print(error_mask)
+
+
+        plot_example(X_test_s[error_mask], y_pred[error_mask], test_x)
+
+        # plot_example(X_test_s, y_test_s, test_x)
+
         # from sklearn.model_selection import GridSearchCV
         # params = {
         #     'lr': [0.03, 0.02, 0.01, 0.001],
         #     'max_epochs': [25, 35],
         # }
         # gs = GridSearchCV(net, params, refit=False, cv=3, scoring='accuracy',n_jobs=1, verbose=1)
-        
+
         # from skorch.helper import SliceDataset
 
         # X_sl = SliceDataset(train_dataset, idx=0)  # idx=0 is the default
         # print(X_sl.shape)
-        
+
         # # y_sl = np.array([y for x, y in iter(train_dataset)])
         # y_sl = SliceDataset(train_dataset, idx=1)
         # print(y_sl.shape)
@@ -934,16 +945,13 @@ def skorch_a():
         #   gs.fit(X_sl, y_sl)
         # except Exception as e:
         #   print(e)
+
     print('CV Accuracies=', cv_test_accs)
-    # print('CV Losses=', cv_test_losses)
-    # print('CV Epochs=', cv_final_epochs)
-    print('Test AVG Accuracy={}'.format(np.average(cv_test_accs))
-    print("Accuracy: %0.3f (+/- %0.3f)" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2)
+    print('Test AVG Accuracy={}'.format(np.average(cv_test_accs)))
+    print("Accuracy: %0.3f (+/- %0.3f)" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2))
+
 
 if __name__ == "__main__":
-    skorch_a()
-    # __my_main__()
+    # skorch_a()
+    __my_main__()
     # __weakly_localization__()
-
-    
-

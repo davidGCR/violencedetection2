@@ -34,7 +34,8 @@ def load_fold_data(dataset, fold):
         test_idx = list(map(int, test_idx))
         return train_idx, test_idx
 
-def customize_kfold(n_splits, dataset, X, y, shuffle=True):
+# def customize_kfold(n_splits, dataset, X, y, shuffle=True):
+def customize_kfold(n_splits, dataset, shuffle=True):
     # X=np.arange(X_len)
     if dataset == 'hockey' or dataset == 'ucfcrime2local':
         kfold = StratifiedKFold(n_splits, shuffle=shuffle)
@@ -44,7 +45,7 @@ def customize_kfold(n_splits, dataset, X, y, shuffle=True):
             for i, (train_idx, test_idx) in enumerate(kfold.split(X, y)):
                 save_file(train_idx, os.path.join(folder, 'fold_{}_train.txt'.format(i + 1)))
                 save_file(test_idx, os.path.join(folder, 'fold_{}_test.txt'.format(i + 1)))
-        
+
         for i in range(n_splits):
             train_idx = read_file(os.path.join(folder, 'fold_{}_train.txt'.format(i + 1)))
             test_idx = read_file(os.path.join(folder, 'fold_{}_test.txt'.format(i + 1)))
@@ -66,7 +67,7 @@ def customize_kfold(n_splits, dataset, X, y, shuffle=True):
             else:
                 splitsLen = read_file(os.path.join(folder, 'lengths.txt'))
                 splitsLen = list(map(int, splitsLen))
-            
+
             for i,l in enumerate(splitsLen):
                 end = np.sum(splitsLen[:(i+1)])
                 start = end-splitsLen[i]
@@ -95,11 +96,11 @@ def rwf_readVideo_saveFrames(file_path, frames_folder_path, resize=(224,224)):
     cap = cv2.VideoCapture(file_path)
     success, frame = cap.read()
     count = 1
-    
+
     while success:
         filename = os.path.join(frames_folder_path, "frame%d.jpg" % count)
         frame = cv2.resize(frame, resize, interpolation=cv2.INTER_AREA)
-        cv2.imwrite(filename, frame)     # save frame as JPEG file      
+        cv2.imwrite(filename, frame)     # save frame as JPEG file
         success, frame = cap.read()
         count += 1
     cap.release()
@@ -107,13 +108,13 @@ def rwf_readVideo_saveFrames(file_path, frames_folder_path, resize=(224,224)):
 def rwf_videos2frames():
     videos_train_path = os.path.join(constants.PATH_RWF_2000_VIDEOS, 'train')
     videos_test_path = os.path.join(constants.PATH_RWF_2000_VIDEOS,'val')
-    
+
     frames_train_path = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train')
     frames_test_path = os.path.join(constants.PATH_RWF_2000_FRAMES,'val')
-    
+
     all_dataset_videos = [videos_train_path, videos_test_path]
     all_dataset_frames = [frames_train_path, frames_test_path]
-    for i, split in enumerate(all_dataset_videos):    
+    for i, split in enumerate(all_dataset_videos):
         for classs in os.listdir(split):
             k=1
             for video in os.listdir(os.path.join(split, classs)):
@@ -138,7 +139,7 @@ def rwf_load_data(shuffle=True, save_csv=False):
     test_num_frames = []
 
     train_path = os.path.join(constants.PATH_RWF_2000_FRAMES, 'train')
-    
+
     for clase in os.listdir(train_path):
         for vid_folder in os.listdir(os.path.join(train_path,clase)):
             sample_path = os.path.join(train_path, clase, vid_folder)
@@ -149,9 +150,9 @@ def rwf_load_data(shuffle=True, save_csv=False):
                 else:
                     train_labels.append(0)
                 train_num_frames.append(len(os.listdir(sample_path)))
-    
+
     test_path = os.path.join(constants.PATH_RWF_2000_FRAMES, 'val')
-    
+
     for clase in os.listdir(test_path):
         for vid_folder in os.listdir(os.path.join(test_path,clase)):
             sample_path = os.path.join(test_path, clase, vid_folder)
@@ -162,7 +163,7 @@ def rwf_load_data(shuffle=True, save_csv=False):
                 else:
                     test_labels.append(0)
                 test_num_frames.append(len(os.listdir(sample_path)))
-    
+
     if shuffle:
         combined = list(zip(train_names, train_labels, train_num_frames))
         random.shuffle(combined)
@@ -176,7 +177,7 @@ def rwf_load_data(shuffle=True, save_csv=False):
         save_csvfile_multicolumn(all_data_train, os.path.join(constants.PATH_RWF_2000_README, 'all_data_labels_numFrames_train.csv'))
         all_data_test = zip(test_names, test_labels, test_num_frames)
         save_csvfile_multicolumn(all_data_test, os.path.join(constants.PATH_RWF_2000_README, 'all_data_labels_numFrames_test.csv'))
-    
+
     return train_names, train_labels, train_num_frames, test_names, test_labels, test_num_frames
 
 
@@ -317,7 +318,7 @@ def hockeyLoadData(shuffle=True):
             combined = list(zip(datasetAll, labelsAll, numFramesAll))
             random.shuffle(combined)
             datasetAll[:], labelsAll[:], numFramesAll[:] = zip(*combined)
-        
+
         all_data = zip(datasetAll, labelsAll, numFramesAll)
         save_csvfile_multicolumn(all_data, os.path.join(constants.PATH_HOCKEY_README, 'all_data_labels_numFrames.csv'))
     else:
@@ -329,7 +330,7 @@ def hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll):
     test_idx = read_file(os.path.join(constants.PATH_HOCKEY_README, 'fold_{}_test.txt'.format(int(split_type[len(split_type)-1]))))
     train_idx = list(map(int, train_idx))
     test_idx = list(map(int, test_idx))
-    
+
     train_x = list(itemgetter(*train_idx)(datasetAll))
     train_y = list(itemgetter(*train_idx)(labelsAll))
     train_numFrames = list(itemgetter(*train_idx)(numFramesAll))
@@ -338,7 +339,7 @@ def hockeyTrainTestSplit(split_type, datasetAll, labelsAll, numFramesAll):
     test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
     return train_x, train_y, train_numFrames, test_x, test_y, test_numFrames
-    
+
 ###################################################################################################################
 ############################################### UCFCRIME2LOCAL#####################################################
 ###################################################################################################################
@@ -365,7 +366,7 @@ def crime2localLoadData(min_frames):
         # sampled_list = random.sample(X_train_neg, len(X_train_pos))
         # X_train_neg = sampled_list
         # y_train_neg  = [0 for i in range(len(X_train_neg))]
-        
+
         # X_test_neg = read_file(test_nonviolence)
         # sampled_list = random.sample(X_test_neg, len(X_test_pos))
         # X_test_neg = sampled_list
@@ -379,7 +380,7 @@ def crime2localLoadData(min_frames):
         # y = y_train_pos + y_train_neg + y_test_pos + y_test_neg
         # X = X_train_pos + X_train_neg + X_test_pos + X_test_neg
         # numFrames = [len(glob.glob1(X[i], "*.jpg")) for i in range(len(X))]
-        
+
         # yxn = list(zip(y, X, numFrames))
         # yxn_sorted = [(y, x, n) for y, x, n in yxn if n > min_frames]
         # y, X, numFrames = zip(*yxn_sorted)
@@ -388,7 +389,7 @@ def crime2localLoadData(min_frames):
         # for i in range(len(X)):
         #     _, vname = os.path.split(X[i])
         #     X_t.append(vname)
-        # X = X_t    
+        # X = X_t
         # save_csvfile_multicolumn(zip(X, y, numFrames), os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt'))
     else:
         X, y, numFrames = read_csvfile_threecolumns(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'All_data.txt'))
@@ -405,12 +406,12 @@ def crime2localLoadData(min_frames):
 def crime2localgGetSplit(X, y, numFrames, splits=5):
     # print(X)
     kfold = KFold(splits, shuffle=True)
-    
+
     if not os.path.exists(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-1-train.txt')):
         for i, (train_idx, test_idx) in enumerate(kfold.split(X)):
             save_file(train_idx, os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-{}-train.txt'.format(i + 1)))
             save_file(test_idx, os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-{}-test.txt'.format(i + 1)))
-    
+
     for i in range(splits):
         train_idx = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-{}-train.txt'.format(i + 1)))
         test_idx = read_file(os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'fold-{}-test.txt'.format(i + 1)))
@@ -468,7 +469,7 @@ def temporal_cut_long_videos():
         l_frames = os.listdir(v_path)
         l_frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         bdx_file_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_Txt_ANNOTATIONS, av+'.txt')
-        data = [] 
+        data = []
         with open(bdx_file_path, 'r') as file:
             for row in file:
                 data.append(row.split())
@@ -504,7 +505,7 @@ def temporal_cut_long_videos():
                 if not start:
                     # print('================')
                     # clip_frames.append(os.path.join(v_path,frame_path))
-                    start=True  
+                    start=True
             elif start:
                 end=True
                 start = False
@@ -533,7 +534,7 @@ def plot_bbox_annotations():
         l_frames.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         av = av[:-8]
         bdx_file_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_Txt_ANNOTATIONS, av+'.txt')
-        data = [] 
+        data = []
         with open(bdx_file_path, 'r') as file:
             for row in file:
                 data.append(row.split())
@@ -562,7 +563,7 @@ def plot_bbox_annotations():
             flac = int(frame_data[6])
             if flac == 0:
                 cv2.rectangle(frame, (x0, y0),(x0+w, y0+h), (0,255,0), 2)
-                
+
             cv2.imshow("frame", frame)
             key = cv2.waitKey(0)
 

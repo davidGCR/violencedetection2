@@ -35,7 +35,7 @@ class ViolenceDataset(Dataset):
                 # transforms.RandomResizedCrop(224),
                 # transforms.CenterCrop(224),
                 transforms.ToTensor()])
-        else:    
+        else:
             self.spatial_transform = spatial_transform
         self.videos = videos
         self.labels = labels
@@ -61,7 +61,7 @@ class ViolenceDataset(Dataset):
 
     def checkSegmentLength(self, segment):
         return (len(segment) == self.videoSegmentLength or len(segment) > self.minSegmentLen)
-    
+
     def padding(self, segment_list):
         if  len(segment_list) < self.numDynamicImagesPerVideo:
             last_element = segment_list[len(segment_list) - 1]
@@ -82,7 +82,7 @@ class ViolenceDataset(Dataset):
             img = np.array(img1)
             frames.append(img)
         return frames, frames_paths
-           
+
     def getVideoSegments(self, vid_name, idx):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
@@ -94,7 +94,7 @@ class ViolenceDataset(Dataset):
         video_segments = []
         # print('self.numFrames = ', type(self.numFrames))
         indices = [x for x in range(0, self.numFrames[idx], self.frame_skip + 1)]
-        
+
         if self.videoSegmentLength == 0:
             seqLen = self.numFrames[idx]
         else:
@@ -115,7 +115,7 @@ class ViolenceDataset(Dataset):
         for i, indices_segment in enumerate(indices_segments): #Generate segments using indices
             segment = np.asarray(frames_list)[indices_segment].tolist()
             video_segments.append(segment)
-                
+
         return video_segments, indices_segments
 
     def __getitem_diff__(self, vid_name):
@@ -136,7 +136,7 @@ class ViolenceDataset(Dataset):
         sequence = os.listdir(vid_name)
         sequence.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         frames, paths = self.loadFramesSeq(vid_name, sequence)
-        
+
         _, indices_segments = self.getVideoSegments(vid_name, idx)
         # print(len(frames),len(indices_segments))
         # ca2@i@VnTCC5TDK
@@ -180,7 +180,7 @@ class ViolenceDataset(Dataset):
             dynamicImages.append(np.array(imgPIL))
             ipts.append(self.spatial_transform(imgPIL.convert("RGB")))
         ipts = torch.stack(ipts, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-        
+
         gt_bboxes, one_box = None, None
         if self.dataset == 'ucfcrime2local':
             # print('---------------paths=',len(paths[0]))
@@ -193,11 +193,10 @@ class ViolenceDataset(Dataset):
             gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
 
         one_box=torch.from_numpy(np.array(one_box)).float()
-        dynamicImages = torch.from_numpy(np.array([0])).float()
-        
+        # dynamicImages = torch.from_numpy(np.array([0])).float()
+
         # print('Dataset=',ipts.size())
-        return (ipts,one_box), label
+        return (ipts, idx, dynamicImages, one_box), label
         # return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
-    
+
 # if __name__ == '__main__':
-    

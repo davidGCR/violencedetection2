@@ -11,3 +11,10 @@ ANOMALYCRIME/learning_curves
 *.zip
 *.txt
 *.DS_Store
+DATASETS
+runs
+tmp_images
+clipped
+.vscode
+UTIL/.ipynb_checkpoints
+SHELLSCRIPTS

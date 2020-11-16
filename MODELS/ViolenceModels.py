@@ -152,8 +152,9 @@ class ResNet(nn.Module):
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
 
     def forward(self, X):
-        (x, bboxes) = X
-        # print(x.size())
+        # (ipts, vid_name, dynamicImages, one_box)
+        (x, vid_name, dynamicImages, bboxes) = X
+        # print('========', x.size())
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)
         x = self.convLayers(c_in)  #torch.Size([8, 2048, 7, 7]
@@ -200,7 +201,7 @@ class ResNet_ROI_Pool(nn.Module):
             # if model_name == 'resnet18' else nn.Linear(512*7*7,self.num_classes)
 
     def forward(self, X):
-        (x, bboxes) = X
+        (x, vid_name, dynamicImages, bboxes) = X
         batch_size, timesteps, C, H, W = x.size()
         c_in = x.view(batch_size * timesteps, C, H, W)
         x = self.model_ft(c_in)  #torch.Size([8, 2048, 7, 7]
