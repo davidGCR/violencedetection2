@@ -887,25 +887,45 @@ def skorch_a():
         from skorch.callbacks import Checkpoint
         checkpoint_path = args_2_checkpoint_path(args, fold=fold)
         checkpoint = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
-
-        net = NeuralNetClassifier(
-                PretrainedModel,
-                criterion=nn.CrossEntropyLoss,
-                lr=0.001,
-                batch_size=args.batchSize,
-                max_epochs=args.numEpochs,
-                optimizer=optim.SGD,
-                optimizer__momentum=0.9,
-                iterator_train__shuffle=True,
-                iterator_train__num_workers=4,
-                iterator_valid__shuffle=True,
-                iterator_valid__num_workers=4,
-                train_split=predefined_split(val_dataset),
-                callbacks=[lrscheduler, ts]
-                # callbacks=[lrscheduler, freezer, ts]
-                # device=DEVICE
-                # module__output_features=2,
-            )
+        if DEVICE=='cpu':
+            net = NeuralNetClassifier(
+                    PretrainedModel,
+                    criterion=nn.CrossEntropyLoss,
+                    lr=0.001,
+                    batch_size=args.batchSize,
+                    max_epochs=args.numEpochs,
+                    optimizer=optim.SGD,
+                    optimizer__momentum=0.9,
+                    iterator_train__shuffle=True,
+                    iterator_train__num_workers=4,
+                    iterator_valid__shuffle=True,
+                    iterator_valid__num_workers=4,
+                    train_split=predefined_split(val_dataset),
+                    callbacks=[lrscheduler, ts]
+                    # callbacks=[lrscheduler, freezer, ts]
+                    # device=DEVICE
+                    # module__output_features=2,
+                )
+        else:
+            net = NeuralNetClassifier(
+                    PretrainedModel,
+                    criterion=nn.CrossEntropyLoss,
+                    lr=0.001,
+                    batch_size=args.batchSize,
+                    max_epochs=args.numEpochs,
+                    optimizer=optim.SGD,
+                    optimizer__momentum=0.9,
+                    iterator_train__shuffle=True,
+                    iterator_train__num_workers=4,
+                    iterator_valid__shuffle=True,
+                    iterator_valid__num_workers=4,
+                    train_split=predefined_split(val_dataset),
+                    callbacks=[lrscheduler, ts],
+                    device=DEVICE
+                    # callbacks=[lrscheduler, freezer, ts]
+                    # device=DEVICE
+                    # module__output_features=2,
+                )
         net.fit(train_dataset, y=None);
 
         from sklearn.metrics import accuracy_score
