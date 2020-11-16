@@ -99,7 +99,7 @@ class C3D(nn.Module):
         else:
             raise TypeError('pretrained must be a str or None')
 
-    def forward(self, x):
+    def forward(self, X):
         """Defines the computation performed at every call.
 
         Args:
@@ -110,6 +110,8 @@ class C3D(nn.Module):
             torch.Tensor: The feature of the input
             samples extracted by the backbone.
         """
+
+        (x, vid_name, dynamicImages, bboxes) = X
 
         # print('forward C3D function, X size=', x.size())
 
