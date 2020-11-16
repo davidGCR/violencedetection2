@@ -111,12 +111,12 @@ class C3D(nn.Module):
             samples extracted by the backbone.
         """
 
-        print('forward C3D function, X size=', x.size())
+        # print('forward C3D function, X size=', x.size())
 
         # batch_size, timesteps, C, H, W = x.size()
         x = x.permute(0,2,1,3,4)
 
-        print('forward C3D function, X permuted size=', x.size())
+        # print('forward C3D function, X permuted size=', x.size())
 
         x = self.conv1a(x)
         x = self.pool1(x)

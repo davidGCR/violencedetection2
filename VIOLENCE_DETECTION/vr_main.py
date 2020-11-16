@@ -638,11 +638,10 @@ def __my_main__():
     input_size = 224
     shuffle = True
     if args.dataset[0] == 'rwf-2000':
-        datasetAll = []
+        datasetAll, labelsAll = [], []
     else:
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
-
-    print('====> Loaded all dataset? X:{}, y:{}, numFrames:{}'.format(len(datasetAll), len(labelsAll), len(numFramesAll)))
+        print('====> Loaded all dataset? X:{}, y:{}, numFrames:{}'.format(len(datasetAll), len(labelsAll), len(numFramesAll)))
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
@@ -654,7 +653,7 @@ def __my_main__():
     print(args.dataset)
 
     # for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
-    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], shuffle=shuffle):
+    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         if args.dataset[0] == 'rwf-2000':

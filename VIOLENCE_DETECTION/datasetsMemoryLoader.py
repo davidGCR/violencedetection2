@@ -34,8 +34,8 @@ def load_fold_data(dataset, fold):
         test_idx = list(map(int, test_idx))
         return train_idx, test_idx
 
-# def customize_kfold(n_splits, dataset, X, y, shuffle=True):
-def customize_kfold(n_splits, dataset, shuffle=True):
+def customize_kfold(n_splits, dataset, X, y, shuffle=True):
+# def customize_kfold(n_splits, dataset, shuffle=True):
     # X=np.arange(X_len)
     if dataset == 'hockey' or dataset == 'ucfcrime2local':
         kfold = StratifiedKFold(n_splits, shuffle=shuffle)

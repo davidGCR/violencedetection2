@@ -105,7 +105,7 @@ def ucf2CrimeTransforms(input_size,mean=None,std=None):
                 transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std) #All Train split
-                
+
             ]
         ),
         "test": transforms.Compose(
@@ -120,7 +120,7 @@ def ucf2CrimeTransforms(input_size,mean=None,std=None):
     return data_transforms
 
 def rwf_2000_Transforms(input_size,mean=None,std=None):
-    # mean = [0.5006697,  0.500758,   0.50071216]  
+    # mean = [0.5006697,  0.500758,   0.50071216]
     # std1 = [0.07394832, 0.07340418, 0.07372487]
     # std2 = [0.07394842, 0.07340426, 0.07372496]
 
@@ -134,7 +134,7 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
         "train": transforms.Compose(
             [
                 # transforms.Resize(input_size),
-                # transforms.CenterCrop(input_size),
+                transforms.CenterCrop(input_size),
                 # transforms.RandomResizedCrop(input_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
@@ -144,10 +144,10 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
         "val": transforms.Compose(
             [
                 # transforms.Resize(input_size),
-                # transforms.CenterCrop(input_size),
+                transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std) #All Train split
-                
+
             ]
         ),
         "test": transforms.Compose(
@@ -176,7 +176,7 @@ def compute_mean_std(dataloader):
         batch_mean = np.mean(numpy_image, axis=(0,2,3))
         batch_std0 = np.std(numpy_image, axis=(0,2,3))
         batch_std1 = np.std(numpy_image, axis=(0,2,3), ddof=1)
-        
+
         pop_mean.append(batch_mean)
         pop_std0.append(batch_std0)
         pop_std1.append(batch_std1)
@@ -196,7 +196,7 @@ import torch
 import constants
 
 if __name__ == "__main__":
-    
+
 
 
     # X, y, numFrames = crime2localLoadData(min_frames=40)
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     numFrames = train_num_frames + test_num_frames
 
     # X, y, numFrames, splitsLen = vifLoadData(constants.PATH_VIF_FRAMES)
-    
+
     dataset = ViolenceDataset(dataset=X,
                             labels=y,
                             numFrames=numFrames,
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     pop_mean, pop_std0, pop_std1 = compute_mean_std(dataloader)
     print(pop_mean, pop_std0, pop_std1)
 
-    
+
 
 # def getDataLoaderAnomaly(x, y, numFrames, data_transform, numDiPerVideos, sequence_length, batch_size, num_workers, dataset_source, debugg_mode):
 #     dataset = anomaly_dataset.AnomalyDataset( dataset=x, labels=y, numFrames=train_num_frames, spatial_transform=transforms["train"], source=dataset_source,
@@ -236,7 +236,7 @@ if __name__ == "__main__":
 #     print('Running main.py from transforms...')
 #     train_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Train_split_AD.txt')
 #     test_videos_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_README, 'Test_split_AD.txt')
-    
+
 #     train_names, train_labels, NumFrames_train, test_names, test_labes, NumFrames_test = anomaly_dataset.train_test_videos(train_videos_path, test_videos_path, constants.PATH_UCFCRIME2LOCAL_FRAMES_REDUCED)
 #     x = train_names + test_names
 #     y = train_labels + test_labes
@@ -260,9 +260,9 @@ if __name__ == "__main__":
 #     ])
 #     # data_loader = getDataLoader(x, y, data_transform, numDiPerVideos, dataset_source, avgmaxDuration, interval_duration, batch_size, num_workers, debugg_mode)
 #     data_loader = getDataLoaderAnomaly(x, y, numFrames, data_transform, numDiPerVideos, sequence_length, batch_size, num_workers, dataset_source, debugg_mode)
-    
+
 #     pop_mean, pop_std0, pop_std1 = compute_mean_std(data_loader)
-    
+
 #     print('pop_mean, pop_std0, pop_std1', pop_mean, pop_std0, pop_std1)
 
 # __main__()
