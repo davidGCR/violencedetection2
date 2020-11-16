@@ -754,6 +754,7 @@ def skorch_a():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
+    parser.add_argument("--inputSize", type=int)
     parser.add_argument("--dataset", nargs='+', type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -777,12 +778,12 @@ def skorch_a():
     parser.add_argument("--transferModel", type=str, default=None)
 
     args = parser.parse_args()
-    input_size = 224
+    # input_size = 224
     shuffle = True
     if args.dataset[0] == 'rwf-2000':
-        datasetAll = []
+        datasetAll, labelsAll = [], []
     else:
-        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0])
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
     cv_test_accs = []
     cv_test_losses = []
     cv_final_epochs = []
@@ -797,7 +798,7 @@ def skorch_a():
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         if args.dataset[0] == 'rwf-2000':
-            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0])
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
             # print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
         else:
             train_x, train_y, test_x, test_y = None, None, None, None
@@ -859,7 +860,7 @@ def skorch_a():
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
 
-        from MODELS.ViolenceModels import ResNet
+        # from MODELS.ViolenceModels import ResNet
         # PretrainedModel = ResNet(num_classes=2,
         #                         numDiPerVideos=args.numDynamicImagesPerVideo,
         #                         model_name=args.modelType,
@@ -876,8 +877,8 @@ def skorch_a():
         from skorch.callbacks import LRScheduler
         lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
 
-        from skorch.callbacks import Freezer
-        freezer = Freezer(lambda x: not x.startswith('linear'))
+        # from skorch.callbacks import Freezer
+        # freezer = Freezer(lambda x: not x.startswith('linear'))
 
         from skorch.callbacks import TensorBoard
         writer = SummaryWriter()
@@ -900,7 +901,8 @@ def skorch_a():
                 iterator_valid__shuffle=True,
                 iterator_valid__num_workers=4,
                 train_split=predefined_split(val_dataset),
-                callbacks=[lrscheduler, freezer, ts]
+                callbacks=[lrscheduler, ts]
+                # callbacks=[lrscheduler, freezer, ts]
                 # device=DEVICE
                 # module__output_features=2,
             )
@@ -920,7 +922,7 @@ def skorch_a():
         print(error_mask)
 
 
-        plot_example(X_test_s[error_mask], y_pred[error_mask], test_x)
+        # plot_example(X_test_s[error_mask], y_pred[error_mask], test_x)
 
         # plot_example(X_test_s, y_test_s, test_x)
 
@@ -951,6 +953,6 @@ def skorch_a():
 
 
 if __name__ == "__main__":
-    # skorch_a()
-    __my_main__()
+    skorch_a()
+    # __my_main__()
     # __weakly_localization__()
