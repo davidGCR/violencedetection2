@@ -887,6 +887,7 @@ def skorch_a():
         from skorch.callbacks import Checkpoint
         checkpoint_path = args_2_checkpoint_path(args, fold=fold)
         checkpoint = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
+        print('Running in: ', DEVICE)
         if DEVICE=='cpu':
             net = NeuralNetClassifier(
                     PretrainedModel,
