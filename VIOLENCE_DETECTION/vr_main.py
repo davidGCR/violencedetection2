@@ -877,16 +877,25 @@ def skorch_a():
         from skorch.callbacks import LRScheduler
         lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
 
-        # from skorch.callbacks import Freezer
-        # freezer = Freezer(lambda x: not x.startswith('linear'))
+        from skorch.callbacks import Freezer
+        freezer = Freezer(lambda x: not x.startswith('linear'))
+
+        if args.freezeConvLayers:
+            callbacks = [lrscheduler, freezer, ts]
+        else:
+            callbacks = [lrscheduler, ts]
 
         from skorch.callbacks import TensorBoard
         writer = SummaryWriter()
         ts = TensorBoard(writer)
 
+
         from skorch.callbacks import Checkpoint
-        checkpoint_path = args_2_checkpoint_path(args, fold=fold)
-        checkpoint = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
+        if args.saveCheckpoint:
+            checkpoint_path = args_2_checkpoint_path(args, fold=fold)
+            cp = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
+            callbacks.append(cp)
+
         print('Running in: ', DEVICE)
         if DEVICE=='cpu':
             net = NeuralNetClassifier(
@@ -902,10 +911,7 @@ def skorch_a():
                     iterator_valid__shuffle=True,
                     iterator_valid__num_workers=4,
                     train_split=predefined_split(val_dataset),
-                    callbacks=[lrscheduler, ts]
-                    # callbacks=[lrscheduler, freezer, ts]
-                    # device=DEVICE
-                    # module__output_features=2,
+                    callbacks=callbacks
                 )
         else:
             net = NeuralNetClassifier(
@@ -921,11 +927,8 @@ def skorch_a():
                     iterator_valid__shuffle=True,
                     iterator_valid__num_workers=4,
                     train_split=predefined_split(val_dataset),
-                    callbacks=[lrscheduler, ts],
+                    callbacks=callbacks,
                     device=DEVICE
-                    # callbacks=[lrscheduler, freezer, ts]
-                    # device=DEVICE
-                    # module__output_features=2,
                 )
         net.fit(train_dataset, y=None);
 
