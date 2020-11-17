@@ -2,6 +2,7 @@ python3  VIOLENCE_DETECTION/vr_main.py \
 --modelType c3d \
 --inputSize 112 \
 --dataset rwf-2000 \
+--useValSplit False \
 --numEpochs 20 \
 --numWorkers 4 \
 --batchSize 8 \

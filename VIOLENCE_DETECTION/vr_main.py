@@ -755,6 +755,7 @@ def skorch_a():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
     parser.add_argument("--inputSize", type=int)
+    parser.add_argument("--useValSplit", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--dataset", nargs='+', type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -809,12 +810,28 @@ def skorch_a():
             test_y = list(itemgetter(*test_idx)(labelsAll))
             test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
-        train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
-        #Label distribution
-        print('Label distribution:')
-        print('Train=', Counter(train_y))
-        print('Val=', Counter(val_y))
-        print('Test=', Counter(test_y))
+        if args.useValSplit:
+            train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
+            #Label distribution
+            print('Label distribution:')
+            print('Train=', Counter(train_y))
+            print('Val=', Counter(val_y))
+            print('Test=', Counter(test_y))
+
+            val_dataset = ViolenceDataset(videos=val_x,
+                                            labels=val_y,
+                                            numFrames=val_numFrames,
+                                            spatial_transform=transforms['val'],
+                                            numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                            videoSegmentLength=args.videoSegmentLength,
+                                            positionSegment=args.positionSegment,
+                                            overlaping=args.overlapping,
+                                            frame_skip=args.frameSkip,
+                                            skipInitialFrames=args.skipInitialFrames,
+                                            ppType=None,
+                                            useKeyframes=args.useKeyframes,
+                                            windowLen=args.windowLen,
+                                            dataset=args.dataset[0])
 
         train_dataset = ViolenceDataset(videos=train_x,
                                         labels=train_y,
@@ -831,20 +848,6 @@ def skorch_a():
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
 
-        val_dataset = ViolenceDataset(videos=val_x,
-                                        labels=val_y,
-                                        numFrames=val_numFrames,
-                                        spatial_transform=transforms['val'],
-                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
-                                        videoSegmentLength=args.videoSegmentLength,
-                                        positionSegment=args.positionSegment,
-                                        overlaping=args.overlapping,
-                                        frame_skip=args.frameSkip,
-                                        skipInitialFrames=args.skipInitialFrames,
-                                        ppType=None,
-                                        useKeyframes=args.useKeyframes,
-                                        windowLen=args.windowLen,
-                                        dataset=args.dataset[0])
         test_dataset = ViolenceDataset(videos=test_x,
                                         labels=test_y,
                                         numFrames=test_numFrames,
@@ -860,6 +863,8 @@ def skorch_a():
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
 
+        if not args.useValSplit:
+            val_dataset = test_dataset
         # from MODELS.ViolenceModels import ResNet
         # PretrainedModel = ResNet(num_classes=2,
         #                         numDiPerVideos=args.numDynamicImagesPerVideo,
