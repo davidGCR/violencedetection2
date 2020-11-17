@@ -891,10 +891,11 @@ def skorch_a():
 
         from skorch.callbacks import Checkpoint
         if args.saveCheckpoint:
-            checkpoint_path = args_2_checkpoint_path(args, fold=fold)
-            cp = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
+            #checkpoint_path = args_2_checkpoint_path(args, fold=fold)
+            #cp = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
+            cp = Checkpoint(dirname='rwf-exp1', monitor='valid_acc_best')
             callbacks.append(cp)
-            print('checkpoint_path: ', checkpoint_path)
+            #print('checkpoint_path: ', checkpoint_path)
 
         print('Running in: ', DEVICE)
         if DEVICE=='cpu':
@@ -936,28 +937,35 @@ def skorch_a():
         from skorch.helper import SliceDataset
 
         ## inferenceMode
-        net_f = NeuralNetClassifier(
+        net = NeuralNetClassifier(
                 PretrainedModel,
                 criterion=nn.CrossEntropyLoss,
                 lr=0.001,
                 batch_size=args.batchSize,
                 max_epochs=args.numEpochs,
                 optimizer=optim.SGD,
-                optimizer__momentum=0.9
+                optimizer__momentum=0.9,
+                iterator_train__shuffle=True,
+                iterator_train__num_workers=4,
+                iterator_valid__shuffle=True,
+                iterator_valid__num_workers=4,
+                train_split=predefined_split(val_dataset),
+                callbacks=callbacks,
+                device=DEVICE
             )
 
-        net_f.initialize()
-        net_f.load_params(checkpoint=cp)
+        net.initialize()
+        net.load_params(checkpoint=cp)
 
-        y_pred = net_f.predict(test_dataset)
+        y_pred = net.predict(test_dataset)
         X_test_s = SliceDataset(test_dataset)
         y_test_s = SliceDataset(test_dataset, idx=1)
         acc = accuracy_score(y_test_s, y_pred)
         cv_test_accs.append(acc)
         print('Accuracy={}'.format(acc))
 
-        error_mask = y_pred != y_test_s
-        print(error_mask)
+        # error_mask = y_pred != y_test_s
+        # print(error_mask)
 
 
         # plot_example(X_test_s[error_mask], y_pred[error_mask], test_x)
@@ -988,6 +996,8 @@ def skorch_a():
     print('CV Accuracies=', cv_test_accs)
     print('Test AVG Accuracy={}'.format(np.average(cv_test_accs)))
     print("Accuracy: %0.3f (+/- %0.3f)" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2))
+
+
 
 
 if __name__ == "__main__":
