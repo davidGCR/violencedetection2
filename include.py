@@ -22,7 +22,7 @@ def getRoot():
   return root, enviroment
 
 root, enviroment = getRoot()
-# print('root:', root)
+print('root:', root)
 
 # root = '/content/'
 # sys.path.insert(1, '/media/david/datos/PAPERS-SOURCE_CODE/violencedetection')
