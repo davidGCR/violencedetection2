@@ -894,6 +894,7 @@ def skorch_a():
             checkpoint_path = args_2_checkpoint_path(args, fold=fold)
             cp = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
             callbacks.append(cp)
+            print('checkpoint_path: ', checkpoint_path)
 
         print('Running in: ', DEVICE)
         if DEVICE=='cpu':
@@ -934,7 +935,21 @@ def skorch_a():
         from sklearn.metrics import accuracy_score
         from skorch.helper import SliceDataset
 
-        y_pred = net.predict(test_dataset)
+        ## inferenceMode
+        net_f = NeuralNetClassifier(
+                PretrainedModel,
+                criterion=nn.CrossEntropyLoss,
+                lr=0.001,
+                batch_size=args.batchSize,
+                max_epochs=args.numEpochs,
+                optimizer=optim.SGD,
+                optimizer__momentum=0.9
+            )
+
+        net_f.initialize()
+        net_f.load_params(checkpoint=cp)
+
+        y_pred = net_f.predict(test_dataset)
         X_test_s = SliceDataset(test_dataset)
         y_test_s = SliceDataset(test_dataset, idx=1)
         acc = accuracy_score(y_test_s, y_pred)
