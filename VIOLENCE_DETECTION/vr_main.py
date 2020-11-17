@@ -880,15 +880,14 @@ def skorch_a():
         from skorch.callbacks import Freezer
         freezer = Freezer(lambda x: not x.startswith('linear'))
 
-        if args.freezeConvLayers:
-            callbacks = [lrscheduler, freezer, ts]
-        else:
-            callbacks = [lrscheduler, ts]
-
         from skorch.callbacks import TensorBoard
         writer = SummaryWriter()
         ts = TensorBoard(writer)
 
+        if args.freezeConvLayers:
+            callbacks = [lrscheduler, freezer, ts]
+        else:
+            callbacks = [lrscheduler, ts]
 
         from skorch.callbacks import Checkpoint
         if args.saveCheckpoint:
