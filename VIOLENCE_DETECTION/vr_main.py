@@ -942,25 +942,26 @@ def skorch_a():
         from skorch.helper import SliceDataset
 
         ## inferenceMode
-        net = NeuralNetClassifier(
-                PretrainedModel,
-                criterion=nn.CrossEntropyLoss,
-                lr=0.001,
-                batch_size=args.batchSize,
-                max_epochs=args.numEpochs,
-                optimizer=optim.SGD,
-                optimizer__momentum=0.9,
-                iterator_train__shuffle=True,
-                iterator_train__num_workers=4,
-                iterator_valid__shuffle=True,
-                iterator_valid__num_workers=4,
-                train_split=predefined_split(val_dataset),
-                callbacks=callbacks,
-                device=DEVICE
-            )
+        if args.saveCheckpoint:
+            net = NeuralNetClassifier(
+                    PretrainedModel,
+                    criterion=nn.CrossEntropyLoss,
+                    lr=0.001,
+                    batch_size=args.batchSize,
+                    max_epochs=args.numEpochs,
+                    optimizer=optim.SGD,
+                    optimizer__momentum=0.9,
+                    iterator_train__shuffle=True,
+                    iterator_train__num_workers=4,
+                    iterator_valid__shuffle=True,
+                    iterator_valid__num_workers=4,
+                    train_split=predefined_split(val_dataset),
+                    callbacks=callbacks,
+                    device=DEVICE
+                )
 
-        net.initialize()
-        net.load_params(checkpoint=cp)
+            net.initialize()
+            net.load_params(checkpoint=cp)
 
         y_pred = net.predict(test_dataset)
         X_test_s = SliceDataset(test_dataset)
