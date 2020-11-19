@@ -776,7 +776,7 @@ def skorch_a():
     parser.add_argument("--windowLen", type=int, default=0)
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
-    parser.add_argument("--transferModel", type=str, default=None)
+    parser.add_argument("--pretrained", type=str, default=None)
 
     args = parser.parse_args()
     # input_size = 224
@@ -877,13 +877,13 @@ def skorch_a():
                                         freezeConvLayers=args.freezeConvLayers,
                                         numDiPerVideos=args.numDynamicImagesPerVideo,
                                         joinType=args.joinType,
-                                        use_pretrained=True)
+                                        pretrained=args.pretrained)
 
         from skorch.callbacks import LRScheduler
         lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
 
         from skorch.callbacks import Freezer
-        freezer = Freezer(lambda x: not x.startswith('linear'))
+        freezer = Freezer(lambda x: not x.startswith('fc8'))
 
         from skorch.callbacks import TensorBoard
         writer = SummaryWriter()

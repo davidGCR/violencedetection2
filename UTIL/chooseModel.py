@@ -8,7 +8,7 @@ from torchvision import datasets, models, transforms
 # import MODELS.ResNet as resnet
 import MODELS.Vgg as vgg
 from MODELS.ViolenceModels import AlexNet, AlexNetV2, ResNet, Densenet, AlexNetConv, ResNetConv, ResnetXt, ResNet_ROI_Pool
-from MODELS.c3d import C3D
+from MODELS.c3d import C3D, C3D_bn
 
 def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
     # if model_name == "resnet18" or model_name == "resnet34":
@@ -18,7 +18,7 @@ def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVi
     model.enableTransferLearning(feature_extract)
     return model
 
-def initialize_model(model_name, num_classes, freezeConvLayers, numDiPerVideos, joinType, use_pretrained=True):
+def initialize_model(model_name, num_classes, freezeConvLayers, numDiPerVideos, joinType, pretrained):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     # print('feature_extract: ', feature_extract)
@@ -50,7 +50,12 @@ def initialize_model(model_name, num_classes, freezeConvLayers, numDiPerVideos, 
         input_size = 224
     elif model_name == "c3d":
         # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
-        model_ft = C3D(pretrained='https://download.openmmlab.com/mmaction/recognition/c3d/c3d_sports1m_pretrain_20201016-dcc47ddc.pth')
+        model_ft = C3D(pretrained=pretrained)
+        model_ft.init_weights()
+        input_size = 224
+    elif model_name == "c3d_bn":
+        # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
+        model_ft = C3D_bn(pretrained=pretrained)
         model_ft.init_weights()
         input_size = 224
     # elif model_name == "efficientnet":
