@@ -597,6 +597,21 @@ def args_2_checkpoint_path(args, fold=0):
     checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'TemporalStream_Best_model-{}-fold={}.pt'.format(ss, fold))
     return checkpoint_path
 
+# create a keyvalue class
+class keyvalue(argparse.Action):
+    # Constructor calling
+    def __call__( self , parser, namespace,
+                 values, option_string = None):
+        setattr(namespace, self.dest, dict())
+        print('VAluessss=', values)
+
+        for value in values:
+            print('VAlue=', value)
+            # split it into key and value
+            key, value = value.split('=')
+            # assign into dictionary
+            getattr(namespace, self.dest)[key] = value
+
 def build_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
@@ -606,7 +621,7 @@ def build_args():
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
     parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
-    parser.add_argument("--numDynamicImagesPerVideo", type=int)
+    parser.add_argument("--numDynamicImagesPerVideo", type=int )
     parser.add_argument("--joinType", type=str)
     parser.add_argument("--foldsNumber", type=int, default=5)
     parser.add_argument("--numWorkers", type=int, default=4)
@@ -629,33 +644,6 @@ def build_args():
 
 
 def __my_main__():
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--modelType", type=str, default="alexnet", help="model")
-    # parser.add_argument("--inputSize", type=int)
-    # parser.add_argument("--dataset", nargs='+', type=str)
-    # parser.add_argument("--numEpochs",type=int,default=30)
-    # parser.add_argument("--batchSize",type=int,default=64)
-    # parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
-    # parser.add_argument("--numDynamicImagesPerVideo", type=int)
-    # parser.add_argument("--joinType", type=str)
-    # parser.add_argument("--foldsNumber", type=int, default=5)
-    # parser.add_argument("--numWorkers", type=int, default=4)
-    # parser.add_argument("--videoSegmentLength", type=int)
-    # parser.add_argument("--positionSegment", type=str)
-    # parser.add_argument("--splitType", type=str)
-    # parser.add_argument("--overlapping", type=float)
-    # parser.add_argument("--frameSkip", type=int, default=0)
-    # parser.add_argument("--patience", type=int, default=5)
-    # parser.add_argument("--skipInitialFrames", type=int, default=0)
-    # parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
-    # parser.add_argument("--useKeyframes", type=str, default=None)
-    # parser.add_argument("--windowLen", type=int, default=0)
-    # # parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
-    #
-    # parser.add_argument("--modelPath", type=str, default=None)
-    # parser.add_argument("--testDataset",type=str, default=None)
-    # parser.add_argument("--transferModel", type=str, default=None)
-
     args = build_args()
 
     if args.splitType == 'cam':
@@ -781,8 +769,10 @@ def __my_main__():
 
 from skorch import NeuralNetClassifier
 from skorch.helper import predefined_split, SliceDataset
-from skorch.callbacks import LRScheduler, Freezer, TensorBoard, Checkpoint
+from skorch.callbacks import LRScheduler, Freezer, TensorBoard, Checkpoint, WandbLogger
 from sklearn.metrics import accuracy_score
+import wandb
+
 
 def skorch_a():
 
@@ -892,13 +882,16 @@ def skorch_a():
         freezer = Freezer(lambda x: not x.startswith('fc8'))
 
 
-        writer = SummaryWriter()
-        ts = TensorBoard(writer)
+        # writer = SummaryWriter()
+        # ts = TensorBoard(writer)
+        wandb_run = wandb.init('Violence-Detection-2')
+        wandb.init(group='fold-'.format(fold))
+        wandb_run.config.update(vars(args))
 
         if args.freezeConvLayers:
-            callbacks = [lrscheduler, freezer, ts]
+            callbacks = [lrscheduler, freezer,  WandbLogger(wandb_run)]
         else:
-            callbacks = [lrscheduler, ts]
+            callbacks = [lrscheduler,  WandbLogger(wandb_run)]
 
         if args.saveCheckpoint:
             #checkpoint_path = args_2_checkpoint_path(args, fold=fold)
