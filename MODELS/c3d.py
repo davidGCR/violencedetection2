@@ -134,8 +134,11 @@ class C3D(nn.Module):
         x = self.conv4b(x)
         x = self.pool4(x)
 
+        print('conv5a in=', x.size())
         x = self.conv5a(x)
+        print('conv5a out=', x.size())
         x = self.conv5b(x)
+        print('conv5b out=', x.size())
         x = self.pool5(x)
 
         x = x.flatten(start_dim=1)

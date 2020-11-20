@@ -1,14 +1,14 @@
 python3  VIOLENCE_DETECTION/vr_main.py \
 --modelType c3d \
 --inputSize 112 \
---dataset rwf-2000 \
+--dataset ucfcrime2local \
 --useValSplit False \
---numEpochs 20 \
+--numEpochs 10 \
 --numWorkers 4 \
 --batchSize 8 \
 --freezeConvLayers False \
 --joinType maxTempPool \
---videoSegmentLength 20 \
+--videoSegmentLength 10 \
 --numDynamicImagesPerVideo 16 \
 --positionSegment begin \
 --overlapping 0.5 \

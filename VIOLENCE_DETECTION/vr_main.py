@@ -597,10 +597,11 @@ def args_2_checkpoint_path(args, fold=0):
     checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'TemporalStream_Best_model-{}-fold={}.pt'.format(ss, fold))
     return checkpoint_path
 
-def __my_main__():
+def build_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
     parser.add_argument("--inputSize", type=int)
+    parser.add_argument("--useValSplit", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--dataset", nargs='+', type=str)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
@@ -619,13 +620,43 @@ def __my_main__():
     parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--useKeyframes", type=str, default=None)
     parser.add_argument("--windowLen", type=int, default=0)
-    # parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
-
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
-    parser.add_argument("--transferModel", type=str, default=None)
+    parser.add_argument("--pretrained", type=str, default=None)
 
     args = parser.parse_args()
+    return args
+
+
+def __my_main__():
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--modelType", type=str, default="alexnet", help="model")
+    # parser.add_argument("--inputSize", type=int)
+    # parser.add_argument("--dataset", nargs='+', type=str)
+    # parser.add_argument("--numEpochs",type=int,default=30)
+    # parser.add_argument("--batchSize",type=int,default=64)
+    # parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
+    # parser.add_argument("--numDynamicImagesPerVideo", type=int)
+    # parser.add_argument("--joinType", type=str)
+    # parser.add_argument("--foldsNumber", type=int, default=5)
+    # parser.add_argument("--numWorkers", type=int, default=4)
+    # parser.add_argument("--videoSegmentLength", type=int)
+    # parser.add_argument("--positionSegment", type=str)
+    # parser.add_argument("--splitType", type=str)
+    # parser.add_argument("--overlapping", type=float)
+    # parser.add_argument("--frameSkip", type=int, default=0)
+    # parser.add_argument("--patience", type=int, default=5)
+    # parser.add_argument("--skipInitialFrames", type=int, default=0)
+    # parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
+    # parser.add_argument("--useKeyframes", type=str, default=None)
+    # parser.add_argument("--windowLen", type=int, default=0)
+    # # parser.add_argument("--segmentPreprocessing", type=lambda x: (str(x).lower() == 'true'), default=False)
+    #
+    # parser.add_argument("--modelPath", type=str, default=None)
+    # parser.add_argument("--testDataset",type=str, default=None)
+    # parser.add_argument("--transferModel", type=str, default=None)
+
+    args = build_args()
 
     if args.splitType == 'cam':
          __weakly_localization__()
@@ -748,38 +779,14 @@ def __my_main__():
     print('Test AVG Accuracy={}, Test AVG Loss={}'.format(np.average(cv_test_accs), np.average(cv_test_losses)))
     print("Accuracy: %0.3f (+/- %0.3f), Losses: %0.3f" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2, np.array(cv_test_losses).mean()))
 
+from skorch import NeuralNetClassifier
+from skorch.helper import predefined_split, SliceDataset
+from skorch.callbacks import LRScheduler, Freezer, TensorBoard, Checkpoint
+from sklearn.metrics import accuracy_score
+
 def skorch_a():
-    from skorch import NeuralNetClassifier
-    from skorch.helper import predefined_split
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--modelType", type=str, default="alexnet", help="model")
-    parser.add_argument("--inputSize", type=int)
-    parser.add_argument("--useValSplit", type=lambda x: (str(x).lower() == 'true'), default=False)
-    parser.add_argument("--dataset", nargs='+', type=str)
-    parser.add_argument("--numEpochs",type=int,default=30)
-    parser.add_argument("--batchSize",type=int,default=64)
-    parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
-    parser.add_argument("--numDynamicImagesPerVideo", type=int)
-    parser.add_argument("--joinType", type=str)
-    parser.add_argument("--foldsNumber", type=int, default=5)
-    parser.add_argument("--numWorkers", type=int, default=4)
-    parser.add_argument("--videoSegmentLength", type=int)
-    parser.add_argument("--positionSegment", type=str)
-    parser.add_argument("--splitType", type=str)
-    parser.add_argument("--overlapping", type=float)
-    parser.add_argument("--frameSkip", type=int, default=0)
-    parser.add_argument("--patience", type=int, default=5)
-    parser.add_argument("--skipInitialFrames", type=int, default=0)
-    parser.add_argument("--saveCheckpoint", type=lambda x: (str(x).lower() == 'true'), default=False)
-    parser.add_argument("--useKeyframes", type=str, default=None)
-    parser.add_argument("--windowLen", type=int, default=0)
-    parser.add_argument("--modelPath", type=str, default=None)
-    parser.add_argument("--testDataset",type=str, default=None)
-    parser.add_argument("--pretrained", type=str, default=None)
-
-    args = parser.parse_args()
-    # input_size = 224
+    args = build_args()
     shuffle = True
     if args.dataset[0] == 'rwf-2000':
         datasetAll, labelsAll = [], []
@@ -879,13 +886,12 @@ def skorch_a():
                                         joinType=args.joinType,
                                         pretrained=args.pretrained)
 
-        from skorch.callbacks import LRScheduler
         lrscheduler = LRScheduler(policy='StepLR', step_size=7, gamma=0.1)
 
-        from skorch.callbacks import Freezer
+
         freezer = Freezer(lambda x: not x.startswith('fc8'))
 
-        from skorch.callbacks import TensorBoard
+
         writer = SummaryWriter()
         ts = TensorBoard(writer)
 
@@ -894,7 +900,6 @@ def skorch_a():
         else:
             callbacks = [lrscheduler, ts]
 
-        from skorch.callbacks import Checkpoint
         if args.saveCheckpoint:
             #checkpoint_path = args_2_checkpoint_path(args, fold=fold)
             #cp = Checkpoint(f_params=checkpoint_path, monitor='valid_acc_best')
@@ -937,9 +942,6 @@ def skorch_a():
                     device=DEVICE
                 )
         net.fit(train_dataset, y=None);
-
-        from sklearn.metrics import accuracy_score
-        from skorch.helper import SliceDataset
 
         ## inferenceMode
         if args.saveCheckpoint:

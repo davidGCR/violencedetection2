@@ -134,8 +134,8 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
         "train": transforms.Compose(
             [
                 # transforms.Resize(input_size),
-                transforms.CenterCrop(input_size),
-                # transforms.RandomResizedCrop(input_size),
+                # transforms.CenterCrop(input_size),
+                transforms.RandomResizedCrop(input_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std) #All Train split
@@ -153,7 +153,7 @@ def rwf_2000_Transforms(input_size,mean=None,std=None):
         "test": transforms.Compose(
             [
                 # transforms.Resize(input_size),
-                # transforms.CenterCrop(input_size),
+                transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std) #All Train split
             ]
