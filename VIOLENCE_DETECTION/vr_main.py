@@ -885,7 +885,7 @@ def skorch_a():
         # writer = SummaryWriter()
         # ts = TensorBoard(writer)
         wandb_run = wandb.init('Violence-Detection-2')
-        wandb.init(group='fold-'.format(fold))
+        # wandb.init(group='fold-'.format(fold))
         wandb_run.config.update(vars(args))
 
         if args.freezeConvLayers:
