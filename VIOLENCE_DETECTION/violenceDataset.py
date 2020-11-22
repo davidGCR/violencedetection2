@@ -87,7 +87,7 @@ class ViolenceDataset(Dataset):
         frames_list = os.listdir(vid_name)
         frames_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
         # print(frames_list)
-        if self.skipInitialFrames > 0 and self.skipInitialFrames < len(frames_list):
+        if self.skipInitialFrames > 0 and self.skipInitialFrames < len(frames_list) and self.numFrames[idx]>40:
             le = len(frames_list)
             frames_list = frames_list[self.skipInitialFrames:le]
             self.numFrames[idx] -= self.skipInitialFrames

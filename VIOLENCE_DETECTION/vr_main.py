@@ -618,6 +618,7 @@ def build_args():
     parser.add_argument("--inputSize", type=int)
     parser.add_argument("--useValSplit", type=lambda x: (str(x).lower() == 'true'), default=False)
     parser.add_argument("--dataset", nargs='+', type=str)
+    parser.add_argument("--lr", type=float)
     parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--batchSize",type=int,default=64)
     parser.add_argument("--freezeConvLayers",type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
@@ -807,13 +808,17 @@ def skorch_a():
             test_y = list(itemgetter(*test_idx)(labelsAll))
             test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
+        print('Label distribution:')
+        print('Train=', Counter(train_y))
+        # print('Val=', Counter(val_y))
+        print('Test=', Counter(test_y))
         if args.useValSplit:
             train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
             #Label distribution
-            print('Label distribution:')
-            print('Train=', Counter(train_y))
+            # print('Label distribution:')
+            # print('Train=', Counter(train_y))
             print('Val=', Counter(val_y))
-            print('Test=', Counter(test_y))
+            # print('Test=', Counter(test_y))
 
             val_dataset = ViolenceDataset(videos=val_x,
                                             labels=val_y,
@@ -884,7 +889,7 @@ def skorch_a():
 
         # writer = SummaryWriter()
         # ts = TensorBoard(writer)
-        wandb_run = wandb.init('Violence-Detection-2')
+        # wandb_run = wandb.init('Violence-Detection-2')
         # wandb.init(group='fold-'.format(fold))
         wandb_run.config.update(vars(args))
 
@@ -905,7 +910,7 @@ def skorch_a():
             net = NeuralNetClassifier(
                     PretrainedModel,
                     criterion=nn.CrossEntropyLoss,
-                    lr=0.001,
+                    lr=args.lr,
                     batch_size=args.batchSize,
                     max_epochs=args.numEpochs,
                     optimizer=optim.SGD,
@@ -913,7 +918,7 @@ def skorch_a():
                     iterator_train__shuffle=True,
                     iterator_train__num_workers=4,
                     iterator_valid__shuffle=True,
-                    iterator_valid__num_workers=4,
+                    iterator_valid__num_workers=args.numWorkers,
                     train_split=predefined_split(val_dataset),
                     callbacks=callbacks
                 )
@@ -921,7 +926,7 @@ def skorch_a():
             net = NeuralNetClassifier(
                     PretrainedModel,
                     criterion=nn.CrossEntropyLoss,
-                    lr=0.001,
+                    lr=args.lr,
                     batch_size=args.batchSize,
                     max_epochs=args.numEpochs,
                     optimizer=optim.SGD,
@@ -929,7 +934,7 @@ def skorch_a():
                     iterator_train__shuffle=True,
                     iterator_train__num_workers=4,
                     iterator_valid__shuffle=True,
-                    iterator_valid__num_workers=4,
+                    iterator_valid__num_workers=args.numWorkers,
                     train_split=predefined_split(val_dataset),
                     callbacks=callbacks,
                     device=DEVICE
@@ -941,7 +946,7 @@ def skorch_a():
             net = NeuralNetClassifier(
                     PretrainedModel,
                     criterion=nn.CrossEntropyLoss,
-                    lr=0.001,
+                    lr=args.lr,
                     batch_size=args.batchSize,
                     max_epochs=args.numEpochs,
                     optimizer=optim.SGD,
@@ -949,7 +954,7 @@ def skorch_a():
                     iterator_train__shuffle=True,
                     iterator_train__num_workers=4,
                     iterator_valid__shuffle=True,
-                    iterator_valid__num_workers=4,
+                    iterator_valid__num_workers=args.numWorkers,
                     train_split=predefined_split(val_dataset),
                     callbacks=callbacks,
                     device=DEVICE
