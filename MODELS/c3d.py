@@ -141,14 +141,14 @@ class C3D(nn.Module):
         x = self.conv5a(x) #torch.Size([8, 512, 2, 7, 7])
         x = self.conv5b(x)
 
-        print('conv5b out=', x.size())
+        # print('conv5b out=', x.size())
         x = self.pool5(x)
 
-        print('pool5 out=', x.size())
+        # print('pool5 out=', x.size())
 
         x = x.flatten(start_dim=1)
 
-        print('flatten out=', x.size())
+        # print('flatten out=', x.size())
 
         x = self.relu(self.fc6(x))
         x = self.dropout(x)
@@ -224,15 +224,19 @@ class C3D_roi_pool(nn.Module):
         self.conv5b = ConvModule(512, 512, **c3d_conv_param)
         self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 1, 1))
 
-        self.fc6 = nn.Linear(2048, 1024)
-        self.fc7 = nn.Linear(1024, 1024)
+        self.fc6 = nn.Linear(8192, 4096)
+        self.fc7 = nn.Linear(4096, 4096)
 
-        self.roi_pool = RoIPool(3, 1)
+        # self.fc6 = nn.Linear(2048, 1024)
+        # self.fc7 = nn.Linear(1024, 1024)
+
+        self.roi_pool = RoIPool(7, 1)
 
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=self.dropout_ratio)
 
-        self.fc8 = nn.Linear(1024, 2)
+        self.fc8 = nn.Linear(4096, 2)
+        # self.fc8 = nn.Linear(1024, 2)
 
     def init_weights(self):
         """Initiate the parameters either from existing checkpoint or from
@@ -303,7 +307,8 @@ class C3D_roi_pool(nn.Module):
 
         x = self.roi_pool(x, bbx)
         # print('x after rp=', x.size())
-        x = x.view(batch_size, C, D, 3, 3)
+        # x = x.view(batch_size, C, D, 3, 3)
+        x = x.view(batch_size, C, D, H, W)
 
         # print('x after rp view=', x.size())
         # print('conv5a out=', x.size())

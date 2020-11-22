@@ -793,6 +793,8 @@ def skorch_a():
     config = None
     print(args.dataset)
 
+    wandb_run = wandb.init('Violence-Detection-2')
+
     for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
         print("**************** Fold:{}/{} ".format(fold, folds_number))
