@@ -5,10 +5,10 @@ import constants
 def load_bbox_gt(video_pth, label, paths):
     _, video_name = os.path.split(video_pth)
     # if label==1:
-    video_name = video_name[:-8]    
+    video_name = video_name[:-8]
     bdx_file_path = os.path.join(constants.PATH_UCFCRIME2LOCAL_Txt_ANNOTATIONS, video_name+'.txt')
-    # print('bdx_file_path=', bdx_file_path)
-    data = [] 
+    # print('bdx_file_path=', label, bdx_file_path)
+    data = []
     with open(bdx_file_path, 'r') as file:
         for row in file:
             data.append(row.split())
@@ -27,7 +27,7 @@ def load_bbox_gt(video_pth, label, paths):
             break
         x0, y0, w, h = int(frame_data[1]), int(frame_data[2]), int(frame_data[3])-int(frame_data[1]), int(frame_data[4])-int(frame_data[2])
         gt_bboxes.append([x0, y0, w, h])
-    
+
     one_box = None
     for gtb in gt_bboxes:
         if one_box is None:
