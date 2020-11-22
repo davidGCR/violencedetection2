@@ -907,6 +907,12 @@ def skorch_a():
             callbacks.append(cp)
             #print('checkpoint_path: ', checkpoint_path)
 
+        optimizer=optim.SGD
+        # if args.modelType == 'c3d_v2':
+        #     from MODELS.c3d_v2 import get_1x_lr_params, get_10x_lr_params
+        #     train_params = [{'params': get_1x_lr_params(PretrainedModel), 'lr': args.lr},
+        #                 {'params': get_10x_lr_params(PretrainedModel), 'lr': args.lr * 10}]
+        #     optimizer = optim.SGD(train_params, lr=args.lr, momentum=0.9, weight_decay=5e-4)
         print('Running in: ', DEVICE)
         if DEVICE=='cpu':
             net = NeuralNetClassifier(
@@ -915,7 +921,7 @@ def skorch_a():
                     lr=args.lr,
                     batch_size=args.batchSize,
                     max_epochs=args.numEpochs,
-                    optimizer=optim.SGD,
+                    optimizer=optimizer,
                     optimizer__momentum=0.9,
                     iterator_train__shuffle=True,
                     iterator_train__num_workers=4,
@@ -931,7 +937,7 @@ def skorch_a():
                     lr=args.lr,
                     batch_size=args.batchSize,
                     max_epochs=args.numEpochs,
-                    optimizer=optim.SGD,
+                    optimizer=optimizer,
                     optimizer__momentum=0.9,
                     iterator_train__shuffle=True,
                     iterator_train__num_workers=4,
@@ -951,7 +957,7 @@ def skorch_a():
                     lr=args.lr,
                     batch_size=args.batchSize,
                     max_epochs=args.numEpochs,
-                    optimizer=optim.SGD,
+                    optimizer=optimizer,
                     optimizer__momentum=0.9,
                     iterator_train__shuffle=True,
                     iterator_train__num_workers=4,
