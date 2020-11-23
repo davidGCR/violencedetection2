@@ -106,12 +106,14 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+
             if phase == 'val':
                 wandb.log({"Test Accuracy": epoch_loss, "Test Loss": epoch_acc})
             else:
                 wandb.log({"Train Accuracy": epoch_loss, "Train Loss": epoch_acc})
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+
             if phase == 'val':
                 early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
             else:
@@ -604,6 +606,7 @@ def args_2_checkpoint_path(args, fold=0):
 
 def build_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--lib", type=str)
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
     parser.add_argument("--inputSize", type=int)
     parser.add_argument("--useValSplit", type=lambda x: (str(x).lower() == 'true'), default=False)
@@ -634,8 +637,8 @@ def build_args():
     return args
 
 
-def __my_main__():
-    args = build_args()
+def __pytorch__(args):
+    # args = build_args()
 
     wandb.login()
 
@@ -830,7 +833,7 @@ from sklearn.metrics import accuracy_score
 import wandb
 
 
-def skorch_a():
+def skorch_a(args.):
 
     args = build_args()
     shuffle = True
@@ -1063,7 +1066,12 @@ def skorch_a():
     print("Accuracy: %0.3f (+/- %0.3f)" % (np.array(cv_test_accs).mean(), np.array(cv_test_accs).std() * 2))
 
 
-
+def __my_main__():
+    args = build_args()
+    if args.lib == 'pytorch':
+        __pytorch__(args)
+    else:
+        skorch_a(args)
 
 if __name__ == "__main__":
     # skorch_a()
