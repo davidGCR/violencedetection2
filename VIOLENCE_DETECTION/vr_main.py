@@ -833,9 +833,8 @@ from sklearn.metrics import accuracy_score
 import wandb
 
 
-def skorch_a(args.):
+def skorch_a(args):
 
-    args = build_args()
     shuffle = True
     if args.dataset[0] == 'rwf-2000':
         datasetAll, labelsAll = [], []
