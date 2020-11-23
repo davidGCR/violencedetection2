@@ -50,6 +50,7 @@ from operator import itemgetter
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset, plot_example
 from collections import Counter
 from sklearn.model_selection import train_test_split
+import wandb
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold, path, model_config, phases, metric_to_track=None):
     since = time.time()
@@ -76,9 +77,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             # Iterate over data.
             for data in tqdm(dataloaders[phase]):
                 (inputs, idx, dynamicImages, one_box), labels = data
-                # inputs, dynamicImages, labels, v_names, one_box, paths = data
-                # print('Train function, inputs size=', inputs.size())
-                # print('Train function, labels size=', labels.size())
+                # (inputs, idx, dynamicImages, one_box) = X
 
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
@@ -92,7 +91,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
                     # outputs = model(inputs, one_box) #for roi_pool
-                    outputs = model(inputs)
+                    outputs = model((inputs, idx, dynamicImages, one_box))
                     loss = criterion(outputs, labels)
                     _, preds = torch.max(outputs, 1)
                     # backward + optimize only if in training phase
@@ -106,6 +105,12 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+
+            if phase == 'val':
+                wandb.log({"Test Accuracy": epoch_loss, "Test Loss": epoch_acc})
+            else:
+                wandb.log({"Train Accuracy": epoch_loss, "Train Loss": epoch_acc})
+
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
             if phase == 'val':
                 early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
@@ -597,21 +602,6 @@ def args_2_checkpoint_path(args, fold=0):
     checkpoint_path = os.path.join(constants.PATH_RESULTS, args.dataset[0].upper(), 'checkpoints', 'TemporalStream_Best_model-{}-fold={}.pt'.format(ss, fold))
     return checkpoint_path
 
-# create a keyvalue class
-class keyvalue(argparse.Action):
-    # Constructor calling
-    def __call__( self , parser, namespace,
-                 values, option_string = None):
-        setattr(namespace, self.dest, dict())
-        print('VAluessss=', values)
-
-        for value in values:
-            print('VAlue=', value)
-            # split it into key and value
-            key, value = value.split('=')
-            # assign into dictionary
-            getattr(namespace, self.dest)[key] = value
-
 def build_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modelType", type=str, default="alexnet", help="model")
@@ -647,6 +637,8 @@ def build_args():
 def __my_main__():
     args = build_args()
 
+    wandb.login()
+
     if args.splitType == 'cam':
          __weakly_localization__()
          return 0
@@ -675,9 +667,12 @@ def __my_main__():
     # for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
     for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
+        wandb_run = wandb.init(project="pytorch-violencedetection2")
+        wandb_run.config.update(vars(args))
+
         print("**************** Fold:{}/{} ".format(fold, folds_number))
         if args.dataset[0] == 'rwf-2000':
-            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0])
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
             print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
         else:
             train_x, train_y, test_x, test_y = None, None, None, None
@@ -688,21 +683,6 @@ def __my_main__():
             test_y = list(itemgetter(*test_idx)(labelsAll))
             test_numFrames = list(itemgetter(*test_idx)(numFramesAll))
 
-        train_dataset = ViolenceDataset(videos=train_x,
-                                        labels=train_y,
-                                        numFrames=train_numFrames,
-                                        spatial_transform=transforms['train'],
-                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
-                                        videoSegmentLength=args.videoSegmentLength,
-                                        positionSegment=args.positionSegment,
-                                        overlaping=args.overlapping,
-                                        frame_skip=args.frameSkip,
-                                        skipInitialFrames=args.skipInitialFrames,
-                                        ppType=None,
-                                        useKeyframes=args.useKeyframes,
-                                        windowLen=args.windowLen,
-                                        dataset=args.dataset[0])
-        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
 
         test_dataset = ViolenceDataset(videos=test_x,
                                         labels=test_y,
@@ -718,33 +698,108 @@ def __my_main__():
                                         useKeyframes=args.useKeyframes,
                                         windowLen=args.windowLen,
                                         dataset=args.dataset[0])
-        test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
 
-        dataloaders = {'train': train_dataloader, 'val': test_dataloader}
+        print('Label distribution:')
+        print('Train=', Counter(train_y))
+        # print('Val=', Counter(val_y))
+        print('Test=', Counter(test_y))
+        if args.useValSplit:
+            train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
+            #Label distribution
+            # print('Label distribution:')
+            # print('Train=', Counter(train_y))
+            print('Val=', Counter(val_y))
+            # print('Test=', Counter(test_y))
 
-        if args.transferModel is not None:
-            model = load_model(args.transferModel)
-        else:
-            model, _ = initialize_model(model_name=args.modelType,
-                                        num_classes=2,
-                                        freezeConvLayers=args.freezeConvLayers,
-                                        numDiPerVideos=args.numDynamicImagesPerVideo,
-                                        joinType=args.joinType,
-                                        use_pretrained=True)
+            val_dataset = ViolenceDataset(videos=val_x,
+                                            labels=val_y,
+                                            numFrames=val_numFrames,
+                                            spatial_transform=transforms['val'],
+                                            numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                            videoSegmentLength=args.videoSegmentLength,
+                                            positionSegment=args.positionSegment,
+                                            overlaping=args.overlapping,
+                                            frame_skip=args.frameSkip,
+                                            skipInitialFrames=args.skipInitialFrames,
+                                            ppType=None,
+                                            useKeyframes=args.useKeyframes,
+                                            windowLen=args.windowLen,
+                                            dataset=args.dataset[0])
+
+        train_dataset = ViolenceDataset(videos=train_x,
+                                        labels=train_y,
+                                        numFrames=train_numFrames,
+                                        spatial_transform=transforms['train'],
+                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                        videoSegmentLength=args.videoSegmentLength,
+                                        positionSegment=args.positionSegment,
+                                        overlaping=args.overlapping,
+                                        frame_skip=args.frameSkip,
+                                        skipInitialFrames=args.skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen,
+                                        dataset=args.dataset[0])
+
+        test_dataset = ViolenceDataset(videos=test_x,
+                                        labels=test_y,
+                                        numFrames=test_numFrames,
+                                        spatial_transform=transforms['val'],
+                                        numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
+                                        videoSegmentLength=args.videoSegmentLength,
+                                        positionSegment=args.positionSegment,
+                                        overlaping=args.overlapping,
+                                        frame_skip=args.frameSkip,
+                                        skipInitialFrames=args.skipInitialFrames,
+                                        ppType=None,
+                                        useKeyframes=args.useKeyframes,
+                                        windowLen=args.windowLen,
+                                        dataset=args.dataset[0])
+
+
+        if not args.useValSplit:
+            val_dataset = test_dataset
+
+        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
+        val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
+
+        dataloaders = {'train': train_dataloader, 'val': val_dataloader}
+
+        # if args.pretrained is not None:
+        #     model = load_model(args.pretrained)
+        # else:
+        #     model = initialize_model(model_name=args.modelType,
+        #                                 num_classes=2,
+        #                                 freezeConvLayers=args.freezeConvLayers,
+        #                                 numDiPerVideos=args.numDynamicImagesPerVideo,
+        #                                 joinType=args.joinType,
+        #                                 pretrained=args.pretrained)
+        model = initialize_model(model_name=args.modelType,
+                                    num_classes=2,
+                                    freezeConvLayers=args.freezeConvLayers,
+                                    numDiPerVideos=args.numDynamicImagesPerVideo,
+                                    joinType=args.joinType,
+                                    pretrained=args.pretrained)
         model.to(DEVICE)
-        params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
-        # print(params_to_update)
-        optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-        criterion = nn.CrossEntropyLoss()
 
-        # for (key, val) in config.items():
-        #     if key != '\'log_dir\'':
-        #         ss.join("{!s}={!r}".format(key, val))
+        if args.modelType == 'c3d_v2':
+            from MODELS.c3d_v2 import get_1x_lr_params, get_10x_lr_params
+            params_to_update = [{'params': get_1x_lr_params(model), 'lr': args.lr},
+                            {'params': get_10x_lr_params(model), 'lr': args.lr * 10}]
+            optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9, weight_decay=5e-4)
+            # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        else:
+            params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
+            optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        criterion = nn.CrossEntropyLoss()
+        wandb.watch(model, log="all")
+
         # log_dir = os.path.join(constants.PATH_RESULTS, args.dataset.upper(), 'tensorboard-runs', experimentConfig_str)
         # writer = SummaryWriter(log_dir)
-        if args.saveCheckpoint:
-            checkpoint_path = args_2_checkpoint_path(args, fold=fold)
+        # if args.saveCheckpoint:
+        #     checkpoint_path = args_2_checkpoint_path(args, fold=fold)
 
         phases = ['train', 'val']
         model, best_acc, val_loss_min, best_epoch = train_model(model,
@@ -876,7 +931,7 @@ def skorch_a():
         #                         joinType=args.joinType,
         #                         freezeConvLayers=args.freezeConvLayers)
 
-        PretrainedModel, _ = initialize_model(model_name=args.modelType,
+        PretrainedModel = initialize_model(model_name=args.modelType,
                                         num_classes=2,
                                         freezeConvLayers=args.freezeConvLayers,
                                         numDiPerVideos=args.numDynamicImagesPerVideo,
@@ -908,11 +963,7 @@ def skorch_a():
             #print('checkpoint_path: ', checkpoint_path)
 
         optimizer=optim.SGD
-        # if args.modelType == 'c3d_v2':
-        #     from MODELS.c3d_v2 import get_1x_lr_params, get_10x_lr_params
-        #     train_params = [{'params': get_1x_lr_params(PretrainedModel), 'lr': args.lr},
-        #                 {'params': get_10x_lr_params(PretrainedModel), 'lr': args.lr * 10}]
-        #     optimizer = optim.SGD(train_params, lr=args.lr, momentum=0.9, weight_decay=5e-4)
+
         print('Running in: ', DEVICE)
         if DEVICE=='cpu':
             net = NeuralNetClassifier(
@@ -1015,6 +1066,6 @@ def skorch_a():
 
 
 if __name__ == "__main__":
-    skorch_a()
-    # __my_main__()
+    # skorch_a()
+    __my_main__()
     # __weakly_localization__()
