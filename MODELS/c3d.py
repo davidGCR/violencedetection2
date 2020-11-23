@@ -80,24 +80,35 @@ class C3D(nn.Module):
         self.dropout = nn.Dropout(p=self.dropout_ratio)
 
         self.fc8 = nn.Linear(4096, 2)
+        self.init_weights()
 
     def init_weights(self):
         """Initiate the parameters either from existing checkpoint or from
         scratch."""
-        if isinstance(self.pretrained, str):
-            # logger = get_root_logger()
-            # logger.info(f'load model from: {self.pretrained}')
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv3d):
+                kaiming_init(m)
+            elif isinstance(m, nn.Linear):
+                normal_init(m, std=self.init_std)
+            elif isinstance(m, _BatchNorm):
+                constant_init(m, 1)
+        if self.pretrained is not None:
             load_checkpoint(self, self.pretrained, strict=False)
 
-        elif self.pretrained is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv3d):
-                    kaiming_init(m)
-                elif isinstance(m, nn.Linear):
-                    normal_init(m, std=self.init_std)
-                elif isinstance(m, _BatchNorm):
-                    constant_init(m, 1)
+        # if isinstance(self.pretrained, str):
+        #     # logger = get_root_logger()
+        #     # logger.info(f'load model from: {self.pretrained}')
+        #     load_checkpoint(self, self.pretrained, strict=False)
+
+        # elif self.pretrained is None:
+        #     for m in self.modules():
+        #         if isinstance(m, nn.Conv3d):
+        #             kaiming_init(m)
+        #         elif isinstance(m, nn.Linear):
+        #             normal_init(m, std=self.init_std)
+        #         elif isinstance(m, _BatchNorm):
+        #             constant_init(m, 1)
 
         else:
             raise TypeError('pretrained must be a str or None')

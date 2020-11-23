@@ -9,7 +9,7 @@ from torchvision import datasets, models, transforms
 import MODELS.Vgg as vgg
 from MODELS.ViolenceModels import AlexNet, AlexNetV2, ResNet, Densenet, AlexNetConv, ResNetConv, ResnetXt, ResNet_ROI_Pool
 from MODELS.c3d import C3D, C3D_bn, C3D_roi_pool
-from MODELS.c3d_v2 import  C3D_v2
+from MODELS.c3d_v2 import  C3D_v2, C3D_v2_roi_pool
 
 def initializeTransferModel(model_name, num_classes, feature_extract, numDiPerVideos, joinType, classifier_file):
     # if model_name == "resnet18" or model_name == "resnet34":
@@ -52,14 +52,14 @@ def initialize_model(model_name, num_classes, freezeConvLayers, numDiPerVideos, 
     elif model_name == "c3d":
         # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
         model_ft = C3D(pretrained=pretrained)
-        model_ft.init_weights()
+        # model_ft.init_weights()
         # input_size = 224
     elif model_name == "c3d_bn":
         # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
         model_ft = C3D_bn(pretrained=pretrained)
         model_ft.init_weights()
         # input_size = 224
-    elif model_name == "C3D_roi_pool":
+    elif model_name == "c3d_roi_pool":
         # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
         model_ft = C3D_roi_pool(pretrained=pretrained)
         model_ft.init_weights()
@@ -67,8 +67,9 @@ def initialize_model(model_name, num_classes, freezeConvLayers, numDiPerVideos, 
     elif model_name == "c3d_v2":
         # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
         model_ft = C3D_v2(num_classes=num_classes, pretrained=pretrained)
-        # model_ft.init_weights()
-        # input_size = 224
+    elif model_name == "c3d_v2_roi_pool":
+        # model_ft = Densenet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
+        model_ft = C3D_v2_roi_pool(num_classes=num_classes, pretrained=pretrained)
     # elif model_name == "efficientnet":
     #     model_ft = MyEfficientNet(num_classes, numDiPerVideos, joinType, freezeConvLayers)
     #     input_size = 224
