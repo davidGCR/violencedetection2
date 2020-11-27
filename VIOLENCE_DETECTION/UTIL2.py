@@ -1,9 +1,9 @@
 
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms, rwf_2000_Transforms
-from datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, vifLoadData, crime2localLoadData, customize_kfold, rwf_load_data
+# import os
+# import sys
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from VIOLENCE_DETECTION.transforms import hockeyTransforms, vifTransforms, ucf2CrimeTransforms, rwf_2000_Transforms
+from VIOLENCE_DETECTION.datasetsMemoryLoader import hockeyLoadData, hockeyTrainTestSplit, vifLoadData, crime2localLoadData, customize_kfold, rwf_load_data
 # from MODELS.ViolenceModels import
 from UTIL.chooseModel import initialize_model
 import torch
