@@ -14,6 +14,7 @@ import random
 import torchvision.transforms as transforms
 from operator import itemgetter
 from UTIL.bbox_gt_loader import load_bbox_gt
+# from PREPROCESING.segmentation import denoise, cluster_segmentation
 
 class ViolenceDataset(Dataset):
     def __init__(self, videos,
@@ -175,11 +176,20 @@ class ViolenceDataset(Dataset):
         for sequence in video_segments:
             # start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(sequence)
+
             # end_time = time.time()
             # preprocessing_time += (end_time - start_time)
             dynamicImages.append(np.array(imgPIL))
             ipts.append(self.spatial_transform(imgPIL.convert("RGB")))
         ipts = torch.stack(ipts, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+
+        # segmented_images = dynamicImages.copy()
+        # for i in range(len(segmented_images)):
+        #     segmented_images[i]=denoise(dynamicImages[i],False)
+        #     segmented_image, image_tmp=cluster_segmentation(dynamicImages[i],3, [(0,0,0), (255,255,255), (255,255,255)])
+        #     segmented_images[i]=image_tmp
+        # sum_maps = np.sum(segmented_images, axis=0)
+
 
         gt_bboxes, one_box = None, None
         if self.dataset == 'ucfcrime2local':

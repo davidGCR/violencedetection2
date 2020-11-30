@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from VIOLENCE_DETECTION.CAM import compute_CAM, cam2bb
+# from VIOLENCE_DETECTION.CAM import compute_CAM, cam2bb
 from VIOLENCE_DETECTION.datasetsMemoryLoader import load_fold_data
 from VIDEO_REPRESENTATION.dynamicImage import getDynamicImage
 from VIOLENCE_DETECTION.metrics import loc_error
@@ -11,8 +11,33 @@ import cv2
 import torch
 import numpy as np
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import ImageGrid
+from sklearn.cluster import KMeans
+from collections import Counter
 
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, transforms_dataset, plot_example
+
+dataset = 'ucfcrime2local'
+# if dataset == 'rwf-2000':
+#     train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(dataset)
+
+datasetAll, labelsAll, numFramesAll, transforms = base_dataset(dataset, input_size=224)
+
+dataset = ViolenceDataset(videos=datasetAll,
+                                labels=labelsAll,
+                                numFrames=numFramesAll,
+                                spatial_transform=transforms['val'],
+                                numDynamicImagesPerVideo=5,
+                                videoSegmentLength=10,
+                                positionSegment='begin',
+                                overlaping=0,
+                                frame_skip=0,
+                                skipInitialFrames=0,
+                                ppType=None,
+                                useKeyframes=None,
+                                windowLen=None,
+                                dataset=dataset)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1)
 
 def background_model(dynamicImages, iters=10):
     # img_0 = dynamicImages[0]
@@ -319,27 +344,6 @@ def FastVD(i0, i1):
     return magnitude_spectrum0, magnitude_spectrum1, dft0, dft1
 
 def FFT():
-    dataset = 'ucfcrime2local'
-    # if dataset == 'rwf-2000':
-    #     train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(dataset)
-
-    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(dataset, input_size=224)
-
-    dataset = ViolenceDataset(videos=datasetAll,
-                                    labels=labelsAll,
-                                    numFrames=numFramesAll,
-                                    spatial_transform=transforms['val'],
-                                    numDynamicImagesPerVideo=6,
-                                    videoSegmentLength=5,
-                                    positionSegment='begin',
-                                    overlaping=0,
-                                    frame_skip=0,
-                                    skipInitialFrames=0,
-                                    ppType=None,
-                                    useKeyframes=None,
-                                    windowLen=None,
-                                    dataset=dataset)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1)
     y, y_preds = [], []
     for data in dataloader:
         # ipts, dynamicImages, label, vid_name
@@ -376,8 +380,59 @@ def FFT():
         # plt.imshow(m1/m0, cmap = 'gray')
         # plt.show()
 
+def denoise(frame, gray):
+    if gray:
+        frame = cv2.fastNlMeansDenoising(frame,None,10,7,21)
+    else:
+        frame = cv2.fastNlMeansDenoisingColored(frame,None,10,10,7,21)
+    return frame
+
+def palette(clusters):
+    width=300
+    palette = np.zeros((50, width, 3), np.uint8)
+    steps = width/clusters.cluster_centers_.shape[0]
+    for idx, centers in enumerate(clusters.cluster_centers_):
+        palette[:, int(idx*steps):(int((idx+1)*steps)), :] = centers
+    return palette
+
+def palette_perc(k_cluster):
+    width = 300
+    palette = np.zeros((50, width, 3), np.uint8)
+
+    n_pixels = len(k_cluster.labels_)
+    counter = Counter(k_cluster.labels_) # count how many pixels per cluster
+    print(counter)
+    perc = {}
+    for i in counter:
+        perc[i] = np.round(counter[i]/n_pixels, 2)
+    perc = dict(sorted(perc.items()))
+
+    #for logging purposes
+    print(perc)
+    print(k_cluster.cluster_centers_)
+
+    step = 0
+
+    for idx, centers in enumerate(k_cluster.cluster_centers_):
+        palette[:, step:int(step + perc[idx]*width+1), :] = centers
+        step += int(perc[idx]*width+1)
+
+    return palette
+
+def frames_mean(frames_list, gray=False):
+    if gray:
+        for i in range(len(frames_list)):
+            frames_list[i] = cv2.cvtColor(frames_list[i], cv2.COLOR_BGR2GRAY)
+
+    # for i in range(len(frames_list)):
+    #     frames_list[i]=denoise(frames_list[i],gray)
+    medianFrame = np.median(frames_list, axis=0).astype(dtype=np.uint8)
+    th, mask = cv2.threshold(medianFrame, 124, 255, cv2.THRESH_BINARY)
+
+    return medianFrame, mask
+
 def object_detector():
-    import torch
+
     precision = 'fp32'
     ssd_model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd', model_math=precision)
     utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd_processing_utils')
@@ -396,15 +451,13 @@ def object_detector():
     results_per_input = utils.decode_results(detections_batch)
     best_results_per_input = [utils.pick_best(results, 0.40) for results in results_per_input]
     classes_to_labels = utils.get_coco_object_dictionary()
-    from matplotlib import pyplot as plt
+    # from matplotlib import pyplot as plt
     import matplotlib.patches as patches
 
     for image_idx in range(len(best_results_per_input)):
         fig, ax = plt.subplots(1)
-        # Show original, denormalized image...
         image = inputs[image_idx] / 2 + 0.5
         ax.imshow(image)
-        # ...with detections
         bboxes, classes, confidences = best_results_per_input[image_idx]
         for idx in range(len(bboxes)):
             left, bot, right, top = bboxes[idx]
@@ -414,6 +467,136 @@ def object_detector():
             ax.text(x, y, "{} {:.0f}%".format(classes_to_labels[classes[idx] - 1], confidences[idx]*100), bbox=dict(facecolor='white', alpha=0.5))
     plt.show()
 
+def cluster_segmentation(image, k=3, values=[(0,0,0), (124,124,124), (255,255,255)]):
+    # image = frame.copy()
+    # Reshaping the image into a 2D array of pixels and 3 color values (RGB)
+    pixel_vals = image.reshape((-1,3))
+
+    # Convert to float type
+    pixel_vals = np.float32(pixel_vals)
+    #the below line of code defines the criteria for the algorithm to stop running,
+    #which will happen is 100 iterations are run or the epsilon (which is the required accuracy)
+    #becomes 85%
+    criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 100, 0.85)
+
+    # then perform k-means clustering wit h number of clusters defined as 3
+    #also random centres are initally chosed for k-means clustering
+    retval, labels, centers = cv2.kmeans(pixel_vals, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    # convert data into 8-bit values
+    centers = np.uint8(centers)
+    # print('image:', image.shape)#(240,320,3)
+    # print('centers:', centers.shape,  centers)#(3,3)
+    # print('labels:', labels.shape)#(76800, 1) (76800,)
+
+    image_tmp = image.copy()
+    image_tmp = image_tmp.reshape((-1,3))
+    counter = Counter(labels.flatten())
+
+    counter = {k: v for k, v in sorted(counter.items(), key=lambda item: item[1], reverse=True)}
+    # values = [(0,0,0), (124,124,124), (255,255,255)]
+    for i, key in enumerate(counter.keys()):
+        # print('00000000=====',i,key)
+        image_tmp[labels.flatten()==int(key)] = values[i]
+
+    # unique, counts = numpy.unique(a, return_counts=True)
+    # print('Counter: ', counter)
+    # cl1=np.where(labels.flatten()==0)
+    # image_tmp[labels.flatten()==0] = 0
+    # image_tmp[labels.flatten()==1] = 0.5
+    # image_tmp[labels==3] = 1
+    # print('label__:', labels[:10])
+
+    segmented_data = centers[labels.flatten()]
+    # print('segmented_data:', segmented_data.shape)#(240,320,3)
+
+    # reshape data into the original image dimensions
+    segmented_image = segmented_data.reshape((image.shape))
+    image_tmp = image_tmp.reshape((image.shape))
+
+    return segmented_image, image_tmp
+
+def preprocess(image):
+
+    print('Batch=',batch.size())
+
+
 if __name__ == '__main__':
     # FFT()
-    object_detector()
+    # object_detector()
+    for data in dataloader:
+        (x, idx, dynamicImages, bboxes), labels = data
+        # vid_name = datasetAll[idx.item()]
+        # print(vid_name)
+        print('---inputs=', x.size(), x.type())
+        print('---dynamicImages=', len(dynamicImages))
+
+        imgs = []
+        for i in range(len(dynamicImages)):
+            dyn_img = torch.squeeze(dynamicImages[i]).numpy()
+            imgs.append(dyn_img)
+
+        ########################## DENOISING ##########################
+        gray=False
+        imgs_denoised = imgs.copy()
+        for i in range(len(imgs_denoised)):
+            imgs_denoised[i]=denoise(imgs_denoised[i],gray)
+
+        ########################## CLUSTER SEGMENTATION ##########################
+
+        for i in range(len(imgs_denoised)):
+            segmented_image, image_tmp=cluster_segmentation(imgs_denoised[i],3, [(0,0,0), (255,255,255), (255,255,255)])
+            imgs_denoised[i]=image_tmp
+
+        # threshold=124
+        sum_maps = np.sum(imgs_denoised, axis=0)
+        sum_maps_gray = cv2.cvtColor(sum_maps.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        # cv2.imshow("contours", sum_maps_gray)
+        # cv2.waitKey(0)
+        # plt.imshow(sum_maps)
+        # plt.show()
+        im2, contours, hierarchy = cv2.findContours(sum_maps_gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        sm=sum_maps.copy().astype(np.uint8)
+        # cv2.drawContours(sm, contours, -1, (0,255,0), 3)
+        # cv2.imshow("contours", sm)
+        # cv2.waitKey(0)
+
+        contours_poly = [None]*len(contours)
+        boundRect = [None]*len(contours)
+        for i, c in enumerate(contours):
+            contours_poly[i] = cv2.approxPolyDP(c, 3, True)
+            boundRect[i] = cv2.boundingRect(contours_poly[i])
+
+        # Draw polygonal contour + bonding rects + circles
+        color=(0,255,0)
+        for i in range(len(contours)):
+            # cv2.drawContours(sum_maps, contours_poly, i, color)
+            cv2.rectangle(sm, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 1)
+
+        imgs.append(sm)
+
+        ########################## COLOR_PALETTE ##########################
+        # clt=KMeans(n_clusters=3)
+        # for i in range(len(imgs_denoised)):
+        #     clt_1 = clt.fit(imgs_denoised[i].reshape(-1, 3))
+        #     # plt.imshow(palette(clt_1))
+        #     plt.imshow(palette_perc(clt_1))
+        #     plt.show()
+
+        ########################## MEAN ##########################
+
+        #Mean
+        # m_frame, mask = frames_mean(imgs,False)
+        # imgs.append(m_frame)
+        # imgs.append(mask)
+
+        ########################## PLOT ##########################
+        fig = plt.figure(figsize=(15., 5.))
+        grid = ImageGrid(fig, 111,  # similar to subplot(111)
+                         nrows_ncols=(2, len(imgs)),  # creates 2x2 grid of axes
+                         axes_pad=0.1,  # pad between axes in inch.
+                         )
+
+        for ax, im in zip(grid, imgs+imgs_denoised):
+            ax.imshow(im, cmap='gray')
+        plt.show()
