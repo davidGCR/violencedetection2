@@ -18,6 +18,7 @@ PATH_VIF_README = root + '/DATASETS/violentflows/readme'
 PATH_RWF_2000_VIDEOS = root + '/DATASETS/RWF-2000/videos'
 PATH_RWF_2000_FRAMES = root + '/DATASETS/RWF-2000/frames'
 PATH_RWF_2000_README = root + '/DATASETS/RWF-2000/readme'
+PATH_RWF_2000_ROIS = root + '/DATASETS/RWF-2000/rois'
 
 # import sys
 # IN_COLAB = 'google.colab' in sys.modules
