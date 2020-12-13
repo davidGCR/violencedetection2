@@ -1,8 +1,8 @@
 python3  VIOLENCE_DETECTION/vr_main.py \
 --lib skorch \
---modelType c3d \
+--modelType c3d_roi_pool \
 --inputSize 112 \
---dataset ucfcrime2local \
+--dataset rwf-2000 \
 --lr 0.01 \
 --useValSplit False \
 --numEpochs 50 \
@@ -10,16 +10,16 @@ python3  VIOLENCE_DETECTION/vr_main.py \
 --batchSize 8 \
 --freezeConvLayers True \
 --joinType maxTempPool \
---videoSegmentLength 10 \
+--videoSegmentLength 20 \
 --numDynamicImagesPerVideo 16 \
 --positionSegment begin \
 --skipInitialFrames 20 \
 --overlapping 0.5 \
 --frameSkip 0 \
---saveCheckpoint True \
+--saveCheckpoint False \
 --splitType cross-val \
 --patience 10 \
---pretrained /media/david/datos/PAPERS-SOURCE_CODE/violencedetection2/MODELS/pretrained/c3d-pretrained.pth
+# --pretrained /media/david/datos/PAPERS-SOURCE_CODE/violencedetection2/MODELS/pretrained/c3d-pretrained.pth
 # --pretrained https://download.openmmlab.com/mmaction/recognition/c3d/c3d_sports1m_pretrain_20201016-dcc47ddc.pth
 # --transferModel RESULTS/HOCKEY/checkpoints/DYN_Stream-_dataset=[hockey]_model=resnet50_numEpochs=25_freezeConvLayers=True_numDynamicImages=1_segmentLength=30_frameSkip=0_skipInitialFrames=0_overlap=0.0_joinType=maxTempPool_useKeyframes=None_windowLen=0-fold=1.pt
 # --useKeyframes blur-max \

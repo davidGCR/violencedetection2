@@ -1,12 +1,15 @@
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# from VIOLENCE_DETECTION.CAM import compute_CAM, cam2bb
-from VIOLENCE_DETECTION.datasetsMemoryLoader import load_fold_data
-from VIDEO_REPRESENTATION.dynamicImage import getDynamicImage
-from VIOLENCE_DETECTION.metrics import loc_error
-from MODELS.ViolenceModels import ResNet_ROI_Pool, ResNet
-from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
+# import os
+# import sys
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# from VIOLENCE_DETECTION.datasetsMemoryLoader import load_fold_data
+# from VIDEO_REPRESENTATION.dynamicImage import getDynamicImage
+# from VIOLENCE_DETECTION.metrics import loc_error
+# from MODELS.ViolenceModels import ResNet_ROI_Pool, ResNet
+# from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
+# from constants import DEVICE
+# from VIOLENCE_DETECTION.UTIL2 import base_dataset, transforms_dataset, plot_example
+
 import cv2
 import torch
 import numpy as np
@@ -14,8 +17,6 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from sklearn.cluster import KMeans
 from collections import Counter
-from constants import DEVICE
-from VIOLENCE_DETECTION.UTIL2 import base_dataset, transforms_dataset, plot_example
 from matplotlib import cm
 from PIL import Image
 from torchvision import transforms
@@ -27,23 +28,23 @@ dataset = 'ucfcrime2local'
 # if dataset == 'rwf-2000':
 #     train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(dataset)
 
-datasetAll, labelsAll, numFramesAll, transforms_p = base_dataset(dataset, input_size=224)
+# datasetAll, labelsAll, numFramesAll, transforms_p = base_dataset(dataset, input_size=224)
 
-dataset = ViolenceDataset(videos=datasetAll,
-                                labels=labelsAll,
-                                numFrames=numFramesAll,
-                                spatial_transform=transforms_p['val'],
-                                numDynamicImagesPerVideo=5,
-                                videoSegmentLength=10,
-                                positionSegment='begin',
-                                overlaping=0,
-                                frame_skip=0,
-                                skipInitialFrames=0,
-                                ppType=None,
-                                useKeyframes=None,
-                                windowLen=None,
-                                dataset=dataset)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1)
+# dataset = ViolenceDataset(videos=datasetAll,
+#                                 labels=labelsAll,
+#                                 numFrames=numFramesAll,
+#                                 spatial_transform=transforms_p['val'],
+#                                 numDynamicImagesPerVideo=5,
+#                                 videoSegmentLength=10,
+#                                 positionSegment='begin',
+#                                 overlaping=0,
+#                                 frame_skip=0,
+#                                 skipInitialFrames=0,
+#                                 ppType=None,
+#                                 useKeyframes=None,
+#                                 windowLen=None,
+#                                 dataset=dataset)
+# dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1)
 
 def background_model(dynamicImages, iters=10):
     # img_0 = dynamicImages[0]
@@ -597,64 +598,36 @@ class ObjectDetectionPipeline:
         #     filehandle.writelines("{}\t {}\n".format(name, rois) for [name, rois] in rois_l)
 
     def rois_load(self, file):
-        count=0
-        with open(file) as fp: 
-            for line in fp: 
-                count += 1
-                row=line.split()
-                frame = row[0]
-                data = row[1]
-                print("Line{}".format(count))
-                print("---{}".format(frame))
-                print("---{}".format(data))
-                if count > 9:
-                    return
+        d = json.load(open(file, "r"))
+        return d
 
 def object_detector():
-    detector = ObjectDetectionPipeline(device=DEVICE, threshold=0.5)
-    setdata='val/Fight'
-    videos_database = os.listdir(os.path.join(constants.PATH_RWF_2000_FRAMES,setdata))
-    videos_database = [os.path.join(constants.PATH_RWF_2000_FRAMES, setdata, v) for v in videos_database]
+    # detector = ObjectDetectionPipeline(device=DEVICE, threshold=0.5)
+    # setdata='val/Fight'
+    # videos_database = os.listdir(os.path.join(constants.PATH_RWF_2000_FRAMES,setdata))
+    # videos_database = [os.path.join(constants.PATH_RWF_2000_FRAMES, setdata, v) for v in videos_database]
     
-    if not os.path.isdir(os.path.join(constants.PATH_RWF_2000_ROIS, setdata)):
-        os.mkdir(os.path.join(constants.PATH_RWF_2000_ROIS, setdata))
+    # if not os.path.isdir(os.path.join(constants.PATH_RWF_2000_ROIS, setdata)):
+    #     os.mkdir(os.path.join(constants.PATH_RWF_2000_ROIS, setdata))
 
-    # detector.rois_load("/media/david/datos/Violence DATA/DATASETS/RWF-2000/rois/train/Fight/_2RYnSFPD_U_0.txt")
-    
+    # d = detector.rois_load(os.path.join(constants.PATH_RWF_2000_ROIS,'train/Fight/_2RYnSFPD_U_0'))
+    d = json.load(open(os.path.join(constants.PATH_RWF_2000_ROIS,'train/Fight/_2RYnSFPD_U_0'), "r"))
+    print(d[10], len(d))
 
-    # output_imgs = detector("/media/david/datos/Violence DATA/DATASETS/RWF-2000/frames/train/Fight/dfsafsghg_325/frame50.jpg")
-    # frames_pth = os.listdir(videos_database[0])
-    # frames_pth = [os.path.join(videos_database[0],f) for f in frames_pth]
-    # rois = detector(frames_pth[:6])
-    # detector.save(rois, 'rois.txt')
-    # print('output_imgs:', len(rois), rois)
-
-    for i,video in enumerate(videos_database):
-        print(i, video)
-        frames_pth = os.listdir(video)
-        frames_pth.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-        frames_pth = [os.path.join(video,f) for f in frames_pth]
-        rois = detector(frames_pth)
-        _, v_name = os.path.split(video)
-        path_out =os.path.join(constants.PATH_RWF_2000_ROIS,setdata,v_name)
-        detector.rois_save(rois, path_out)
+    # for i,video in enumerate(videos_database):
+    #     print(i, video)
+    #     frames_pth = os.listdir(video)
+    #     frames_pth.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+    #     frames_pth = [os.path.join(video,f) for f in frames_pth]
+    #     rois = detector(frames_pth)
+    #     _, v_name = os.path.split(video)
+    #     path_out =os.path.join(constants.PATH_RWF_2000_ROIS,setdata,v_name)
+    #     detector.rois_save(rois, path_out)
     #     # plt.figure(figsize=(10, 10))
     #     output_imgs = detector(get_frame_cap(video))
     #     print('output_imgs:', len(output_imgs))
     #     # plt.imshow(output_imgs[2])
     #     # plt.show()
-
-
-    # precision = 'fp32'
-    # ssd_model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd', model_math=precision)
-    # utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_ssd_processing_utils')
-    # ssd_model.to('cuda')
-    # ssd_model.eval()
-    # video = '/media/david/datos/Violence DATA/DATASETS/RWF-2000/frames/train/Fight/0H2s9UJcNJ0_2'
-
-    # uris=os.listdir(video)
-    # uris.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-    # uris = [os.path.join(video, u) for u in uris]
 
     # batchSize = 10
     # rois=[]
@@ -741,98 +714,143 @@ def cluster_segmentation(image, k=3, values=[(0,0,0), (124,124,124), (255,255,25
 
     return segmented_image, image_tmp
 
+def bbox_from_di(imgs, num_imgs=5, plot=False):
+    gray=False
+    m_bboxes = []
+    if len(imgs)>num_imgs:
+        imgs = imgs[0:num_imgs]
+    imgs_denoised = imgs.copy()
+    for i in range(len(imgs_denoised)):
+        imgs_denoised[i]=denoise(imgs_denoised[i],gray)
+    for i in range(len(imgs_denoised)):
+        segmented_image, image_tmp=cluster_segmentation(imgs_denoised[i],3, [(0,0,0), (255,255,255), (255,255,255)])
+        imgs_denoised[i]=image_tmp
+    sum_maps = np.sum(imgs_denoised, axis=0)
+    sum_maps_gray = cv2.cvtColor(sum_maps.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+    val_type=2
+    dilatation_size=5
+    if val_type == 0:
+        dilatation_type = cv2.MORPH_RECT
+    elif val_type == 1:
+        dilatation_type = cv2.MORPH_CROSS
+    elif val_type == 2:
+        dilatation_type = cv2.MORPH_ELLIPSE
+    element = cv2.getStructuringElement(dilatation_type, (2*dilatation_size + 1, 2*dilatation_size+1), (dilatation_size, dilatation_size))
+    sum_maps_gray = cv2.dilate(sum_maps_gray, element)
+    im2, contours, hierarchy = cv2.findContours(sum_maps_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    contours_poly = [None]*len(contours)
+    boundRect = [None]*len(contours)
+    for i, c in enumerate(contours):
+        contours_poly[i] = cv2.approxPolyDP(c, 3, True)
+        boundRect[i] = cv2.boundingRect(contours_poly[i])
+    color=(0,255,0)
+    sm=sum_maps.copy().astype(np.uint8)
+    for i in range(len(contours)):
+        # cv2.drawContours(sum_maps, contours_poly, i, color)
+        x = int(boundRect[i][0])
+        y = int(boundRect[i][1])
+        w = int(boundRect[i][2])
+        h = int(boundRect[i][3])
+        cv2.rectangle(sm, (x, y), (x+w, y+h), color, 1)
+        m_bboxes.append([x,y,w,h])
+    if plot:
+        plt.imshow(sm)
+        plt.show()
+    idx = 0
+    if len(m_bboxes)>1:
+        area = 0
+        for i, m_b in enumerate(m_bboxes):
+            if area<m_b[2]*m_b[3]:
+                area = m_b[2]*m_b[3]
+                idx = i
+                
+    return m_bboxes[idx]
 
 if __name__ == '__main__':
     # FFT()
-    object_detector()
+    # object_detector()
 
-    # for data in dataloader:
-    #     (x, idx, dynamicImages, bboxes), labels = data
-    #     # vid_name = datasetAll[idx.item()]
-    #     # print(vid_name)
-    #     print('---inputs=', x.size(), x.type())
-    #     print('---dynamicImages=', len(dynamicImages))
-    #
-    #     imgs = []
-    #     for i in range(len(dynamicImages)):
-    #         dyn_img = torch.squeeze(dynamicImages[i]).numpy()
-    #         imgs.append(dyn_img)
-    #
-    #     ########################## DENOISING ##########################
-    #     gray=False
-    #     imgs_denoised = imgs.copy()
-    #     for i in range(len(imgs_denoised)):
-    #         imgs_denoised[i]=denoise(imgs_denoised[i],gray)
-    #
-    #     ########################## CLUSTER SEGMENTATION ##########################
-    #
-    #     for i in range(len(imgs_denoised)):
-    #         segmented_image, image_tmp=cluster_segmentation(imgs_denoised[i],3, [(0,0,0), (255,255,255), (255,255,255)])
-    #         imgs_denoised[i]=image_tmp
-    #
-    #     # threshold=124
-    #     sum_maps = np.sum(imgs_denoised, axis=0)
-    #     sum_maps_gray = cv2.cvtColor(sum_maps.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-    #
-    #     val_type=2
-    #     dilatation_size=5
-    #     if val_type == 0:
-    #         dilatation_type = cv2.MORPH_RECT
-    #     elif val_type == 1:
-    #         dilatation_type = cv2.MORPH_CROSS
-    #     elif val_type == 2:
-    #         dilatation_type = cv2.MORPH_ELLIPSE
-    #     element = cv2.getStructuringElement(dilatation_type, (2*dilatation_size + 1, 2*dilatation_size+1), (dilatation_size, dilatation_size))
-    #     sum_maps_gray = cv2.dilate(sum_maps_gray, element)
-    #     imgs.append(sum_maps_gray)
-    #
-    #     # cv2.imshow("contours", sum_maps_gray)
-    #     # cv2.waitKey(0)
-    #     # plt.imshow(sum_maps)
-    #     # plt.show()
-    #     im2, contours, hierarchy = cv2.findContours(sum_maps_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #
-    #     sm=sum_maps.copy().astype(np.uint8)
-    #     # cv2.drawContours(sm, contours, -1, (0,255,0), 3)
-    #     # cv2.imshow("contours", sm)
-    #     # cv2.waitKey(0)
-    #
-    #     contours_poly = [None]*len(contours)
-    #     boundRect = [None]*len(contours)
-    #     for i, c in enumerate(contours):
-    #         contours_poly[i] = cv2.approxPolyDP(c, 3, True)
-    #         boundRect[i] = cv2.boundingRect(contours_poly[i])
-    #
-    #     # Draw polygonal contour + bonding rects + circles
-    #     color=(0,255,0)
-    #     for i in range(len(contours)):
-    #         # cv2.drawContours(sum_maps, contours_poly, i, color)
-    #         cv2.rectangle(sm, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 1)
-    #
-    #     imgs_denoised.append(sm)
-    #
-    #     ########################## COLOR_PALETTE ##########################
-    #     # clt=KMeans(n_clusters=3)
-    #     # for i in range(len(imgs_denoised)):
-    #     #     clt_1 = clt.fit(imgs_denoised[i].reshape(-1, 3))
-    #     #     # plt.imshow(palette(clt_1))
-    #     #     plt.imshow(palette_perc(clt_1))
-    #     #     plt.show()
-    #
-    #     ########################## MEAN ##########################
-    #
-    #     #Mean
-    #     # m_frame, mask = frames_mean(imgs,False)
-    #     # imgs.append(m_frame)
-    #     # imgs.append(mask)
-    #
-    #     ########################## PLOT ##########################
-    #     fig = plt.figure(figsize=(15., 5.))
-    #     grid = ImageGrid(fig, 111,  # similar to subplot(111)
-    #                      nrows_ncols=(2, len(imgs)),  # creates 2x2 grid of axes
-    #                      axes_pad=0.1,  # pad between axes in inch.
-    #                      )
-    #
-    #     for ax, im in zip(grid, imgs+imgs_denoised):
-    #         ax.imshow(im, cmap='gray')
-    #     plt.show()
+    for data in dataloader:
+        (x, idx, dynamicImages, bboxes), labels = data
+        # vid_name = datasetAll[idx.item()]
+        # print(vid_name)
+        print('---inputs=', x.size(), x.type())
+        print('---dynamicImages=', len(dynamicImages))
+        imgs = []
+        for i in range(len(dynamicImages)):
+            dyn_img = torch.squeeze(dynamicImages[i]).numpy()
+            imgs.append(dyn_img)
+        m_bboxes = bbox_from_di(imgs)
+    
+        # ########################## DENOISING ##########################
+        # gray=False
+        # imgs_denoised = imgs.copy()
+        # for i in range(len(imgs_denoised)):
+        #     imgs_denoised[i]=denoise(imgs_denoised[i],gray)
+    
+        # ########################## CLUSTER SEGMENTATION ##########################
+    
+        # for i in range(len(imgs_denoised)):
+        #     segmented_image, image_tmp=cluster_segmentation(imgs_denoised[i],3, [(0,0,0), (255,255,255), (255,255,255)])
+        #     imgs_denoised[i]=image_tmp
+    
+        # # threshold=124
+        # sum_maps = np.sum(imgs_denoised, axis=0)
+        # sum_maps_gray = cv2.cvtColor(sum_maps.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+    
+        # val_type=2
+        # dilatation_size=5
+        # if val_type == 0:
+        #     dilatation_type = cv2.MORPH_RECT
+        # elif val_type == 1:
+        #     dilatation_type = cv2.MORPH_CROSS
+        # elif val_type == 2:
+        #     dilatation_type = cv2.MORPH_ELLIPSE
+        # element = cv2.getStructuringElement(dilatation_type, (2*dilatation_size + 1, 2*dilatation_size+1), (dilatation_size, dilatation_size))
+        # sum_maps_gray = cv2.dilate(sum_maps_gray, element)
+        # imgs.append(sum_maps_gray)
+    
+        # im2, contours, hierarchy = cv2.findContours(sum_maps_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+        # sm=sum_maps.copy().astype(np.uint8)
+    
+        # contours_poly = [None]*len(contours)
+        # boundRect = [None]*len(contours)
+        # for i, c in enumerate(contours):
+        #     contours_poly[i] = cv2.approxPolyDP(c, 3, True)
+        #     boundRect[i] = cv2.boundingRect(contours_poly[i])
+    
+        # # Draw polygonal contour + bonding rects + circles
+        # color=(0,255,0)
+        # for i in range(len(contours)):
+        #     # cv2.drawContours(sum_maps, contours_poly, i, color)
+        #     cv2.rectangle(sm, (int(boundRect[i][0]), int(boundRect[i][1])), (int(boundRect[i][0]+boundRect[i][2]), int(boundRect[i][1]+boundRect[i][3])), color, 1)
+    
+        # imgs_denoised.append(sm)
+    
+        # ########################## COLOR_PALETTE ##########################
+        # # clt=KMeans(n_clusters=3)
+        # # for i in range(len(imgs_denoised)):
+        # #     clt_1 = clt.fit(imgs_denoised[i].reshape(-1, 3))
+        # #     # plt.imshow(palette(clt_1))
+        # #     plt.imshow(palette_perc(clt_1))
+        # #     plt.show()
+    
+        # ########################## MEAN ##########################
+    
+        # #Mean
+        # # m_frame, mask = frames_mean(imgs,False)
+        # # imgs.append(m_frame)
+        # # imgs.append(mask)
+    
+        # ########################## PLOT ##########################
+        # fig = plt.figure(figsize=(15., 5.))
+        # grid = ImageGrid(fig, 111,  # similar to subplot(111)
+        #                  nrows_ncols=(2, len(imgs)),  # creates 2x2 grid of axes
+        #                  axes_pad=0.1,  # pad between axes in inch.
+        #                  )
+    
+        # for ax, im in zip(grid, imgs+imgs_denoised):
+        #     ax.imshow(im, cmap='gray')
+        # plt.show()

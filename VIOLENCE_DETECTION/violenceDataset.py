@@ -14,6 +14,7 @@ import random
 import torchvision.transforms as transforms
 from operator import itemgetter
 from UTIL.bbox_gt_loader import load_bbox_gt
+from PREPROCESING.segmentation import bbox_from_di
 # from PREPROCESING.segmentation import denoise, cluster_segmentation
 
 class ViolenceDataset(Dataset):
@@ -182,32 +183,17 @@ class ViolenceDataset(Dataset):
             dynamicImages.append(np.array(imgPIL))
             ipts.append(self.spatial_transform(imgPIL.convert("RGB")))
         ipts = torch.stack(ipts, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-
-        # segmented_images = dynamicImages.copy()
-        # for i in range(len(segmented_images)):
-        #     segmented_images[i]=denoise(dynamicImages[i],False)
-        #     segmented_image, image_tmp=cluster_segmentation(dynamicImages[i],3, [(0,0,0), (255,255,255), (255,255,255)])
-        #     segmented_images[i]=image_tmp
-        # sum_maps = np.sum(segmented_images, axis=0)
-
+        m_bboxes = bbox_from_di(dynamicImages, num_imgs=5, plot=False)
 
         gt_bboxes, one_box = None, None
         if self.dataset == 'ucfcrime2local':
-            # print('---------------paths=',len(paths[0]))
             gt_bboxes, one_box = load_bbox_gt(vid_name, label, paths[0])
-            # if label != 0:
-            #     gt_bboxes, one_box = load_bbox_gt(vid_name, paths[0])
-            # else:
-            #     gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
         else:
-            gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
+            one_box = m_bboxes
+            # gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
 
         one_box=torch.from_numpy(np.array(one_box)).float()
-        # dynamicImages = torch.from_numpy(np.array([0])).float()
 
-        # print('Dataset=',ipts.size())
-
-        # print('ipts=',type(ipts), '-label:', type(label))
         return (ipts, idx, dynamicImages, one_box), label
         # return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
