@@ -190,6 +190,7 @@ class ViolenceDataset(Dataset):
             gt_bboxes, one_box = load_bbox_gt(vid_name, label, paths[0])
         else:
             one_box = m_bboxes
+            print('m_bboxes: ', len(one_box))
             # gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
 
         one_box=torch.from_numpy(np.array(one_box)).float()

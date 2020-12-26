@@ -719,6 +719,9 @@ def bbox_from_di(imgs, num_imgs=5, plot=False):
     m_bboxes = []
     if len(imgs)>num_imgs:
         imgs = imgs[0:num_imgs]
+    
+    print('len m_bboxes: ', len(imgs))
+
     imgs_denoised = imgs.copy()
     for i in range(len(imgs_denoised)):
         imgs_denoised[i]=denoise(imgs_denoised[i],gray)
