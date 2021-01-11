@@ -1,8 +1,8 @@
-python3  VIOLENCE_DETECTION/vr_main.py \
+python3  VIOLENCE_DETECTION/main_ag-cnn.py \
 --lib pytorch \
 --modelType resnet50 \
---inputSize 112 \
---dataset vif \
+--inputSize 224 \
+--dataset hockey \
 --lr 0.01 \
 --useValSplit False \
 --numEpochs 2 \
@@ -10,11 +10,11 @@ python3  VIOLENCE_DETECTION/vr_main.py \
 --batchSize 8 \
 --freezeConvLayers True \
 --joinType maxTempPool \
---videoSegmentLength 20 \
+--videoSegmentLength 30 \
 --numDynamicImagesPerVideo 1 \
 --positionSegment begin \
---skipInitialFrames 20 \
---overlapping 0.5 \
+--skipInitialFrames 0 \
+--overlapping 0 \
 --frameSkip 0 \
 --saveCheckpoint False \
 --splitType cross-val \

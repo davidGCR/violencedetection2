@@ -20,7 +20,7 @@ def getRoot():
     root = '/media/david/datos/Violence DATA'
     enviroment = 'local-ubuntu'
   else:
-      root = '/Users/davidchoqueluqueroman/Desktop/PROJECTS-SOURCE-CODES/violencedetection2'
+      root = '/Users/davidchoqueluqueroman/Documents/CODIGOS/violencedetection2'
       enviroment = 'local'
   return root, enviroment
 
