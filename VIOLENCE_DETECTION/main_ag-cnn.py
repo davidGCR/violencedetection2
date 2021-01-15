@@ -24,7 +24,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 # from read_data import ChestXrayDataSet
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score
 from skimage.measure import label
 # from model import Densenet121_AG, Fusion_Branch
 
@@ -403,12 +403,26 @@ def main():
                 #print(fusion_var.shape)
                 output_fusion = Fusion_Branch_model(pool_global, pool_local)
                 #
+                print('output_global: ', output_global.size())
+                print('output_local: ', output_local.size())
+                print('output_fusion: ', output_fusion.size())
+                
+                _, preds_global = torch.max(output_global, 1)
+                _, preds_local = torch.max(output_local, 1)
+                _, preds_fusion = torch.max(output_fusion, 1)
+
+                print('preds_global: ', preds_global.size())
+                print('preds_local: ', preds_local.size())
+                print('preds_fusion: ', preds_fusion.size())
 
                 # loss
                 loss1 = criterion(output_global, target_var)
                 loss2 = criterion(output_local, target_var)
                 loss3 = criterion(output_fusion, target_var)
                 #
+
+
+                
 
                 loss = loss1*0.8 + loss2*0.1 + loss3*0.1 
 
@@ -531,6 +545,12 @@ def compute_AUCs(gt, pred):
     for i in range(N_CLASSES):
         AUROCs.append(roc_auc_score(gt_np[:, i], pred_np[:, i]))
     return AUROCs
+
+def compute_ACC(gt, pred):
+    gt = gt.cpu().numpy()
+    pred = pred.cpu.numpy()
+    return accuracy_score(gt,pred)
+
 
 if __name__ == '__main__':
     
