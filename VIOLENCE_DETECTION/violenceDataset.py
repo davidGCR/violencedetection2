@@ -183,14 +183,14 @@ class ViolenceDataset(Dataset):
             dynamicImages.append(np.array(imgPIL))
             ipts.append(self.spatial_transform(imgPIL.convert("RGB")))
         ipts = torch.stack(ipts, dim=0)  #torch.Size([bs, ndi, ch, h, w])
-        m_bboxes = bbox_from_di(dynamicImages, num_imgs=5, plot=False)
-
+        # m_bboxes = bbox_from_di(dynamicImages, num_imgs=5, plot=False)
+        m_bboxes = [0]
         gt_bboxes, one_box = None, None
         if self.dataset == 'ucfcrime2local':
             gt_bboxes, one_box = load_bbox_gt(vid_name, label, paths[0])
         else:
             one_box = m_bboxes
-            print('m_bboxes: ', len(one_box))
+            # print('m_bboxes: ', len(one_box))
             # gt_bboxes, one_box = [-1, -1, -1, -1], [0, 0, 224, 224]
 
         one_box=torch.from_numpy(np.array(one_box)).float()

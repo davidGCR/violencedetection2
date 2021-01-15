@@ -24,14 +24,15 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 # from read_data import ChestXrayDataSet
-# from sklearn.metrics import roc_auc_score
-# from skimage.measure import label
+from sklearn.metrics import roc_auc_score
+from skimage.measure import label
 # from model import Densenet121_AG, Fusion_Branch
 
 from PIL import Image
-
+import argparse
+from collections import Counter
 import constants
-# from constants import DEVICE
+from constants import DEVICE
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset, plot_example
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 from MODELS.AGCNN import Densenet121_AG, Fusion_Branch
@@ -48,7 +49,7 @@ CKPT_PATH_G = '/best_model/AG_CNN_Global_epoch_1.pkl'
 CKPT_PATH_L = '/best_model/AG_CNN_Local_epoch_2.pkl' 
 CKPT_PATH_F = '/best_model/AG_CNN_Fusion_epoch_23.pkl'
 
-N_CLASSES = 14
+N_CLASSES = 2
 CLASS_NAMES = [ 'Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass', 'Nodule', 'Pneumonia',
                 'Pneumothorax', 'Consolidation', 'Edema', 'Emphysema', 'Fibrosis', 'Pleural_Thickening', 'Hernia']
 
@@ -178,8 +179,8 @@ def build_args():
 
 def main():
     print('********************load data********************')
-    normalize = transforms.Normalize([0.485, 0.456, 0.406],
-                                     [0.229, 0.224, 0.225])
+    # normalize = transforms.Normalize([0.485, 0.456, 0.406],
+    #                                  [0.229, 0.224, 0.225])
 
     # train_dataset = ChestXrayDataSet(data_dir=DATA_DIR,
     #                                 image_list_file=TRAIN_IMAGE_LIST,
@@ -204,17 +205,18 @@ def main():
     #                          shuffle=False, num_workers=4, pin_memory=True)
 
     # dataset = 'hockey'
-    # shuffle = True
+    shuffle = True
+    fold=0
     # folds_number = 5
     # inputSize = 224
     # useValSplit = False
     args = build_args()
-    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=inputSize)
+    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
 
-    for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
+    for train_idx, test_idx in customize_kfold(n_splits=args.foldsNumber, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
 
-        print("**************** Fold:{}/{} ".format(fold, folds_number))
+        print("**************** Fold:{}/{} ".format(fold, args.foldsNumber))
         if args.dataset[0] == 'rwf-2000':
             train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0], input_size=inputSize)
             print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
@@ -231,7 +233,7 @@ def main():
         print('Train=', Counter(train_y))
         # print('Val=', Counter(val_y))
         print('Test=', Counter(test_y))
-        if useValSplit:
+        if args.useValSplit:
             train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
             #Label distribution
             # print('Label distribution:')
@@ -288,8 +290,8 @@ def main():
         if not args.useValSplit:
             val_dataset = test_dataset
         
-        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
-        val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
+        test_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorkers)
 
         print('********************load data succeed!********************')
 
@@ -348,7 +350,8 @@ def main():
             print("=> loaded Fusion_Branch_model checkpoint")
 
         cudnn.benchmark = True
-        criterion = nn.BCELoss()
+        # criterion = nn.BCELoss()
+        criterion = nn.CrossEntropyLoss()
         optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=LR_G, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
         lr_scheduler_global = lr_scheduler.StepLR(optimizer_global , step_size = 10, gamma = 1)
         
@@ -378,8 +381,15 @@ def main():
             #     print(type(input))
 
             for i, (input, target) in enumerate(train_loader):
-                input_var = torch.autograd.Variable(input.to(DEVICE))
-                target_var = torch.autograd.Variable(target.to(DEVICE))
+                # input_var = torch.autograd.Variable(input.to(DEVICE))
+                # target_var = torch.autograd.Variable(target.to(DEVICE))
+
+                (input, vid_name, dynamicImages, bboxes) = input
+                batch_size, timesteps, C, H, W = input.size()
+                input = input.view(batch_size * timesteps, C, H, W)
+                input_var = input.to(DEVICE)
+                target_var = target.to(DEVICE)
+
                 optimizer_global.zero_grad()
                 optimizer_local.zero_grad()
                 optimizer_fusion.zero_grad()
@@ -460,7 +470,13 @@ def test(model_global, model_local, model_fusion, test_loader):
                 print('testing process:',i)
             target = target.to(DEVICE)
             gt = torch.cat((gt, target), 0)
-            input_var = torch.autograd.Variable(inp.to(DEVICE))
+            # input_var = torch.autograd.Variable(inp.to(DEVICE))
+            (inp, vid_name, dynamicImages, bboxes) = inp
+            batch_size, timesteps, C, H, W = inp.size()
+            inp = inp.view(batch_size * timesteps, C, H, W)
+            input_var = inp.to(DEVICE)
+            # target_var = target.to(DEVICE)
+
             #output = model_global(input_var)
 
             output_global, fm_global, pool_global = model_global(input_var)

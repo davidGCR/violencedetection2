@@ -1,7 +1,7 @@
 
 from PIL import Image, ImageFile, ImageFilter
 import cv2
-from skimage.measure import compare_ssim
+from skimage import measure
 import imutils
 
 class Preprocessor():
@@ -30,7 +30,7 @@ class Preprocessor():
         #         break
         # print('previous: ', previous.shape)
 
-        (score, diff2) = compare_ssim(current, previous, full=True)
+        (score, diff2) = measure.compare_ssim(current, previous, full=True)
         # diff2 = (diff2 * 255).astype("uint8")
         
         ret1, thresh_otsu = cv2.threshold(diff1, 0, 255, cv2.THRESH_OTSU)
