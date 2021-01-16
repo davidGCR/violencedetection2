@@ -33,11 +33,13 @@ import argparse
 from collections import Counter
 import constants
 from constants import DEVICE
+from include import root
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset, plot_example
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
 from MODELS.AGCNN import Densenet121_AG, Fusion_Branch
 from datasetsMemoryLoader import customize_kfold
 from operator import itemgetter
+from torch.utils.tensorboard import SummaryWriter
 
 #np.set_printoptions(threshold = np.nan)
 
@@ -57,7 +59,8 @@ CLASS_NAMES = [ 'Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass
 DATA_DIR = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/DATA/images' #'/media/xxxx/data/xxxx/images'
 TRAIN_IMAGE_LIST = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/labels/train_list.txt'
 VAL_IMAGE_LIST = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/labels/val_list.txt'
-save_model_path = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/model-AG-CNN/'
+# save_model_path = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/model-AG-CNN/'
+save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN'
 save_model_name = 'AG_CNN'
 
 # learning rate
@@ -363,9 +366,11 @@ def main():
         print('********************load model succeed!********************')
 
         print('********************begin training!********************')
-        for epoch in range(num_epochs):
+        log_dir = os.path.join(save_path, 'tensorboard', 'fold-'+str(fold))
+        writer = SummaryWriter(log_dir)
+        for epoch in range(args.numEpochs):
             since = time.time()
-            print('Epoch {}/{}'.format(epoch , num_epochs - 1))
+            print('Epoch {}/{}'.format(epoch , args.numEpochs - 1))
             print('-' * 10)
             #set the mode of model
             lr_scheduler_global.step()  #about lr and gamma
@@ -379,7 +384,6 @@ def main():
             #Iterate over data
             # for i, (input, target) in enumerate(train_loader):
             #     print(type(input))
-
             for i, (input, target) in enumerate(train_loader):
                 # input_var = torch.autograd.Variable(input.to(DEVICE))
                 # target_var = torch.autograd.Variable(target.to(DEVICE))
@@ -402,25 +406,12 @@ def main():
                 output_local, _, pool_local = Local_Branch_model(patchs_var)
                 #print(fusion_var.shape)
                 output_fusion = Fusion_Branch_model(pool_global, pool_local)
-                #
-                # print('output_global: ', output_global.size())
-                # print('output_local: ', output_local.size())
-                # print('output_fusion: ', output_fusion.size())
-                
-                # _, preds_global = torch.max(output_global, 1)
-                # _, preds_local = torch.max(output_local, 1)
-                # _, preds_fusion = torch.max(output_fusion, 1)
-
-                # print('preds_global: ', preds_global.size())
-                # print('preds_local: ', preds_local.size())
-                # print('preds_fusion: ', preds_fusion.size())
 
                 # loss
                 loss1 = criterion(output_global, target_var)
                 loss2 = criterion(output_local, target_var)
                 loss3 = criterion(output_fusion, target_var)
                 #
-
 
                 
 
@@ -444,15 +435,20 @@ def main():
                 '''
 
             epoch_loss = float(running_loss) / float(i)
+            # print('i para epoch_loss:',i)
+            # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
+            writer.add_scalar("Avg-Train-Loss", epoch_loss, epoch)
             print(' Epoch over  Loss: {:.5f}'.format(epoch_loss))
 
             print('*******testing!*********')
-            test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader)
+            test_loss, epoch_acc = test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader, criterion)
+            writer.add_scalar("Avg-Test-Loss", test_loss, epoch)
+            writer.add_scalar("Avg-Accuracy", epoch_acc, epoch)
             #break
 
             #save
-            if epoch % 1 == 0:
-                save_path = save_model_path
+            if epoch % 1 == 0 and args.saveCheckpoint:
+                # save_path = save_model_path
                 torch.save(Global_Branch_model.state_dict(), save_path+save_model_name+'_Global'+'_epoch_'+str(epoch)+'.pkl')
                 print('Global_Branch_model already save!')
                 torch.save(Local_Branch_model.state_dict(), save_path+save_model_name+'_Local'+'_epoch_'+str(epoch)+'.pkl')
@@ -464,7 +460,7 @@ def main():
             print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
     
 
-def test(model_global, model_local, model_fusion, test_loader):
+def test(model_global, model_local, model_fusion, test_loader, criterion):
 
     # initialize the ground truth and output tensor
     gt = torch.FloatTensor().to(DEVICE)
@@ -477,29 +473,36 @@ def test(model_global, model_local, model_fusion, test_loader):
     model_local.eval()
     model_fusion.eval()
     cudnn.benchmark = True
-
+    running_loss = 0.0
     for i, (inp, target) in enumerate(test_loader):
         with torch.no_grad():
             if i % 2000 == 0:
                 print('testing process:',i)
-            target = target.to(DEVICE).float();
-            gt = torch.cat((gt, target), 0)
+            # target_var = target.to(DEVICE)
+            target_var = target.to(DEVICE);
+            gt = torch.cat((gt, target.float()), 0)
             # input_var = torch.autograd.Variable(inp.to(DEVICE))
             (inp, vid_name, dynamicImages, bboxes) = inp
             batch_size, timesteps, C, H, W = inp.size()
             inp = inp.view(batch_size * timesteps, C, H, W)
             input_var = inp.to(DEVICE)
-            # target_var = target.to(DEVICE)
+            
 
             #output = model_global(input_var)
 
             output_global, fm_global, pool_global = model_global(input_var)
-            
             patchs_var = Attention_gen_patchs(inp,fm_global)
-
             output_local, _, pool_local = model_local(patchs_var)
-
             output_fusion = model_fusion(pool_global,pool_local)
+
+            loss1 = criterion(output_global, target_var)
+            loss2 = criterion(output_local, target_var)
+            loss3 = criterion(output_fusion, target_var)
+            
+            loss = loss1*0.8 + loss2*0.1 + loss3*0.1
+
+            running_loss += loss.data.item()
+
             
             _, preds_g = torch.max(output_global, 1)
             # print('preds_g:', preds_g.size(), preds_g.type())
@@ -522,9 +525,17 @@ def test(model_global, model_local, model_fusion, test_loader):
             pred_global = torch.cat([pred_global, preds_g], 0)
             pred_local = torch.cat([pred_local, preds_l], 0)
             pred_fusion = torch.cat([pred_fusion, preds_f], 0)
+    
+    # epoch_loss = float(running_loss) / float(len(test_loader.dataset))
+    epoch_loss = float(running_loss) / float(i)
             
-    Acc_g = compute_ACC(gt, pred_global)
-    print('Global accuracy=', Acc_g)
+    epoch_acc_g = compute_ACC(gt, pred_global)
+    print('Global accuracy=', epoch_acc)
+    epoch_acc_l = compute_ACC(gt, pred_local)
+    print('Local accuracy=', epoch_acc_l)
+    epoch_acc_f = compute_ACC(gt, pred_fusion)
+    print('Fusion accuracy=', epoch_acc_f)
+    return epoch_loss, epoch_acc_f
     # AUROCs_g = compute_AUCs(gt, pred_global)
     # AUROC_avg = np.array(AUROCs_g).mean()
     # print('Global branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
@@ -568,7 +579,7 @@ def compute_AUCs(gt, pred):
 
 def compute_ACC(gt, pred):
     gt = gt.cpu().numpy()
-    pred = pred.cpu.numpy()
+    pred = pred.cpu().numpy()
     return accuracy_score(gt,pred)
 
 
