@@ -403,17 +403,17 @@ def main():
                 #print(fusion_var.shape)
                 output_fusion = Fusion_Branch_model(pool_global, pool_local)
                 #
-                print('output_global: ', output_global.size())
-                print('output_local: ', output_local.size())
-                print('output_fusion: ', output_fusion.size())
+                # print('output_global: ', output_global.size())
+                # print('output_local: ', output_local.size())
+                # print('output_fusion: ', output_fusion.size())
                 
-                _, preds_global = torch.max(output_global, 1)
-                _, preds_local = torch.max(output_local, 1)
-                _, preds_fusion = torch.max(output_fusion, 1)
+                # _, preds_global = torch.max(output_global, 1)
+                # _, preds_local = torch.max(output_local, 1)
+                # _, preds_fusion = torch.max(output_fusion, 1)
 
-                print('preds_global: ', preds_global.size())
-                print('preds_local: ', preds_local.size())
-                print('preds_fusion: ', preds_fusion.size())
+                # print('preds_global: ', preds_global.size())
+                # print('preds_local: ', preds_local.size())
+                # print('preds_fusion: ', preds_fusion.size())
 
                 # loss
                 loss1 = criterion(output_global, target_var)
@@ -482,7 +482,7 @@ def test(model_global, model_local, model_fusion, test_loader):
         with torch.no_grad():
             if i % 2000 == 0:
                 print('testing process:',i)
-            target = target.to(DEVICE)
+            target = target.to(DEVICE).float();
             gt = torch.cat((gt, target), 0)
             # input_var = torch.autograd.Variable(inp.to(DEVICE))
             (inp, vid_name, dynamicImages, bboxes) = inp
@@ -500,30 +500,50 @@ def test(model_global, model_local, model_fusion, test_loader):
             output_local, _, pool_local = model_local(patchs_var)
 
             output_fusion = model_fusion(pool_global,pool_local)
-
-            pred_global = torch.cat((pred_global, output_global.data), 0)
-            pred_local = torch.cat((pred_local, output_local.data), 0)
-            pred_fusion = torch.cat((pred_fusion, output_fusion.data), 0)
             
-    AUROCs_g = compute_AUCs(gt, pred_global)
-    AUROC_avg = np.array(AUROCs_g).mean()
-    print('Global branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
-    for i in range(N_CLASSES):
-        print('The AUROC of {} is {}'.format(CLASS_NAMES[i], AUROCs_g[i]))
+            _, preds_g = torch.max(output_global, 1)
+            # print('preds_g:', preds_g.size(), preds_g.type())
+            # print('pred_global:', pred_global.size(), pred_global.type())
+            _, preds_l = torch.max(output_local, 1)
+            _, preds_f = torch.max(output_fusion, 1)
 
-    AUROCs_l = compute_AUCs(gt, pred_local)
-    AUROC_avg = np.array(AUROCs_l).mean()
-    print('\n')
-    print('Local branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
-    for i in range(N_CLASSES):
-        print('The AUROC of {} is {}'.format(CLASS_NAMES[i], AUROCs_l[i]))
+            preds_g = preds_g.type(torch.FloatTensor).to(DEVICE)
+            preds_l = preds_l.type(torch.FloatTensor).to(DEVICE)
+            preds_f = preds_f.type(torch.FloatTensor).to(DEVICE)
 
-    AUROCs_f = compute_AUCs(gt, pred_fusion)
-    AUROC_avg = np.array(AUROCs_f).mean()
-    print('\n')
-    print('Fusion branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
-    for i in range(N_CLASSES):
-        print('The AUROC of {} is {}'.format(CLASS_NAMES[i], AUROCs_f[i]))
+            # print('gt:', gt.size())
+            # print('output_global:', output_global.size())
+            # print('preds:', preds_global.size())
+
+            # pred_global = torch.cat((pred_global, output_global.data), 0)
+            # pred_local = torch.cat((pred_local, output_local.data), 0)
+            # pred_fusion = torch.cat((pred_fusion, output_fusion.data), 0)
+
+            pred_global = torch.cat([pred_global, preds_g], 0)
+            pred_local = torch.cat([pred_local, preds_l], 0)
+            pred_fusion = torch.cat([pred_fusion, preds_f], 0)
+            
+    Acc_g = compute_ACC(gt, pred_global)
+    print('Global accuracy=', Acc_g)
+    # AUROCs_g = compute_AUCs(gt, pred_global)
+    # AUROC_avg = np.array(AUROCs_g).mean()
+    # print('Global branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
+    # for i in range(N_CLASSES):
+    #     print('The AUROC of {} is {}'.format(CLASS_NAMES[i], AUROCs_g[i]))
+
+    # AUROCs_l = compute_AUCs(gt, pred_local)
+    # AUROC_avg = np.array(AUROCs_l).mean()
+    # print('\n')
+    # print('Local branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
+    # for i in range(N_CLASSES):
+    #     print('The AUROC of {} is {}'.format(CLASS_NAMES[i], AUROCs_l[i]))
+
+    # AUROCs_f = compute_AUCs(gt, pred_fusion)
+    # AUROC_avg = np.array(AUROCs_f).mean()
+    # print('\n')
+    # print('Fusion branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
+    # for i in range(N_CLASSES):
+    #     print('The AUROC of {} is {}'.format(CLASS_NAMES[i], AUROCs_f[i]))
 
 
 def compute_AUCs(gt, pred):
