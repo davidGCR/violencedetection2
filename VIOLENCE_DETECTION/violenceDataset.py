@@ -22,6 +22,7 @@ class ViolenceDataset(Dataset):
                         labels,
                         numFrames,
                         spatial_transform,
+                        rgb_transform,
                         numDynamicImagesPerVideo,
                         videoSegmentLength,
                         positionSegment='begin',
@@ -32,6 +33,7 @@ class ViolenceDataset(Dataset):
                         useKeyframes=None,
                         windowLen=None,
                         dataset=None):
+        self.rgb_transform = rgb_transform
         if spatial_transform is None:
             self.spatial_transform = transforms.Compose([
                 # transforms.RandomResizedCrop(224),
@@ -39,6 +41,8 @@ class ViolenceDataset(Dataset):
                 transforms.ToTensor()])
         else:
             self.spatial_transform = spatial_transform
+
+        
         self.videos = videos
         self.labels = labels
         self.numFrames = numFrames
@@ -171,19 +175,21 @@ class ViolenceDataset(Dataset):
         # preprocessing_time = 0.0
         video_segments, _ = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         paths = []
-        rgb_central_frames = 
+        rgb_central_frames = []
         for i, sequence in enumerate(video_segments):
             video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
             paths.append(pths)
+            
         for sequence in video_segments:
             # start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(sequence)
-
+            rgb_central_frames.append(self.rgb_transform(sequence[int(len(sequence)/2)]))
             # end_time = time.time()
             # preprocessing_time += (end_time - start_time)
             dynamicImages.append(np.array(imgPIL))
             ipts.append(self.spatial_transform(imgPIL.convert("RGB")))
         ipts = torch.stack(ipts, dim=0)  #torch.Size([bs, ndi, ch, h, w])
+        rgb_central_frames = torch.stack(rgb_central_frames, dim=0)
         # m_bboxes = bbox_from_di(dynamicImages, num_imgs=5, plot=False)
         m_bboxes = [0]
         gt_bboxes, one_box = None, None
@@ -196,7 +202,7 @@ class ViolenceDataset(Dataset):
 
         one_box=torch.from_numpy(np.array(one_box)).float()
 
-        return (ipts, idx, dynamicImages, one_box), label
+        return (ipts, idx, dynamicImages, one_box, rgb_central_frames), label
         # return ipts, dynamicImages, label, vid_name, one_box, paths #dinamycImages, label:  <class 'torch.Tensor'> <class 'int'> torch.Size([3, 224, 224])
 
 # if __name__ == '__main__':

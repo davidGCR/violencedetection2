@@ -222,9 +222,22 @@ def main():
     else:
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
     save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN/'+args.dataset[0]
-
+    rgb_transforms = {
+                        'train': transforms.Compose([
+                            transforms.RandomResizedCrop(args.inputSize),
+                            transforms.RandomHorizontalFlip(),
+                            transforms.ToTensor(),
+                            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        ]),
+                        'val': transforms.Compose([
+                            transforms.Resize(args.inputSize),
+                            transforms.CenterCrop(args.inputSize),
+                            transforms.ToTensor(),
+                            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        ]),
+                    }
     template = 'Fold {}==>Epoch {}/{}, Train Loss: {:.5f}, Test Loss: {:.5f}, Accuracies ==> Global Acc: {:.5f}, Local Acc: {:.5f}, Fusion Acc: {:.5f}, Time: {:.0f}m {:.0f}s'
-    template_details = '=====>Epoch {}/{}, Global Train Loss: {:.5f}, Global Test Loss: {:.5f}, Local Train Loss: {:.5f}, Local Test Loss: {:.5f}, Fusion Train Loss: {:.5f}, Fusion Test Loss: {:.5f}'
+    template_details = '========= (Global Train Loss: {:.5f}, Global Test Loss: {:.5f}), (Local Train Loss: {:.5f}, Local Test Loss: {:.5f}), (Fusion Train Loss: {:.5f}, Fusion Test Loss: {:.5f})'
 
     for train_idx, test_idx in customize_kfold(n_splits=args.foldsNumber, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
@@ -258,6 +271,7 @@ def main():
                                             labels=val_y,
                                             numFrames=val_numFrames,
                                             spatial_transform=transforms['val'],
+                                            rgb_transform=rgb_transforms['val'],
                                             numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                             videoSegmentLength=args.videoSegmentLength,
                                             positionSegment=args.positionSegment,
@@ -273,6 +287,7 @@ def main():
                                         labels=train_y,
                                         numFrames=train_numFrames,
                                         spatial_transform=transforms['train'],
+                                        rgb_transform=rgb_transforms['train'],
                                         numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                         videoSegmentLength=args.videoSegmentLength,
                                         positionSegment=args.positionSegment,
@@ -288,6 +303,7 @@ def main():
                                         labels=test_y,
                                         numFrames=test_numFrames,
                                         spatial_transform=transforms['val'],
+                                        rgb_transform=rgb_transforms['val'],
                                         numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                         videoSegmentLength=args.videoSegmentLength,
                                         positionSegment=args.positionSegment,
@@ -418,7 +434,8 @@ def main():
                 # input_var = torch.autograd.Variable(input.to(DEVICE))
                 # target_var = torch.autograd.Variable(target.to(DEVICE))
 
-                (input, vid_name, dynamicImages, bboxes) = input
+                (input, vid_name, dynamicImages, bboxes, rgb_central_frames) = input
+                print('rgb_central_frames: ', rgb_central_frames.size())
                 batch_size, timesteps, C, H, W = input.size()
                 input = input.view(batch_size * timesteps, C, H, W)
                 input_var = input.to(DEVICE)
@@ -498,7 +515,7 @@ def main():
 
             time_elapsed = time.time() - since
             print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, time_elapsed // 60, time_elapsed % 60))
-            print(template_details.format(fold,epoch,epoch_loss_global,test_loss_global, epoch_loss_local, test_loss_local, epoch_loss_fusion, test_loss_fusion))
+            print(template_details.format(epoch_loss_global,test_loss_global, epoch_loss_local, test_loss_local, epoch_loss_fusion, test_loss_fusion))
             # print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
     
 
@@ -528,7 +545,7 @@ def test(model_global, model_local, model_fusion, test_loader, criterion, args):
             target_var = target.to(DEVICE)
             gt = torch.cat((gt, target.float().to(DEVICE)), 0)
             # input_var = torch.autograd.Variable(inp.to(DEVICE))
-            (inp, vid_name, dynamicImages, bboxes) = inp
+            (inp, vid_name, dynamicImages, bboxes, rgb_central_frames) = inp
             batch_size, timesteps, C, H, W = inp.size()
             inp = inp.view(batch_size * timesteps, C, H, W)
             input_var = inp.to(DEVICE)
