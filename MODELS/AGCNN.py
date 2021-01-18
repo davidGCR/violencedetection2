@@ -207,7 +207,8 @@ class DenseNet121(nn.Module):
         out = F.relu(features, inplace=True)
         out_after_pooling = F.avg_pool2d(out, kernel_size=7, stride=1).view(features.size(0), -1)
         out = self.classifier(out_after_pooling)
-
+        # print('densenet features: ',features.size()) #torch.Size([16, 1024, 7, 7])
+        # print('densenet out_after_pooling: ',out_after_pooling.size()) #torch.Size([16, 1024])
         return out, features, out_after_pooling
 
 class Resnet50(nn.Module):
@@ -224,19 +225,22 @@ class Resnet50(nn.Module):
         self.resnet50.fc = Identity()
         self.resnet50 = nn.Sequential(*list(self.resnet50.children())[:-2])  # to tempooling
         # self.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d((1,1))
-
+        self.AvgPool2D = nn.AdaptiveAvgPool2d((1,1))
         self.classifier = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1,1)),
             nn.Linear(num_ftrs, num_classes),
             nn.Sigmoid()
         )
 
     def forward(self, x):
         features = self.resnet50(x)
+        pool_out = self.AvgPool2D(features)
+        flat_in = torch.flatten(pool_out, 1)
+        # print('resnet features: ',features.size())##torch.Size([16, 2048, 7, 7])
+        # print('resnet pool_out: ',flat_in.size())#torch.Size([16, 2048])
         # out_after_pooling = F.avg_pool2d(out, kernel_size=7, stride=1).view(features.size(0), -1)
-        out = self.classifier(features)
+        out = self.classifier(flat_in)
 
-        return out, features, 0
+        return out, features, flat_in
 
 #model = AG_CNN_densenet121(pretrained = True)
 #model.cuda()

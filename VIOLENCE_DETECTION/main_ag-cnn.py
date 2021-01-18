@@ -220,7 +220,7 @@ def main():
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
     save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN/'+args.dataset[0]
 
-    template = 'Fold {}==>Epoch {}, Train Loss: {:.5f}, Test Loss: {:.5f}, Accuracies ==> Global Acc: {:.5f}, Local Acc: {:.5f}, Fusion Acc: {:.5f}, Time: {:.0f}m {:.0f}s'
+    template = 'Fold {}==>Epoch {}/{}, Train Loss: {:.5f}, Test Loss: {:.5f}, Accuracies ==> Global Acc: {:.5f}, Local Acc: {:.5f}, Fusion Acc: {:.5f}, Time: {:.0f}m {:.0f}s'
 
     for train_idx, test_idx in customize_kfold(n_splits=args.foldsNumber, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
@@ -307,21 +307,24 @@ def main():
 
         print('********************load model********************')
 
+        Global_Branch_model = None
         if args.modelType == 'densenet-V0':
             Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
         elif args.modelType == 'densenet-V1':
             Global_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Local_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
         elif args.modelType == 'resnet50':
             Global_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Local_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        # initialize and load the model
-        
+            Fusion_Branch_model = Fusion_Branch(input_size = 2*2048, output_size = N_CLASSES).to(DEVICE)
         
 
-        Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
+        # Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
         print(Global_Branch_model)
+        print(Fusion_Branch_model)
 
         if os.path.isfile(CKPT_PATH):
             print("=> loading checkpoint")
@@ -394,9 +397,7 @@ def main():
             # print('Epoch {}/{}'.format(epoch , args.numEpochs - 1))
             # print('-' * 10)
             #set the mode of model
-            lr_scheduler_global.step()  #about lr and gamma
-            lr_scheduler_local.step() 
-            lr_scheduler_fusion.step() 
+            
             Global_Branch_model.train()  #set model to training mode
             Local_Branch_model.train()
             Fusion_Branch_model.train()
@@ -451,6 +452,9 @@ def main():
                     print('break')
                     break
                 '''
+            lr_scheduler_global.step()  #about lr and gamma
+            lr_scheduler_local.step() 
+            lr_scheduler_fusion.step() 
 
             epoch_loss = float(running_loss) / float(i)
             # print('i para epoch_loss:',i)
@@ -477,7 +481,7 @@ def main():
                 print('Fusion_Branch_model already save!')
 
             time_elapsed = time.time() - since
-            print(template.format(fold, epoch, epoch_loss, test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, time_elapsed // 60, time_elapsed % 60))
+            print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, time_elapsed // 60, time_elapsed % 60))
             # print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
     
 
@@ -520,7 +524,7 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
             loss2 = criterion(output_local, target_var)
             loss3 = criterion(output_fusion, target_var)
             
-            loss = loss1*0.8 + loss2*0.1 + loss3*0.1
+            loss = loss1*0.4 + loss2*0.4 + loss3*0.2
 
             running_loss += loss.data.item()
 
