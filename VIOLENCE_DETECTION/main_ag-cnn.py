@@ -175,7 +175,7 @@ def build_args():
     parser.add_argument("--windowLen", type=int, default=0)
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
-    parser.add_argument("--pretrained", type=bool, default=True)
+    parser.add_argument("--pretrained", type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
 
     args = parser.parse_args()
     return args
