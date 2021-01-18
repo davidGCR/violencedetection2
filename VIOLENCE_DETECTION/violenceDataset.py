@@ -171,6 +171,7 @@ class ViolenceDataset(Dataset):
         # preprocessing_time = 0.0
         video_segments, _ = self.getVideoSegments(vid_name, idx)  # bbox_segments: (1, 16, 6)= (no segments,no frames segment,info
         paths = []
+        rgb_central_frames = 
         for i, sequence in enumerate(video_segments):
             video_segments[i], pths = self.loadFramesSeq(vid_name, sequence)
             paths.append(pths)

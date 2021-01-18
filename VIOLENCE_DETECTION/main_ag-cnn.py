@@ -176,6 +176,9 @@ def build_args():
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
     parser.add_argument("--pretrained", type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
+    parser.add_argument("--lossCoefGlobal", type=float, default=0.8)
+    parser.add_argument("--lossCoefLocal", type=float, default=0.1)
+    parser.add_argument("--lossCoefFusion", type=float, default=0.1)
 
     args = parser.parse_args()
     return args
@@ -221,6 +224,7 @@ def main():
     save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN/'+args.dataset[0]
 
     template = 'Fold {}==>Epoch {}/{}, Train Loss: {:.5f}, Test Loss: {:.5f}, Accuracies ==> Global Acc: {:.5f}, Local Acc: {:.5f}, Fusion Acc: {:.5f}, Time: {:.0f}m {:.0f}s'
+    template_details = '=====>Epoch {}/{}, Global Train Loss: {:.5f}, Global Test Loss: {:.5f}, Local Train Loss: {:.5f}, Local Test Loss: {:.5f}, Fusion Train Loss: {:.5f}, Fusion Test Loss: {:.5f}'
 
     for train_idx, test_idx in customize_kfold(n_splits=args.foldsNumber, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
@@ -319,6 +323,7 @@ def main():
         elif args.modelType == 'resnet50':
             Global_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Local_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            Local_RGB_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Fusion_Branch_model = Fusion_Branch(input_size = 2*2048, output_size = N_CLASSES).to(DEVICE)
         
 
@@ -403,6 +408,9 @@ def main():
             Fusion_Branch_model.train()
 
             running_loss = 0.0
+            running_loss_global = 0.0
+            running_loss_local = 0.0
+            running_loss_fusion = 0.0
             #Iterate over data
             # for i, (input, target) in enumerate(train_loader):
             #     print(type(input))
@@ -433,8 +441,12 @@ def main():
                 loss1 = criterion(output_global, target_var)
                 loss2 = criterion(output_local, target_var)
                 loss3 = criterion(output_fusion, target_var)
+
+                running_loss_global += loss1.data.item()
+                running_loss_local += loss2.data.item()
+                running_loss_fusion += loss3.data.item()
                 #
-                loss = loss1*0.8 + loss2*0.1 + loss3*0.1 
+                loss = loss1*args.lossCoefGlobal + loss2*args.lossCoefLocal + loss3*args.lossCoefFusion 
 
                 # if (i%500) == 0: 
                 #     print('step: {} totalloss: {loss:.3f} loss1: {loss1:.3f} loss2: {loss2:.3f} loss3: {loss3:.3f}'.format(i, loss = loss, loss1 = loss1, loss2 = loss2, loss3 = loss3))
@@ -457,13 +469,17 @@ def main():
             lr_scheduler_fusion.step() 
 
             epoch_loss = float(running_loss) / float(i)
+
+            epoch_loss_global = float(running_loss_global) / float(i)
+            epoch_loss_local = float(running_loss_local) / float(i)
+            epoch_loss_fusion = float(running_loss_fusion) / float(i)
             # print('i para epoch_loss:',i)
             # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
             writer.add_scalar("Avg-Train-Loss", epoch_loss, epoch)
             # print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
 
             # print('*******testing!*********')
-            test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f = test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader, criterion)
+            test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, test_loss_global, test_loss_local, test_loss_fusion = test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader, criterion, args)
             
             # print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
             writer.add_scalar("Avg-Test-Loss", test_loss, epoch)
@@ -482,10 +498,11 @@ def main():
 
             time_elapsed = time.time() - since
             print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, time_elapsed // 60, time_elapsed % 60))
+            print(template_details.format(fold,epoch,epoch_loss_global,test_loss_global, epoch_loss_local, test_loss_local, epoch_loss_fusion, test_loss_fusion))
             # print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
     
 
-def test(model_global, model_local, model_fusion, test_loader, criterion):
+def test(model_global, model_local, model_fusion, test_loader, criterion, args):
 
     # initialize the ground truth and output tensor
     gt = torch.FloatTensor().to(DEVICE)
@@ -499,6 +516,10 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     model_fusion.eval()
     cudnn.benchmark = True
     running_loss = 0.0
+
+    running_loss_global = 0.0
+    running_loss_local = 0.0
+    running_loss_fusion = 0.0
     for i, (inp, target) in enumerate(test_loader):
         with torch.no_grad():
             # if i % 2000 == 0:
@@ -523,8 +544,12 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
             loss1 = criterion(output_global, target_var)
             loss2 = criterion(output_local, target_var)
             loss3 = criterion(output_fusion, target_var)
+
+            running_loss_global += loss1.data.item()
+            running_loss_local += loss2.data.item()
+            running_loss_fusion += loss3.data.item()
             
-            loss = loss1*0.4 + loss2*0.4 + loss3*0.2
+            loss = lloss = loss1*args.lossCoefGlobal + loss2*args.lossCoefLocal + loss3*args.lossCoefFusion 
 
             running_loss += loss.data.item()
 
@@ -553,6 +578,10 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     
     # epoch_loss = float(running_loss) / float(len(test_loader.dataset))
     epoch_loss = float(running_loss) / float(i)
+
+    test_loss_global = float(running_loss_global) / float(i)
+    test_loss_local = float(running_loss_local) / float(i)
+    test_loss_fusion = float(running_loss_fusion) / float(i)
             
     epoch_acc_g = compute_ACC(gt, pred_global)
     # print('Global accuracy=', epoch_acc_g)
@@ -560,7 +589,7 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     # print('Local accuracy=', epoch_acc_l)
     epoch_acc_f = compute_ACC(gt, pred_fusion)
     # print('Fusion accuracy=', epoch_acc_f)
-    return epoch_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f
+    return epoch_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, test_loss_global, test_loss_local, test_loss_fusion
     # AUROCs_g = compute_AUCs(gt, pred_global)
     # AUROC_avg = np.array(AUROCs_g).mean()
     # print('Global branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
