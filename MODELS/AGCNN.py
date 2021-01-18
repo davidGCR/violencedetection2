@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from collections import OrderedDict
+from torchvision import models
  
 __all__ = ['DenseNet', 'Densenet121_AG']
  
@@ -23,13 +24,16 @@ def Densenet121_AG(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16),
-                     **kwargs)
+    
     if pretrained:
         # '.'s are no longer allowed in module names, but pervious _DenseLayer
         # has keys 'norm.1', 'relu.1', 'conv.1', 'norm.2', 'relu.2', 'conv.2'.
         # They are also in the checkpoints in model_urls. This pattern is used
         # to find such keys.
+        kwargs['num_classes'] = 1000
+        model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16),
+                    **kwargs)
+
         pattern = re.compile(
             r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
         state_dict = model_zoo.load_url(model_urls['densenet121'])
@@ -40,6 +44,11 @@ def Densenet121_AG(pretrained=False, **kwargs):
                 state_dict[new_key] = state_dict[key]
                 del state_dict[key]
         model.load_state_dict(state_dict)
+        num_fc_input_features = model.classifier.in_features
+        model.classifier = nn.Linear(num_fc_input_features, 2)
+    else:
+        model = DenseNet(num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16),
+                      **kwargs)
     return model
 
 
@@ -95,7 +104,7 @@ class DenseNet(nn.Module):
     """
  
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=2):
+                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000):
  
         super(DenseNet, self).__init__()
  
@@ -121,6 +130,8 @@ class DenseNet(nn.Module):
  
         # Final batch norm
         self.features.add_module('norm5', nn.BatchNorm2d(num_features))
+
+        # print('num_features=', num_features)
  
         # Linear layer
         self.classifier = nn.Linear(num_features, num_classes)
@@ -165,7 +176,7 @@ class Fusion_Branch(nn.Module):
 
 
 
-'''
+
 class DenseNet121(nn.Module):
     """Model modified.
 
@@ -173,19 +184,22 @@ class DenseNet121(nn.Module):
     except the classifier layer which has an additional sigmoid function.
 
     """
-    def __init__(self, out_size):
+    def __init__(self, num_classes, pretrained):
         super(DenseNet121, self).__init__()
-        self.densenet121 = torchvision.models.densenet121(pretrained=True)
+        self.densenet121 = models.densenet121(pretrained=pretrained)
         num_ftrs = self.densenet121.classifier.in_features
         self.densenet121.classifier = nn.Sequential(
-            nn.Linear(num_ftrs, out_size),
+            nn.Linear(num_ftrs, num_classes),
             nn.Sigmoid()
         )
 
     def forward(self, x):
-        x = self.densenet121(x)
-        return x
-'''
+        features = self.densenet121.features(x)
+        out = F.relu(features, inplace=True)
+        out_after_pooling = F.avg_pool2d(out, kernel_size=7, stride=1).view(features.size(0), -1)
+        out = self.densenet121(x)
+
+        return out, features, out_after_pooling
 
 #model = AG_CNN_densenet121(pretrained = True)
 #model.cuda()

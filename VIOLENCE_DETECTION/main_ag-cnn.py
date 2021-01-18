@@ -36,7 +36,7 @@ from constants import DEVICE
 from include import root
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset, plot_example
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
-from MODELS.AGCNN import Densenet121_AG, Fusion_Branch
+from MODELS.AGCNN import Densenet121_AG, Fusion_Branch, DenseNet121
 from datasetsMemoryLoader import customize_kfold
 from operator import itemgetter
 from torch.utils.tensorboard import SummaryWriter
@@ -305,9 +305,13 @@ def main():
 
         print('********************load model********************')
         # initialize and load the model
-        Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        # Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        # Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        Global_Branch_model = Densenet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        Local_Branch_model = Densenet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+
         Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
+        print(Global_Branch_model)
 
         if os.path.isfile(CKPT_PATH):
             print("=> loading checkpoint")
@@ -442,10 +446,12 @@ def main():
             # print('i para epoch_loss:',i)
             # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
             writer.add_scalar("Avg-Train-Loss", epoch_loss, epoch)
-            print(' Epoch over  Loss: {:.5f}'.format(epoch_loss))
+            print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
 
             print('*******testing!*********')
             test_loss, epoch_acc = test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader, criterion)
+
+            print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
             writer.add_scalar("Avg-Test-Loss", test_loss, epoch)
             writer.add_scalar("Avg-Accuracy", epoch_acc, epoch)
             #break
