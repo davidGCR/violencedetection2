@@ -206,7 +206,7 @@ class DenseNet121(nn.Module):
         features = self.convs(x)
         out = F.relu(features, inplace=True)
         out_after_pooling = F.avg_pool2d(out, kernel_size=7, stride=1).view(features.size(0), -1)
-        out = self.densenet121(out_after_pooling)
+        out = self.classifier(out_after_pooling)
 
         return out, features, out_after_pooling
 

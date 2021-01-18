@@ -220,6 +220,8 @@ def main():
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
     save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN/'+args.dataset[0]
 
+    template = 'Fold {}==>Epoch {}, Train Loss: {:.5f}, Test Loss: {:.5f}, Accuracies ==> Global Acc: {:.5f}, Local Acc: {:.5f}, Fusion Acc: {:.5f}, Time: {:.0f}m {:.0f}s'
+
     for train_idx, test_idx in customize_kfold(n_splits=args.foldsNumber, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
 
@@ -363,12 +365,12 @@ def main():
         cudnn.benchmark = True
         # criterion = nn.BCELoss()
         criterion = nn.CrossEntropyLoss()
-        # optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=LR_G, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
-        optimizer_global = optim.SGD(Global_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=LR_G, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        # optimizer_global = optim.SGD(Global_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         lr_scheduler_global = lr_scheduler.StepLR(optimizer_global , step_size = 10, gamma = 1)
 
-        # optimizer_local = optim.Adam(Local_Branch_model.parameters(), lr=LR_L, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
-        optimizer_local = optim.SGD(Local_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        optimizer_local = optim.Adam(Local_Branch_model.parameters(), lr=LR_L, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        # optimizer_local = optim.SGD(Local_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         lr_scheduler_local = lr_scheduler.StepLR(optimizer_local , step_size = 10, gamma = 1)
         
         # optimizer_fusion = optim.Adam(Fusion_Branch_model.parameters(), lr=LR_F, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
@@ -381,8 +383,8 @@ def main():
         writer = SummaryWriter(log_dir)
         for epoch in range(args.numEpochs):
             since = time.time()
-            print('Epoch {}/{}'.format(epoch , args.numEpochs - 1))
-            print('-' * 10)
+            # print('Epoch {}/{}'.format(epoch , args.numEpochs - 1))
+            # print('-' * 10)
             #set the mode of model
             lr_scheduler_global.step()  #about lr and gamma
             lr_scheduler_local.step() 
@@ -446,14 +448,14 @@ def main():
             # print('i para epoch_loss:',i)
             # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
             writer.add_scalar("Avg-Train-Loss", epoch_loss, epoch)
-            print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
+            # print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
 
-            print('*******testing!*********')
-            test_loss, epoch_acc = test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader, criterion)
-
-            print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
+            # print('*******testing!*********')
+            test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f = test(Global_Branch_model, Local_Branch_model, Fusion_Branch_model,test_loader, criterion)
+            
+            # print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
             writer.add_scalar("Avg-Test-Loss", test_loss, epoch)
-            writer.add_scalar("Avg-Accuracy", epoch_acc, epoch)
+            writer.add_scalar("Avg-Accuracy", epoch_acc_f, epoch)
             #break
 
             #save
@@ -467,7 +469,8 @@ def main():
                 print('Fusion_Branch_model already save!')
 
             time_elapsed = time.time() - since
-            print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
+            print(template.format(fold, epoch, epoch_loss, test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, time_elapsed // 60, time_elapsed % 60))
+            # print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
     
 
 def test(model_global, model_local, model_fusion, test_loader, criterion):
@@ -487,7 +490,7 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     for i, (inp, target) in enumerate(test_loader):
         with torch.no_grad():
             if i % 2000 == 0:
-                print('testing process:',i)
+                # print('testing process:',i)
             # target_var = target.to(DEVICE)
             target_var = target.to(DEVICE);
             gt = torch.cat((gt, target.float().to(DEVICE)), 0)
@@ -540,12 +543,12 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     epoch_loss = float(running_loss) / float(i)
             
     epoch_acc_g = compute_ACC(gt, pred_global)
-    print('Global accuracy=', epoch_acc_g)
+    # print('Global accuracy=', epoch_acc_g)
     epoch_acc_l = compute_ACC(gt, pred_local)
-    print('Local accuracy=', epoch_acc_l)
+    # print('Local accuracy=', epoch_acc_l)
     epoch_acc_f = compute_ACC(gt, pred_fusion)
-    print('Fusion accuracy=', epoch_acc_f)
-    return epoch_loss, epoch_acc_f
+    # print('Fusion accuracy=', epoch_acc_f)
+    return epoch_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f
     # AUROCs_g = compute_AUCs(gt, pred_global)
     # AUROC_avg = np.array(AUROCs_g).mean()
     # print('Global branch: The average AUROC is {AUROC_avg:.3f}'.format(AUROC_avg=AUROC_avg))
