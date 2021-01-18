@@ -175,6 +175,12 @@ class Fusion_Branch(nn.Module):
         return x
 
 
+class Identity(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
 
 
 class DenseNet121(nn.Module):
@@ -186,20 +192,51 @@ class DenseNet121(nn.Module):
     """
     def __init__(self, num_classes, pretrained):
         super(DenseNet121, self).__init__()
-        self.densenet121 = models.densenet121(pretrained=pretrained)
-        num_ftrs = self.densenet121.classifier.in_features
-        self.densenet121.classifier = nn.Sequential(
+        self.convs = models.densenet121(pretrained=pretrained)
+        # print(convs)
+        num_ftrs = self.convs.classifier.in_features
+        self.convs.classifier = Identity()
+        self.convs = nn.Sequential(*list(self.convs.children())[:-1])
+        self.classifier = nn.Sequential(
             nn.Linear(num_ftrs, num_classes),
             nn.Sigmoid()
         )
 
     def forward(self, x):
-        features = self.densenet121.features(x)
+        features = self.convs(x)
         out = F.relu(features, inplace=True)
         out_after_pooling = F.avg_pool2d(out, kernel_size=7, stride=1).view(features.size(0), -1)
-        out = self.densenet121(x)
+        out = self.densenet121(out_after_pooling)
 
         return out, features, out_after_pooling
+
+class Resnet50(nn.Module):
+    """Model modified.
+
+    The architecture of our model is the same as standard DenseNet121
+    except the classifier layer which has an additional sigmoid function.
+
+    """
+    def __init__(self, num_classes, pretrained):
+        super(Resnet50, self).__init__()
+        self.resnet50 = models.resnet50(pretrained=pretrained)
+        num_ftrs = self.resnet50.fc.in_features
+        self.resnet50.fc = Identity()
+        self.resnet50 = nn.Sequential(*list(self.resnet50.children())[:-2])  # to tempooling
+        # self.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d((1,1))
+
+        self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1,1)),
+            nn.Linear(num_ftrs, num_classes),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        features = self.resnet50(x)
+        # out_after_pooling = F.avg_pool2d(out, kernel_size=7, stride=1).view(features.size(0), -1)
+        out = self.classifier(features)
+
+        return out, features, 0
 
 #model = AG_CNN_densenet121(pretrained = True)
 #model.cuda()

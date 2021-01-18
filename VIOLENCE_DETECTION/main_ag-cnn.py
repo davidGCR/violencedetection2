@@ -307,8 +307,8 @@ def main():
         # initialize and load the model
         # Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
         # Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        Global_Branch_model = Densenet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        Local_Branch_model = Densenet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        Global_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        Local_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
 
         Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
         print(Global_Branch_model)
