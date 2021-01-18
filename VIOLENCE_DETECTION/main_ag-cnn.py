@@ -175,7 +175,7 @@ def build_args():
     parser.add_argument("--windowLen", type=int, default=0)
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
-    parser.add_argument("--pretrained", type=str, default=None)
+    parser.add_argument("--pretrained", type=bool, default=True)
 
     args = parser.parse_args()
     return args
@@ -305,8 +305,8 @@ def main():
 
         print('********************load model********************')
         # initialize and load the model
-        Global_Branch_model = Densenet121_AG(pretrained = False, num_classes = N_CLASSES).to(DEVICE)
-        Local_Branch_model = Densenet121_AG(pretrained = False, num_classes = N_CLASSES).to(DEVICE)
+        Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
         Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
 
         if os.path.isfile(CKPT_PATH):
