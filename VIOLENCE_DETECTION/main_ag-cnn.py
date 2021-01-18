@@ -60,7 +60,7 @@ DATA_DIR = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/DATA/images' #
 TRAIN_IMAGE_LIST = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/labels/train_list.txt'
 VAL_IMAGE_LIST = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/labels/val_list.txt'
 # save_model_path = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/model-AG-CNN/'
-save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN'
+
 save_model_name = 'AG_CNN'
 
 # learning rate
@@ -214,14 +214,18 @@ def main():
     # inputSize = 224
     # useValSplit = False
     args = build_args()
-    datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
+    if args.dataset[0] == 'rwf-2000':
+        datasetAll, labelsAll = [], []
+    else:
+        datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
+    save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN/'+args.dataset[0]
 
     for train_idx, test_idx in customize_kfold(n_splits=args.foldsNumber, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
 
         print("**************** Fold:{}/{} ".format(fold, args.foldsNumber))
         if args.dataset[0] == 'rwf-2000':
-            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0], input_size=inputSize)
+            train_x, train_y, train_numFrames, test_x, test_y, test_numFrames, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
             print(len(train_x), len(train_y), len(train_numFrames), len(test_x), len(test_y), len(test_numFrames))
         else:
             train_x, train_y, test_x, test_y = None, None, None, None
@@ -355,13 +359,16 @@ def main():
         cudnn.benchmark = True
         # criterion = nn.BCELoss()
         criterion = nn.CrossEntropyLoss()
-        optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=LR_G, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        # optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=LR_G, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        optimizer_global = optim.SGD(Global_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         lr_scheduler_global = lr_scheduler.StepLR(optimizer_global , step_size = 10, gamma = 1)
-        
-        optimizer_local = optim.Adam(Local_Branch_model.parameters(), lr=LR_L, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+
+        # optimizer_local = optim.Adam(Local_Branch_model.parameters(), lr=LR_L, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        optimizer_local = optim.SGD(Local_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         lr_scheduler_local = lr_scheduler.StepLR(optimizer_local , step_size = 10, gamma = 1)
         
-        optimizer_fusion = optim.Adam(Fusion_Branch_model.parameters(), lr=LR_F, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        # optimizer_fusion = optim.Adam(Fusion_Branch_model.parameters(), lr=LR_F, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+        optimizer_fusion = optim.SGD(Fusion_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         lr_scheduler_fusion = lr_scheduler.StepLR(optimizer_fusion , step_size = 15, gamma = 0.1)
         print('********************load model succeed!********************')
 
@@ -412,9 +419,6 @@ def main():
                 loss2 = criterion(output_local, target_var)
                 loss3 = criterion(output_fusion, target_var)
                 #
-
-                
-
                 loss = loss1*0.8 + loss2*0.1 + loss3*0.1 
 
                 if (i%500) == 0: 
@@ -480,7 +484,7 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
                 print('testing process:',i)
             # target_var = target.to(DEVICE)
             target_var = target.to(DEVICE);
-            gt = torch.cat((gt, target.float()), 0)
+            gt = torch.cat((gt, target.float().to(DEVICE)), 0)
             # input_var = torch.autograd.Variable(inp.to(DEVICE))
             (inp, vid_name, dynamicImages, bboxes) = inp
             batch_size, timesteps, C, H, W = inp.size()
@@ -530,7 +534,7 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     epoch_loss = float(running_loss) / float(i)
             
     epoch_acc_g = compute_ACC(gt, pred_global)
-    print('Global accuracy=', epoch_acc)
+    print('Global accuracy=', epoch_acc_g)
     epoch_acc_l = compute_ACC(gt, pred_local)
     print('Local accuracy=', epoch_acc_l)
     epoch_acc_f = compute_ACC(gt, pred_fusion)
