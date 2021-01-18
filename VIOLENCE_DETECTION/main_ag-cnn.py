@@ -427,8 +427,8 @@ def main():
                 #
                 loss = loss1*0.8 + loss2*0.1 + loss3*0.1 
 
-                if (i%500) == 0: 
-                    print('step: {} totalloss: {loss:.3f} loss1: {loss1:.3f} loss2: {loss2:.3f} loss3: {loss3:.3f}'.format(i, loss = loss, loss1 = loss1, loss2 = loss2, loss3 = loss3))
+                # if (i%500) == 0: 
+                #     print('step: {} totalloss: {loss:.3f} loss1: {loss1:.3f} loss2: {loss2:.3f} loss3: {loss3:.3f}'.format(i, loss = loss, loss1 = loss1, loss2 = loss2, loss3 = loss3))
 
                 loss.backward() 
                 optimizer_global.step()  
@@ -489,10 +489,10 @@ def test(model_global, model_local, model_fusion, test_loader, criterion):
     running_loss = 0.0
     for i, (inp, target) in enumerate(test_loader):
         with torch.no_grad():
-            if i % 2000 == 0:
+            # if i % 2000 == 0:
                 # print('testing process:',i)
             # target_var = target.to(DEVICE)
-            target_var = target.to(DEVICE);
+            target_var = target.to(DEVICE)
             gt = torch.cat((gt, target.float().to(DEVICE)), 0)
             # input_var = torch.autograd.Variable(inp.to(DEVICE))
             (inp, vid_name, dynamicImages, bboxes) = inp
