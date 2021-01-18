@@ -36,7 +36,7 @@ from constants import DEVICE
 from include import root
 from VIOLENCE_DETECTION.UTIL2 import base_dataset, load_model, transforms_dataset, plot_example
 from VIOLENCE_DETECTION.violenceDataset import ViolenceDataset
-from MODELS.AGCNN import Densenet121_AG, Fusion_Branch, DenseNet121
+from MODELS.AGCNN import Densenet121_AG, Fusion_Branch, DenseNet121, Resnet50
 from datasetsMemoryLoader import customize_kfold
 from operator import itemgetter
 from torch.utils.tensorboard import SummaryWriter
@@ -306,11 +306,19 @@ def main():
 
 
         print('********************load model********************')
+
+        if args.modelType == 'densenet-V0':
+            Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        elif args.modelType == 'densenet-V1':
+            Global_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            Local_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        elif args.modelType == 'resnet50':
+            Global_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            Local_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
         # initialize and load the model
-        # Global_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        # Local_Branch_model = Densenet121_AG(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        Global_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-        Local_Branch_model = DenseNet121(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+        
+        
 
         Fusion_Branch_model = Fusion_Branch(input_size = 2048, output_size = N_CLASSES).to(DEVICE)
         print(Global_Branch_model)
