@@ -223,17 +223,17 @@ def main():
         datasetAll, labelsAll, numFramesAll, transforms = base_dataset(args.dataset[0], input_size=args.inputSize)
     save_path = root + '/drive/MyDrive/VIOLENCE DATA/AG-CNN/'+args.dataset[0]
     rgb_transforms = {
-                        'train': transforms.Compose([
-                            transforms.RandomResizedCrop(args.inputSize),
-                            transforms.RandomHorizontalFlip(),
-                            transforms.ToTensor(),
-                            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        'train': torchvision.transforms.Compose([
+                            torchvision.transforms.RandomResizedCrop(args.inputSize),
+                            torchvision.transforms.RandomHorizontalFlip(),
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                         ]),
-                        'val': transforms.Compose([
-                            transforms.Resize(args.inputSize),
-                            transforms.CenterCrop(args.inputSize),
-                            transforms.ToTensor(),
-                            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        'val': torchvision.transforms.Compose([
+                            torchvision.transforms.Resize(args.inputSize),
+                            torchvision.transforms.CenterCrop(args.inputSize),
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                         ]),
                     }
     template = 'Fold {}==>Epoch {}/{}, Train Loss: {:.5f}, Test Loss: {:.5f}, Accuracies ==> Global Acc: {:.5f}, Local Acc: {:.5f}, Fusion Acc: {:.5f}, Time: {:.0f}m {:.0f}s'
@@ -435,9 +435,15 @@ def main():
                 # target_var = torch.autograd.Variable(target.to(DEVICE))
 
                 (input, vid_name, dynamicImages, bboxes, rgb_central_frames) = input
-                print('rgb_central_frames: ', rgb_central_frames.size())
+                # print('rgb_central_frames: ', rgb_central_frames.size())
                 batch_size, timesteps, C, H, W = input.size()
                 input = input.view(batch_size * timesteps, C, H, W)
+
+                #rgb
+                batch_size, timesteps, C, H, W = rgb_central_frames.size()
+                rgb_central_frames = rgb_central_frames.view(batch_size * timesteps, C, H, W)
+                rgb_central_frames = rgb_central_frames.to(DEVICE)
+
                 input_var = input.to(DEVICE)
                 target_var = target.to(DEVICE)
 
@@ -448,7 +454,8 @@ def main():
                 # compute output
                 output_global, fm_global, pool_global = Global_Branch_model(input_var)
                 
-                patchs_var = Attention_gen_patchs(input,fm_global)
+                # patchs_var = Attention_gen_patchs(input,fm_global)
+                patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
 
                 output_local, _, pool_local = Local_Branch_model(patchs_var)
                 #print(fusion_var.shape)
@@ -549,12 +556,19 @@ def test(model_global, model_local, model_fusion, test_loader, criterion, args):
             batch_size, timesteps, C, H, W = inp.size()
             inp = inp.view(batch_size * timesteps, C, H, W)
             input_var = inp.to(DEVICE)
+
+            #rgb
+            batch_size, timesteps, C, H, W = rgb_central_frames.size()
+            rgb_central_frames = rgb_central_frames.view(batch_size * timesteps, C, H, W)
+            rgb_central_frames = rgb_central_frames.to(DEVICE)
             
 
             #output = model_global(input_var)
 
             output_global, fm_global, pool_global = model_global(input_var)
-            patchs_var = Attention_gen_patchs(inp,fm_global)
+            # patchs_var = Attention_gen_patchs(inp,fm_global)
+            patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
+
             output_local, _, pool_local = model_local(patchs_var)
             output_fusion = model_fusion(pool_global,pool_local)
 

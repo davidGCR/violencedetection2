@@ -183,7 +183,9 @@ class ViolenceDataset(Dataset):
         for sequence in video_segments:
             # start_time = time.time()
             imgPIL, img = dynamicImage.getDynamicImage(sequence)
-            rgb_central_frames.append(self.rgb_transform(sequence[int(len(sequence)/2)]))
+            rgb = sequence[int(len(sequence)/2)]
+            rgb_pil = Image.fromarray(np.uint8(rgb)).convert('RGB')
+            rgb_central_frames.append(self.rgb_transform(rgb_pil))
             # end_time = time.time()
             # preprocessing_time += (end_time - start_time)
             dynamicImages.append(np.array(imgPIL))
