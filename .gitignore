@@ -19,3 +19,4 @@ clipped
 UTIL/.ipynb_checkpoints
 *.log
 wandb
+*.ipynb
