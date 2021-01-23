@@ -110,7 +110,8 @@ def Attention_gen_patchs(ori_image, fm_cuda):
         maxw = max(ind[:,1])
         
         # to ori image 
-        image = ori_image[i].numpy().reshape(224,224,3)
+        # image = ori_image[i].numpy().reshape(224,224,3)
+        image = ori_image[i].cpu().numpy().reshape(224,224,3)
         image = image[int(224*0.334):int(224*0.667),int(224*0.334):int(224*0.667),:]
 
         image = cv2.resize(image, size_upsample)
@@ -179,12 +180,12 @@ def build_args():
     parser.add_argument("--lossCoefGlobal", type=float, default=0.8)
     parser.add_argument("--lossCoefLocal", type=float, default=0.1)
     parser.add_argument("--lossCoefFusion", type=float, default=0.1)
-    parser.add_argument("--trainType", type=str)
+    parser.add_argument("--trainOneModel", type=str, default="")
 
     args = parser.parse_args()
     return args
 
-def parallel_training(args, models_dict, train_loader, optimizers_dict, schedulers_dict, writer, save_path, fold, template, template_details):
+def parallel_training(args, Global_Branch_model, Local_Branch_model, Fusion_Branch_model, criterion, train_loader, test_loader, optimizers_dict, schedulers_dict, writer, save_path, fold, template, template_details):
     """
     Training in parallel
     args, 
@@ -204,12 +205,15 @@ def parallel_training(args, models_dict, train_loader, optimizers_dict, schedule
         # print('Epoch {}/{}'.format(epoch , args.numEpochs - 1))
         # print('-' * 10)
         #set the mode of model
-        for key in models_dict:
-            models_dict[key].train()
+        # print('key:', key)
 
-        # Global_Branch_model.train()  #set model to training mode
-        # Local_Branch_model.train()
-        # Fusion_Branch_model.train()
+        # for key in models_dict:
+        #     print('key:', key)
+        #     models_dict[key].train()
+
+        Global_Branch_model.train()  #set model to training mode
+        Local_Branch_model.train()
+        Fusion_Branch_model.train()
 
         running_loss = 0.0
         running_loss_global = 0.0
@@ -242,17 +246,17 @@ def parallel_training(args, models_dict, train_loader, optimizers_dict, schedule
             # optimizer_fusion.zero_grad()
 
             # compute output
-            # output_global, fm_global, pool_global = Global_Branch_model(input_var)
-            output_global, fm_global, pool_global = models_dict['global'](input_var)
+            output_global, fm_global, pool_global = Global_Branch_model(input_var)
+            # output_global, fm_global, pool_global = models_dict['global'](input_var)
             
-            # patchs_var = Attention_gen_patchs(input,fm_global)
-            patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
+            patchs_var = Attention_gen_patchs(input,fm_global)
+            # patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
 
-            # output_local, _, pool_local = Local_Branch_model(patchs_var)
-            output_local, _, pool_local = models_dict['local'](patchs_var)
+            output_local, _, pool_local = Local_Branch_model(patchs_var)
+            # output_local, _, pool_local = models_dict['local'](patchs_var)
             #print(fusion_var.shape)
-            # output_fusion = Fusion_Branch_model(pool_global, pool_local)
-            output_fusion = models_dict['fusion'](pool_global, pool_local)
+            output_fusion = Fusion_Branch_model(pool_global, pool_local)
+            # output_fusion = models_dict['fusion'](pool_global, pool_local)
 
             # loss
             loss1 = criterion(output_global, target_var)
@@ -321,7 +325,86 @@ def parallel_training(args, models_dict, train_loader, optimizers_dict, schedule
         print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc_g, epoch_acc_l, epoch_acc_f, time_elapsed // 60, time_elapsed % 60))
         print(template_details.format(epoch_loss_global,test_loss_global, epoch_loss_local, test_loss_local, epoch_loss_fusion, test_loss_fusion))
         # print('Training one epoch complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60 , time_elapsed % 60))
+
+def train_one_model(args, model, train_loader, test_loader, optimizer, scheduler, save_path, fold, template):
+    """
+    Train one model
+    """
+    since = time.time()
+    model.train()  #set model to training mode
+
+    running_loss = 0.0
+
+    for i, (input, target) in enumerate(train_loader):
+        (input, vid_name, dynamicImages, bboxes, rgb_central_frames) = input
+        # print('rgb_central_frames: ', rgb_central_frames.size())
+        batch_size, timesteps, C, H, W = input.size()
+        input = input.view(batch_size * timesteps, C, H, W)
+
+        #rgb
+        # batch_size, timesteps, C, H, W = rgb_central_frames.size()
+        # rgb_central_frames = rgb_central_frames.view(batch_size * timesteps, C, H, W)
+        # rgb_central_frames = rgb_central_frames.to(DEVICE)
+
+        input_var = input.to(DEVICE)
+        target_var = target.to(DEVICE)
+
+        optimizer.zero_grad()
+
+        # compute output
+        output_global, fm_global, pool_global = model(input_var)
+        
+        # patchs_var = Attention_gen_patchs(input,fm_global)
+        # patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
+
+        # output_local, _, pool_local = Local_Branch_model(patchs_var)
+
+        # output_fusion = Fusion_Branch_model(pool_global, pool_local)
+
+        # loss
+        loss = criterion(output_global, target_var)
+
+        # loss = loss1*args.lossCoefGlobal + loss2*args.lossCoefLocal + loss3*args.lossCoefFusion 
+
+        # if (i%500) == 0: 
+        #     print('step: {} totalloss: {loss:.3f} loss1: {loss1:.3f} loss2: {loss2:.3f} loss3: {loss3:.3f}'.format(i, loss = loss, loss1 = loss1, loss2 = loss2, loss3 = loss3))
+
+        loss.backward() 
+        optimizer.step()
+        # optimizer_global.step()  
+        # optimizer_local.step()
+        # optimizer_fusion.step()
+
+        #print(loss.data.item())
+        running_loss += loss.data.item()
+        
+    scheduler.step()
+
+    epoch_loss = float(running_loss) / float(i)
+
+    # print('i para epoch_loss:',i)
+    # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
+    writer.add_scalar("Train-Loss", epoch_loss, epoch)
+    # print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
+
+    # print('*******testing!*********')
+    test_loss, epoch_acc,  = test(model, test_loader, criterion, args)
     
+    # print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
+    writer.add_scalar("Test-Loss", test_loss, epoch)
+    writer.add_scalar("Test-Accuracy", epoch_acc_f, epoch)
+    #break
+
+    #save
+    if epoch % 1 == 0 and args.saveCheckpoint:
+        # save_path = save_model_path
+        torch.save(model.state_dict(), save_path+save_model_name+'Model'+'_epoch_'+str(epoch)+'.pkl')
+        print('Global_Branch_model already save!')
+       
+
+    time_elapsed = time.time() - since
+    print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc, time_elapsed // 60, time_elapsed % 60))
+
 
 
 def main():
@@ -454,13 +537,13 @@ def main():
         elif args.modelType == 'resnet50':
             Global_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Local_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
-            Local_RGB_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
+            # Local_RGB_Branch_model = Resnet50(pretrained = args.pretrained, num_classes = N_CLASSES).to(DEVICE)
             Fusion_Branch_model = Fusion_Branch(input_size = 2*2048, output_size = N_CLASSES).to(DEVICE)
 
         models_dict = {
-            "global": Global_Branch_model,
-            "local": Local_Branch_model,
-            "fusion": Fusion_Branch
+            'global': Global_Branch_model,
+            'local': Local_Branch_model,
+            'fusion': Fusion_Branch
         }
         
 
@@ -546,7 +629,11 @@ def main():
         print('********************begin training!********************')
         log_dir = os.path.join(save_path, 'tensorboard', 'fold-'+str(fold))
         writer = SummaryWriter(log_dir)
-        parallel_training(args, models_dict, train_loader, optimizers_dict, schedulers_dict, writer, save_path, fold, template, template_details)
+        if args.trainOneModel == "parallel":
+          parallel_training(args, Global_Branch_model, Local_Branch_model, Fusion_Branch_model, criterion, train_loader, test_loader, optimizers_dict, schedulers_dict, writer, save_path, fold, template, template_details)
+        elif args.trainOneModel == "global":
+          train_one_model(args, Global_Branch_model, train_loader, test_loader, optimizer_global, optimizer_global, save_path, fold, "Fold {}==>Epoch {}/{}, Train Loss: {:.5f}, Test Loss: {:.5f}, Test Acc: {:.5f}, Time: {:.0f}m {:.0f}s")
+        
 
 def test(model_global, model_local, model_fusion, test_loader, criterion, args):
 
