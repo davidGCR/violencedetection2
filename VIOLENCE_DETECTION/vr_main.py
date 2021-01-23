@@ -76,7 +76,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             running_corrects = 0
             # Iterate over data.
             for data in tqdm(dataloaders[phase]):
-                (inputs, idx, dynamicImages, one_box), labels = data
+                # (inp, vid_name, dynamicImages, bboxes, rgb_central_frames) = inp
+                (inputs, idx, dynamicImages, one_box, rgb_central_frames), labels = data
                 # (inputs, idx, dynamicImages, one_box) = X
 
                 inputs = inputs.to(DEVICE)

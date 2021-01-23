@@ -330,80 +330,80 @@ def train_one_model(args, model, train_loader, test_loader, optimizer, scheduler
     """
     Train one model
     """
-    since = time.time()
-    model.train()  #set model to training mode
+    for epoch in range(args.numEpochs):
+        since = time.time()
+        model.train()  #set model to training mode
+        running_loss = 0.0
 
-    running_loss = 0.0
+        for i, (input, target) in enumerate(train_loader):
+            (input, vid_name, dynamicImages, bboxes, rgb_central_frames) = input
+            # print('rgb_central_frames: ', rgb_central_frames.size())
+            batch_size, timesteps, C, H, W = input.size()
+            input = input.view(batch_size * timesteps, C, H, W)
 
-    for i, (input, target) in enumerate(train_loader):
-        (input, vid_name, dynamicImages, bboxes, rgb_central_frames) = input
-        # print('rgb_central_frames: ', rgb_central_frames.size())
-        batch_size, timesteps, C, H, W = input.size()
-        input = input.view(batch_size * timesteps, C, H, W)
+            #rgb
+            # batch_size, timesteps, C, H, W = rgb_central_frames.size()
+            # rgb_central_frames = rgb_central_frames.view(batch_size * timesteps, C, H, W)
+            # rgb_central_frames = rgb_central_frames.to(DEVICE)
 
-        #rgb
-        # batch_size, timesteps, C, H, W = rgb_central_frames.size()
-        # rgb_central_frames = rgb_central_frames.view(batch_size * timesteps, C, H, W)
-        # rgb_central_frames = rgb_central_frames.to(DEVICE)
+            input_var = input.to(DEVICE)
+            target_var = target.to(DEVICE)
 
-        input_var = input.to(DEVICE)
-        target_var = target.to(DEVICE)
+            optimizer.zero_grad()
 
-        optimizer.zero_grad()
+            # compute output
+            output_global, fm_global, pool_global = model(input_var)
+            
+            # patchs_var = Attention_gen_patchs(input,fm_global)
+            # patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
 
-        # compute output
-        output_global, fm_global, pool_global = model(input_var)
+            # output_local, _, pool_local = Local_Branch_model(patchs_var)
+
+            # output_fusion = Fusion_Branch_model(pool_global, pool_local)
+
+            # loss
+            loss = criterion(output_global, target_var)
+
+            # loss = loss1*args.lossCoefGlobal + loss2*args.lossCoefLocal + loss3*args.lossCoefFusion 
+
+            # if (i%500) == 0: 
+            #     print('step: {} totalloss: {loss:.3f} loss1: {loss1:.3f} loss2: {loss2:.3f} loss3: {loss3:.3f}'.format(i, loss = loss, loss1 = loss1, loss2 = loss2, loss3 = loss3))
+
+            loss.backward() 
+            optimizer.step()
+            # optimizer_global.step()  
+            # optimizer_local.step()
+            # optimizer_fusion.step()
+
+            #print(loss.data.item())
+            running_loss += loss.data.item()
+            
+        scheduler.step()
+
+        epoch_loss = float(running_loss) / float(i)
+
+        # print('i para epoch_loss:',i)
+        # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
+        writer.add_scalar("Train-Loss", epoch_loss, epoch)
+        # print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
+
+        # print('*******testing!*********')
+        test_loss, epoch_acc = test_one_model(model, test_loader, criterion, args)
         
-        # patchs_var = Attention_gen_patchs(input,fm_global)
-        # patchs_var = Attention_gen_patchs(rgb_central_frames,fm_global)
+        # print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
+        writer.add_scalar("Test-Loss", test_loss, epoch)
+        writer.add_scalar("Test-Accuracy", epoch_acc, epoch)
+        #break
 
-        # output_local, _, pool_local = Local_Branch_model(patchs_var)
+        #save
+        if epoch % 1 == 0 and args.saveCheckpoint:
+            # save_path = save_model_path
+            torch.save(model.state_dict(), save_path+save_model_name+'Model'+'_epoch_'+str(epoch)+'.pkl')
+            print('Global_Branch_model already save!')
+          
 
-        # output_fusion = Fusion_Branch_model(pool_global, pool_local)
-
-        # loss
-        loss = criterion(output_global, target_var)
-
-        # loss = loss1*args.lossCoefGlobal + loss2*args.lossCoefLocal + loss3*args.lossCoefFusion 
-
-        # if (i%500) == 0: 
-        #     print('step: {} totalloss: {loss:.3f} loss1: {loss1:.3f} loss2: {loss2:.3f} loss3: {loss3:.3f}'.format(i, loss = loss, loss1 = loss1, loss2 = loss2, loss3 = loss3))
-
-        loss.backward() 
-        optimizer.step()
-        # optimizer_global.step()  
-        # optimizer_local.step()
-        # optimizer_fusion.step()
-
-        #print(loss.data.item())
-        running_loss += loss.data.item()
-        
-    scheduler.step()
-
-    epoch_loss = float(running_loss) / float(i)
-
-    # print('i para epoch_loss:',i)
-    # epoch_loss = float(running_loss) / float(len(train_loader.dataset))
-    writer.add_scalar("Train-Loss", epoch_loss, epoch)
-    # print(' Train Epoch over  Loss: {:.5f}'.format(epoch_loss))
-
-    # print('*******testing!*********')
-    test_loss, epoch_acc = test_one_model(model, test_loader, criterion, args)
-    
-    # print(' Test Epoch over  Loss: {:.5f}'.format(test_loss))
-    writer.add_scalar("Test-Loss", test_loss, epoch)
-    writer.add_scalar("Test-Accuracy", epoch_acc_f, epoch)
-    #break
-
-    #save
-    if epoch % 1 == 0 and args.saveCheckpoint:
-        # save_path = save_model_path
-        torch.save(model.state_dict(), save_path+save_model_name+'Model'+'_epoch_'+str(epoch)+'.pkl')
-        print('Global_Branch_model already save!')
-       
-
-    time_elapsed = time.time() - since
-    print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc, time_elapsed // 60, time_elapsed % 60))
+        time_elapsed = time.time() - since
+        print(template.format(fold, epoch, args.numEpochs - 1, epoch_loss, test_loss, epoch_acc, time_elapsed // 60, time_elapsed % 60))
 
 def test_one_model(model, test_loader, criterion, args):
 
@@ -446,17 +446,17 @@ def test_one_model(model, test_loader, criterion, args):
             running_loss += loss.data.item()
 
             
-            _, pred = torch.max(output_global, 1)
+            _, pred_batch = torch.max(output_global, 1)
             # print('preds_g:', preds_g.size(), preds_g.type())
             # print('pred_global:', pred_global.size(), pred_global.type())
             # _, preds_l = torch.max(output_local, 1)
             # _, preds_f = torch.max(output_fusion, 1)
 
-            pred = pred.type(torch.FloatTensor).to(DEVICE)
+            pred_batch = pred_batch.type(torch.FloatTensor).to(DEVICE)
             # preds_l = preds_l.type(torch.FloatTensor).to(DEVICE)
             # preds_f = preds_f.type(torch.FloatTensor).to(DEVICE)
 
-            pred = torch.cat([pred, pred], 0)
+            pred = torch.cat([pred, pred_batch], 0)
     
     # epoch_loss = float(running_loss) / float(len(test_loader.dataset))
     epoch_loss = float(running_loss) / float(i)
