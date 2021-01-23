@@ -64,11 +64,11 @@ VAL_IMAGE_LIST = '/Users/davidchoqueluqueroman/Documents/CODIGOS/AG-CNN/labels/v
 save_model_name = 'AG_CNN'
 
 # learning rate
-LR_G = 1e-8
-LR_L = 1e-8
-LR_F = 1e-3
-num_epochs = 50
-BATCH_SIZE = 16 #32
+# LR_G = 1e-8
+# LR_L = 1e-8
+# LR_F = 1e-3
+# num_epochs = 50
+# BATCH_SIZE = 16 #32
 
 normalize = transforms.Normalize(
    mean=[0.485, 0.456, 0.406],
@@ -181,6 +181,7 @@ def build_args():
     parser.add_argument("--lossCoefLocal", type=float, default=0.1)
     parser.add_argument("--lossCoefFusion", type=float, default=0.1)
     parser.add_argument("--trainOneModel", type=str, default="")
+    parser.add_argument("--optimizer", type=str, default="adam")
 
     args = parser.parse_args()
     return args
@@ -658,16 +659,20 @@ def main():
         cudnn.benchmark = True
         # criterion = nn.BCELoss()
         criterion = nn.CrossEntropyLoss()
-        optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=LR_G, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
-        # optimizer_global = optim.SGD(Global_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-        lr_scheduler_global = lr_scheduler.StepLR(optimizer_global , step_size = 10, gamma = 1)
 
-        optimizer_local = optim.Adam(Local_Branch_model.parameters(), lr=LR_L, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
-        # optimizer_local = optim.SGD(Local_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-        lr_scheduler_local = lr_scheduler.StepLR(optimizer_local , step_size = 10, gamma = 1)
+        if args.optimizer == 'adam':
+          optimizer_global = optim.Adam(Global_Branch_model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+          optimizer_local = optim.Adam(Local_Branch_model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+          optimizer_fusion = optim.Adam(Fusion_Branch_model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+          
+        else:
+          optimizer_global = optim.SGD(Global_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+          optimizer_local = optim.SGD(Local_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+          optimizer_fusion = optim.SGD(Fusion_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         
-        # optimizer_fusion = optim.Adam(Fusion_Branch_model.parameters(), lr=LR_F, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
-        optimizer_fusion = optim.SGD(Fusion_Branch_model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        
+        lr_scheduler_global = lr_scheduler.StepLR(optimizer_global , step_size = 10, gamma = 1)
+        lr_scheduler_local = lr_scheduler.StepLR(optimizer_local , step_size = 10, gamma = 1)
         lr_scheduler_fusion = lr_scheduler.StepLR(optimizer_fusion , step_size = 15, gamma = 0.1)
 
         optimizers_dict = {

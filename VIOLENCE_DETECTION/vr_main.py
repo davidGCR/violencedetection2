@@ -352,7 +352,12 @@ def build_args():
     parser.add_argument("--windowLen", type=int, default=0)
     parser.add_argument("--modelPath", type=str, default=None)
     parser.add_argument("--testDataset",type=str, default=None)
-    parser.add_argument("--pretrained", type=str, default=None)
+    parser.add_argument("--pretrained", type=lambda x: (str(x).lower() == 'true'), default=False, help="to fine tunning")
+    parser.add_argument("--lossCoefGlobal", type=float, default=0.8)
+    parser.add_argument("--lossCoefLocal", type=float, default=0.1)
+    parser.add_argument("--lossCoefFusion", type=float, default=0.1)
+    parser.add_argument("--trainOneModel", type=str, default="")
+    parser.add_argument("--optimizer", type=str, default="adam")
 
     args = parser.parse_args()
     return args
@@ -511,10 +516,15 @@ def __pytorch__(args):
             params_to_update = [{'params': get_1x_lr_params(model), 'lr': args.lr},
                             {'params': get_10x_lr_params(model), 'lr': args.lr * 10}]
             optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9, weight_decay=5e-4)
+            
             # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         else:
             params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
-            optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+            if args.optimizer == 'adam':
+                optimizer = optim.Adam(params_to_update, lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
+            else:
+                optimizer = optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+            
 
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         criterion = nn.CrossEntropyLoss()
