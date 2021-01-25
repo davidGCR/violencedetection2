@@ -76,7 +76,7 @@ def train_model(model, dataloaders, criterion, optimizer, exp_lr_scheduler, num_
             running_loss = 0.0
             running_corrects = 0
             # Iterate over data.
-            for data in tqdm(dataloaders[phase]):
+            for data in dataloaders[phase]:
                 # (inp, vid_name, dynamicImages, bboxes, rgb_central_frames) = inp
                 (inputs, idx, dynamicImages, one_box, rgb_central_frames), labels = data
                 # (inputs, idx, dynamicImages, one_box) = X
@@ -125,6 +125,7 @@ def train_model(model, dataloaders, criterion, optimizer, exp_lr_scheduler, num_
 
 
             if phase == 'val':
+                a=''
                 # early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
             else:
                 last_train_loss = epoch_loss
@@ -147,7 +148,7 @@ def test_model(model, dataloader):
     running_loss = 0.0
     running_corrects = 0
     # Iterate over data.
-    for data in tqdm(dataloader):
+    for data in dataloader:
         inputs, labels, v_names, _, _ = data
         # print('inputs=', inputs.size(), type(inputs))
         inputs = inputs.to(DEVICE)
@@ -420,7 +421,7 @@ def __pytorch__(args):
     print(args.dataset)
 
     # for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
-    template = 'Fold: {}, epoch: {}/{}, train_loss: {}, train_acc: {}, test_loss: {}, test_acc: {}'
+    template = 'Fold: {}, epoch: {}/{}, train_loss: {:.5f}, train_acc: {:.5f}, test_loss: {:.5f}, test_acc: {:.5f}'
     for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
         wandb_run = wandb.init(project="pytorch-violencedetection2")
@@ -545,7 +546,7 @@ def __pytorch__(args):
             
             # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         else:
-            params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=True)
+            params_to_update = verifiParametersToTrain(model, args.freezeConvLayers, printLayers=False)
             if args.optimizer == 'adam':
                 optimizer = optim.Adam(params_to_update, lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
             else:
