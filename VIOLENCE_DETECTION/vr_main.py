@@ -52,20 +52,21 @@ from collections import Counter
 from sklearn.model_selection import train_test_split
 import wandb
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, fold, path, model_config, phases, metric_to_track=None):
+def train_model(model, dataloaders, criterion, optimizer, exp_lr_scheduler, num_epochs, patience, fold, path, model_config, phases, metric_to_track=None, template=''):
     since = time.time()
     val_acc_history = []
     # best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path=path, model_config=model_config)
+    # early_stopping = EarlyStopping(patience=patience, verbose=True, path=path, model_config=model_config)
 
     for epoch in range(1,num_epochs+1,1):
-        print('Fold ({})--Epoch {}/{}'.format(fold, epoch, num_epochs+1))
-        print('-' * 10)
+        # print('Fold ({})--Epoch {}/{}'.format(fold, epoch, num_epochs+1))
+        # print('-' * 10)
         # Each epoch has a training and validation phase
         last_train_loss = np.inf
         last_train_acc = np.inf
+        train_loss, test_loss, train_acc, test_acc = .0, .0, .0, .0
         for phase in phases:
             if phase == 'train':
                 model.train()  # Set model to training mode
@@ -107,7 +108,15 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            if phase == 'train':
+                train_loss = epoch_loss
+                train_acc = epoch_acc
+            else:
+                test_loss = epoch_loss
+                test_acc = epoch_acc
+            # print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+
+            
 
             if phase == 'val':
                 wandb.log({"Test Accuracy": epoch_loss, "Test Loss": epoch_acc})
@@ -116,15 +125,17 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, patience, 
 
 
             if phase == 'val':
-                early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
+                # early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
             else:
                 last_train_loss = epoch_loss
                 last_train_acc = epoch_acc
-                if metric_to_track == 'train-loss':
-                    early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
-        if early_stopping.early_stop:
-            print("Early stopping")
-            break
+                # if metric_to_track == 'train-loss':
+                    # early_stopping(epoch_loss, epoch_acc, last_train_loss, epoch, fold, model)
+        exp_lr_scheduler.step()
+        print(template.format(fold,epoch, num_epochs+1, train_loss, train_acc, test_loss, test_acc))
+        # if early_stopping.early_stop:
+        #     print("Early stopping")
+        #     break
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 
@@ -368,6 +379,21 @@ def __pytorch__(args):
 
     wandb.login()
 
+    rgb_transforms = {
+                        'train': torchvision.transforms.Compose([
+                            torchvision.transforms.RandomResizedCrop(args.inputSize),
+                            torchvision.transforms.RandomHorizontalFlip(),
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        ]),
+                        'val': torchvision.transforms.Compose([
+                            torchvision.transforms.Resize(args.inputSize),
+                            torchvision.transforms.CenterCrop(args.inputSize),
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        ]),
+                    }
+
     if args.splitType == 'cam':
          __weakly_localization__()
          return 0
@@ -394,6 +420,7 @@ def __pytorch__(args):
     print(args.dataset)
 
     # for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X_len=len(datasetAll), shuffle=shuffle):
+    template = 'Fold: {}, epoch: {}/{}, train_loss: {}, train_acc: {}, test_loss: {}, test_acc: {}'
     for train_idx, test_idx in customize_kfold(n_splits=folds_number, dataset=args.dataset[0], X=datasetAll, y=labelsAll, shuffle=shuffle):
         fold = fold + 1
         wandb_run = wandb.init(project="pytorch-violencedetection2")
@@ -417,6 +444,7 @@ def __pytorch__(args):
                                         labels=test_y,
                                         numFrames=test_numFrames,
                                         spatial_transform=transforms['val'],
+                                        rgb_transform=rgb_transforms['val'],
                                         numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                         videoSegmentLength=args.videoSegmentLength,
                                         positionSegment=args.positionSegment,
@@ -430,20 +458,16 @@ def __pytorch__(args):
 
         print('Label distribution:')
         print('Train=', Counter(train_y))
-        # print('Val=', Counter(val_y))
         print('Test=', Counter(test_y))
         if args.useValSplit:
             train_x, val_x, train_numFrames, val_numFrames, train_y, val_y = train_test_split(train_x, train_numFrames, train_y, test_size=0.2, stratify=train_y, random_state=1)
-            #Label distribution
-            # print('Label distribution:')
-            # print('Train=', Counter(train_y))
             print('Val=', Counter(val_y))
-            # print('Test=', Counter(test_y))
 
             val_dataset = ViolenceDataset(videos=val_x,
                                             labels=val_y,
                                             numFrames=val_numFrames,
                                             spatial_transform=transforms['val'],
+                                            rgb_transform=rgb_transforms['val'],
                                             numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                             videoSegmentLength=args.videoSegmentLength,
                                             positionSegment=args.positionSegment,
@@ -459,6 +483,7 @@ def __pytorch__(args):
                                         labels=train_y,
                                         numFrames=train_numFrames,
                                         spatial_transform=transforms['train'],
+                                        rgb_transform=rgb_transforms['train'],
                                         numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                         videoSegmentLength=args.videoSegmentLength,
                                         positionSegment=args.positionSegment,
@@ -474,6 +499,7 @@ def __pytorch__(args):
                                         labels=test_y,
                                         numFrames=test_numFrames,
                                         spatial_transform=transforms['val'],
+                                        rgb_transform=rgb_transforms['val'],
                                         numDynamicImagesPerVideo=args.numDynamicImagesPerVideo,
                                         videoSegmentLength=args.videoSegmentLength,
                                         positionSegment=args.positionSegment,
@@ -540,12 +566,14 @@ def __pytorch__(args):
                                                             dataloaders,
                                                             criterion,
                                                             optimizer,
+                                                            exp_lr_scheduler,
                                                             num_epochs=args.numEpochs,
                                                             patience=args.patience,
                                                             fold=fold,
                                                             path=checkpoint_path,
                                                             phases = phases,
-                                                            model_config=config)
+                                                            model_config=config,
+                                                            template=template)
         cv_test_accs.append(best_acc.item())
         cv_test_losses.append(val_loss_min)
         cv_final_epochs.append(best_epoch)
