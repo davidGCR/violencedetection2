@@ -94,6 +94,8 @@ def train_model(model, dataloaders, criterion, optimizer, exp_lr_scheduler, num_
                     # Get model outputs and calculate loss
                     # outputs = model(inputs, one_box) #for roi_pool
                     outputs = model((inputs, idx, dynamicImages, one_box))
+                    print('model output: ', outputs.size())
+                    print('labels size: ', labels.size())
                     loss = criterion(outputs, labels)
                     _, preds = torch.max(outputs, 1)
                     # backward + optimize only if in training phase
